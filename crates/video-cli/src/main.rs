@@ -25,9 +25,17 @@ enum Command {
     },
     Ingest(IngestArgs),
     Transcribe(TranscribeArgs),
+    Bench {
+        #[command(subcommand)]
+        command: BenchCommand,
+    },
     Analyze {
         #[command(subcommand)]
         command: AnalyzeCommand,
+    },
+    Reframe {
+        #[command(subcommand)]
+        command: ReframeCommand,
     },
     Evidence {
         #[command(subcommand)]
@@ -89,6 +97,21 @@ struct TranscribeArgs {
 }
 
 #[derive(Debug, Subcommand)]
+enum BenchCommand {
+    Transcribe {
+        project: PathBuf,
+        #[arg(long, default_value = "heardright")]
+        primary: String,
+        #[arg(long, default_value = "whisperx")]
+        verifier: String,
+        #[arg(long, default_value_t = 20)]
+        boundaries: usize,
+        #[arg(long, default_value_t = 40)]
+        padding_ms: i64,
+    },
+}
+
+#[derive(Debug, Subcommand)]
 enum AnalyzeCommand {
     Local(PathCommand),
     Cloud {
@@ -96,6 +119,11 @@ enum AnalyzeCommand {
         #[arg(long)]
         provider: String,
     },
+}
+
+#[derive(Debug, Subcommand)]
+enum ReframeCommand {
+    Plan(PathCommand),
 }
 
 #[derive(Debug, Subcommand)]
@@ -213,10 +241,34 @@ fn run(cli: Cli) -> Result<Value, String> {
                 .map(|result| json!({ "event": "transcribe", "result": result }))
                 .map_err(|error| error.to_string())
         }
+        Command::Bench {
+            command:
+                BenchCommand::Transcribe {
+                    project,
+                    primary,
+                    verifier,
+                    boundaries,
+                    padding_ms,
+                },
+        } => video_project::bench_transcribe(
+            &project,
+            &primary,
+            &verifier,
+            boundaries,
+            padding_ms,
+            cli.dry_run,
+        )
+        .map(|result| json!({ "event": "bench.transcribe", "result": result }))
+        .map_err(|error| error.to_string()),
         Command::Analyze {
             command: AnalyzeCommand::Local(args),
         } => video_project::analyze_local(&args.project, cli.dry_run)
             .map(|result| json!({ "event": "analyze.local", "result": result }))
+            .map_err(|error| error.to_string()),
+        Command::Reframe {
+            command: ReframeCommand::Plan(args),
+        } => video_project::reframe_plan(&args.project, cli.dry_run)
+            .map(|result| json!({ "event": "reframe.plan", "result": result }))
             .map_err(|error| error.to_string()),
         Command::Evidence {
             command: EvidenceCommand::Build(args),
@@ -326,7 +378,9 @@ fn command_name(command: &Command) -> String {
     match command {
         Command::Ingest(_) => "ingest",
         Command::Transcribe(_) => "transcribe",
+        Command::Bench { .. } => "bench transcribe",
         Command::Analyze { .. } => "analyze",
+        Command::Reframe { .. } => "reframe plan",
         Command::Evidence { .. } => "evidence build",
         Command::Edit { .. } => "edit",
         Command::Review(_) => "review open",

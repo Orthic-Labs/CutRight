@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CutRight Studio">
+  <defs>
+    <linearGradient id="accent" x1="84" y1="72" x2="426" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#78E6D4"/>
+      <stop offset="1" stop-color="#2BAFBE"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="#071118"/>
+  <path d="M126 128h170l90 128-90 128H126l90-128-90-128Z" fill="url(#accent)"/>
+  <path d="m230 190 96 66-96 66V190Z" fill="#071118"/>
+  <path d="M128 128h168" stroke="#E7FBF7" stroke-width="20" stroke-linecap="round" opacity=".8"/>
+  <path d="M128 384h168" stroke="#E7FBF7" stroke-width="20" stroke-linecap="round" opacity=".5"/>
+</svg>

@@ -1,4 +1,11 @@
 /target/
 /.cache/
+/.audit/
+/.venv-whisperx/
+/apps/studio/node_modules/
+/apps/studio/dist/
+/apps/studio/.cache/
+/apps/studio/src-tauri/gen/
+/apps/studio/src-tauri/target/
 *.swp
 .DS_Store

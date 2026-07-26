@@ -573,9 +573,12 @@ dependencies = [
 name = "video-providers"
 version = "0.1.0"
 dependencies = [
+ "blake3",
+ "serde",
  "serde_json",
  "thiserror",
  "video-core",
+ "video-media",
 ]
 
 [[package]]

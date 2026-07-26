@@ -5,15 +5,17 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use video_core::{
-    models::{SourceEntry, SCHEMA_VERSION},
+    models::{ProviderCost, ProviderResponseEnvelope, SourceEntry, SCHEMA_VERSION},
+    providers::{TranscriptionProvider, TranscriptionRequest, VadProvider, VadRequest},
     Candidate, CandidateManifest, CutPlan, CutSegment, OutputPreset, ProjectManifest, ReviewMode,
-    SourceManifest, SourcePolicy, Timebase, Timeline, TimelineSegment, Track, Transcript,
-    VadRegion, VadSignal, Word,
+    SourceManifest, SourcePolicy, Timebase, Timeline, TimelineSegment, Track, Transcript, Word,
 };
 use video_media::{
-    probe, render_segments, render_subtitled, ProbeError, RenderError, RenderSegment,
+    extract_audio_f32, extract_frame, probe, render_segments, render_source_segments,
+    render_subtitled, render_to_preset, render_waveform, AudioError, ProbeError, RenderError,
+    RenderSegment, SourceRenderSegment,
 };
-use video_providers::{HeardRightProvider, ProviderError};
+use video_providers::{HeardRightProvider, ProviderError, SileroVadProvider, WhisperXProvider};
 
 const PROJECT_DIRS: &[&str] = &[
     "brief",
@@ -24,6 +26,7 @@ const PROJECT_DIRS: &[&str] = &[
     "cache/waveforms",
     "cache/provider-responses",
     "analysis/cloud-analysis",
+    "analysis/bench/transcribe",
     "analysis/transcripts",
     "edit/variants",
     "finish/slots",
@@ -64,6 +67,8 @@ pub enum ProjectError {
     Provider(#[from] ProviderError),
     #[error(transparent)]
     Render(#[from] RenderError),
+    #[error(transparent)]
+    Audio(#[from] AudioError),
     #[error("pipeline state is invalid: {0}")]
     InvalidState(String),
 }
@@ -271,24 +276,74 @@ pub fn transcribe_project(
     if sources.sources.is_empty() {
         return Err(ProjectError::NoSources);
     }
-    if provider_name != "heardright" && provider_name != "heardright-parakeet-tdt" {
-        return Err(ProjectError::InvalidState(format!(
-            "unsupported local provider {provider_name}; use heardright"
-        )));
-    }
     let provider = if dry_run {
         None
     } else {
-        Some(HeardRightProvider::discover()?)
+        Some(match provider_name {
+            "heardright" | "heardright-parakeet-tdt" => {
+                Box::new(HeardRightProvider::discover()?) as Box<dyn TranscriptionProvider>
+            }
+            "whisperx" | "whisperx-alignment" => {
+                Box::new(WhisperXProvider::discover()?) as Box<dyn TranscriptionProvider>
+            }
+            other => {
+                return Err(ProjectError::InvalidState(format!(
+                    "unsupported local provider {other}; use heardright or whisperx"
+                )))
+            }
+        })
     };
     let output_dir = project_path.join("analysis/transcripts");
+    let provider_suffix = match provider_name {
+        "heardright" | "heardright-parakeet-tdt" => None,
+        "whisperx" | "whisperx-alignment" => Some("whisperx"),
+        _ => None,
+    };
+    let provider_label = provider_suffix.unwrap_or("heardright");
     if !dry_run {
         fs::create_dir_all(&output_dir)?;
     }
     let mut transcripts = Vec::new();
+    let mut cache_hits = 0_usize;
     for source in &sources.sources {
+        let transcript_path = match provider_suffix {
+            Some(suffix) => output_dir.join(format!("{}.{}.json", source.source_id, suffix)),
+            None => output_dir.join(format!("{}.json", source.source_id)),
+        };
         let transcript = if let Some(provider) = &provider {
-            provider.transcribe(&source.source_id, Path::new(&source.path))?
+            if let Some(cached) = load_cached_transcription(
+                project_path,
+                source,
+                &transcript_path,
+                provider.id(),
+                provider.model_id(),
+                provider_label,
+            )? {
+                cache_hits += 1;
+                cached
+            } else {
+                let output = provider
+                    .transcribe(&TranscriptionRequest {
+                        source_id: source.source_id.clone(),
+                        source_path: PathBuf::from(&source.path),
+                        language_hint: Some("en".into()),
+                    })
+                    .map_err(|error| ProjectError::InvalidState(error.to_string()))?;
+                write_json_atomic(&transcript_path, &output.transcript)?;
+                write_transcription_provenance(
+                    project_path,
+                    source,
+                    &transcript_path,
+                    TranscriptionProvenance {
+                        raw_response: &output.raw_response,
+                        provider: provider.id(),
+                        provider_model: &output.provider_model,
+                        warnings: &output.warnings,
+                        provider_label,
+                    },
+                )?;
+                output.transcript
+            }
         } else {
             Transcript {
                 schema_version: SCHEMA_VERSION,
@@ -299,35 +354,395 @@ pub fn transcribe_project(
                 events: Vec::new(),
             }
         };
-        if !dry_run {
-            write_json_atomic(
-                &output_dir.join(format!("{}.json", source.source_id)),
-                &transcript,
-            )?;
-        }
         transcripts.push(transcript);
     }
-    if !dry_run {
-        if let Some(first) = transcripts.first() {
-            write_json_atomic(&project_path.join("analysis/transcript.json"), first)?;
-            let packed = first
-                .words
-                .iter()
-                .map(|word| format!("- `{}–{}` {}", word.start_ms, word.end_ms, word.text))
-                .collect::<Vec<_>>()
-                .join("\n");
-            fs::write(
-                project_path.join("analysis/transcript-packed.md"),
-                packed + "\n",
-            )?;
-        }
+    if !dry_run && provider_suffix.is_none() {
+        let first = transcripts.first().expect("sources are nonempty");
+        write_json_atomic(&project_path.join("analysis/transcript.json"), first)?;
+        let packed = first
+            .words
+            .iter()
+            .map(|word| format!("- `{}–{}` {}", word.start_ms, word.end_ms, word.text))
+            .collect::<Vec<_>>()
+            .join("\n");
+        fs::write(
+            project_path.join("analysis/transcript-packed.md"),
+            packed + "\n",
+        )?;
     }
     let path = project_path.join("analysis/transcripts");
     Ok(PipelineArtifact {
-        status: if dry_run { "dry-run" } else { "created" },
+        status: if dry_run {
+            "dry-run"
+        } else if cache_hits == sources.sources.len() {
+            "cached"
+        } else {
+            "created"
+        },
         path,
         count: sources.sources.len(),
     })
+}
+
+fn load_cached_transcription(
+    project_path: &Path,
+    source: &SourceEntry,
+    transcript_path: &Path,
+    provider: &str,
+    provider_model: &str,
+    provider_label: &str,
+) -> Result<Option<Transcript>, ProjectError> {
+    let raw_path = project_path.join(format!(
+        "cache/provider-responses/{}.{}.raw.json",
+        source.source_id, provider_label
+    ));
+    let envelope_path = project_path.join(format!(
+        "analysis/transcripts/{}.{}.envelope.json",
+        source.source_id, provider_label
+    ));
+    if !transcript_path.is_file() || !raw_path.is_file() || !envelope_path.is_file() {
+        return Ok(None);
+    }
+    let envelope: ProviderResponseEnvelope = read_json(&envelope_path)?;
+    if envelope.provider != provider
+        || envelope.provider_model != provider_model
+        || envelope.request_hash != transcription_request_hash(source, provider, provider_model)?
+    {
+        return Ok(None);
+    }
+    Ok(Some(read_json(transcript_path)?))
+}
+
+struct TranscriptionProvenance<'a> {
+    raw_response: &'a serde_json::Value,
+    provider: &'a str,
+    provider_model: &'a str,
+    warnings: &'a [String],
+    provider_label: &'a str,
+}
+
+fn write_transcription_provenance(
+    project_path: &Path,
+    source: &SourceEntry,
+    transcript_path: &Path,
+    provenance: TranscriptionProvenance<'_>,
+) -> Result<(), ProjectError> {
+    let raw_path = project_path.join(format!(
+        "cache/provider-responses/{}.{}.raw.json",
+        source.source_id, provenance.provider_label
+    ));
+    write_json_atomic(&raw_path, provenance.raw_response)?;
+    let envelope = ProviderResponseEnvelope {
+        provider: provenance.provider.into(),
+        provider_model: provenance.provider_model.into(),
+        request_hash: transcription_request_hash(
+            source,
+            provenance.provider,
+            provenance.provider_model,
+        )?,
+        created_at: Utc::now(),
+        cost: ProviderCost {
+            currency: "USD".into(),
+            estimated: Some(0.0),
+        },
+        raw_response_path: relative_artifact_path(project_path, &raw_path),
+        normalised_output_path: relative_artifact_path(project_path, transcript_path),
+        warnings: provenance.warnings.to_vec(),
+    };
+    let envelope_path = project_path.join(format!(
+        "analysis/transcripts/{}.{}.envelope.json",
+        source.source_id, provenance.provider_label
+    ));
+    write_json_atomic(&envelope_path, &envelope)
+}
+
+fn transcription_request_hash(
+    source: &SourceEntry,
+    provider: &str,
+    provider_model: &str,
+) -> Result<String, ProjectError> {
+    let request = serde_json::json!({
+        "provider": provider,
+        "provider_model": provider_model,
+        "source_id": source.source_id,
+        "source_blake3": source.blake3,
+        "source_path": source.path,
+        "language_hint": "en"
+    });
+    Ok(blake3::hash(&serde_json::to_vec(&request)?)
+        .to_hex()
+        .to_string())
+}
+
+fn relative_artifact_path(project_path: &Path, path: &Path) -> String {
+    path.strip_prefix(project_path)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .to_string()
+}
+
+pub fn bench_transcribe(
+    project_path: &Path,
+    primary: &str,
+    verifier: &str,
+    boundaries: usize,
+    padding_ms: i64,
+    dry_run: bool,
+) -> Result<PipelineArtifact, ProjectError> {
+    if boundaries == 0 || padding_ms < 0 {
+        return Err(ProjectError::InvalidState(
+            "benchmark boundaries must be positive and padding must be nonnegative".into(),
+        ));
+    }
+    let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
+    if sources.sources.len() < 3 {
+        return Err(ProjectError::InvalidState(
+            "transcription benchmark requires at least three immutable source clips".into(),
+        ));
+    }
+    if dry_run {
+        return Ok(PipelineArtifact {
+            status: "dry-run",
+            path: project_path.join("analysis/bench/transcribe/report.json"),
+            count: sources.sources.len(),
+        });
+    }
+    transcribe_project(project_path, primary, false)?;
+    transcribe_project(project_path, verifier, false)?;
+    let mut total_primary_non_clean = 0_usize;
+    let mut total_verifier_non_clean = 0_usize;
+    let mut total_primary_unmatched = 0_usize;
+    let mut total_verifier_unmatched = 0_usize;
+    let mut clips = Vec::new();
+    for source in &sources.sources {
+        let primary_path =
+            project_path.join(format!("analysis/transcripts/{}.json", source.source_id));
+        let verifier_path = project_path.join(format!(
+            "analysis/transcripts/{}.whisperx.json",
+            source.source_id
+        ));
+        let primary_transcript: Transcript = read_json(&primary_path)?;
+        let verifier_transcript: Transcript = read_json(&verifier_path)?;
+        let alignment = align_words(&primary_transcript.words, &verifier_transcript.words);
+        let primary_checks = aligned_boundary_checks(
+            &primary_transcript.words,
+            &verifier_transcript.words,
+            &alignment.matches,
+            true,
+            boundaries,
+            padding_ms,
+        );
+        let verifier_checks = aligned_boundary_checks(
+            &verifier_transcript.words,
+            &primary_transcript.words,
+            &alignment.matches,
+            false,
+            boundaries,
+            padding_ms,
+        );
+        let primary_non_clean = primary_checks
+            .iter()
+            .filter(|check| check["status"] != "clean")
+            .count();
+        let verifier_non_clean = verifier_checks
+            .iter()
+            .filter(|check| check["status"] != "clean")
+            .count();
+        total_primary_non_clean += primary_non_clean;
+        total_verifier_non_clean += verifier_non_clean;
+        total_primary_unmatched += alignment.unmatched_primary.len();
+        total_verifier_unmatched += alignment.unmatched_verifier.len();
+        clips.push(serde_json::json!({
+            "source_id": source.source_id,
+            "source_path": source.path,
+            "source_blake3": source.blake3,
+            "primary_transcript": primary_path.strip_prefix(project_path).unwrap_or(&primary_path),
+            "verifier_transcript": verifier_path.strip_prefix(project_path).unwrap_or(&verifier_path),
+            "primary_checks": primary_checks,
+            "verifier_checks": verifier_checks,
+            "counts": {
+                "primary_non_clean": primary_non_clean,
+                "verifier_non_clean": verifier_non_clean,
+                "primary_unmatched_words": alignment.unmatched_primary.len(),
+                "verifier_unmatched_words": alignment.unmatched_verifier.len()
+            }
+        }));
+    }
+    let primary_eligible = total_primary_non_clean == 0 && total_primary_unmatched == 0;
+    let verifier_eligible = total_verifier_non_clean == 0 && total_verifier_unmatched == 0;
+    let decision = benchmark_decision(primary, verifier, primary_eligible, verifier_eligible);
+    let path = project_path.join("analysis/bench/transcribe/report.json");
+    write_json_atomic(
+        &path,
+        &serde_json::json!({
+            "schema_version": SCHEMA_VERSION,
+            "kind": "transcription_benchmark",
+            "primary": primary,
+            "verifier": verifier,
+            "boundaries_requested": boundaries,
+            "padding_ms": padding_ms,
+            "clips": clips,
+            "summary": {
+                "primary_non_clean": total_primary_non_clean,
+                "verifier_non_clean": total_verifier_non_clean,
+                "primary_unmatched_words": total_primary_unmatched,
+                "verifier_unmatched_words": total_verifier_unmatched,
+                "primary_eligible": primary_eligible,
+                "verifier_eligible": verifier_eligible
+            },
+            "decision": decision
+        }),
+    )?;
+    if decision == "unresolved" {
+        return Err(ProjectError::InvalidState(format!(
+            "transcription benchmark is unresolved; inspect {}",
+            path.display()
+        )));
+    }
+    Ok(PipelineArtifact {
+        status: "created",
+        path,
+        count: sources.sources.len(),
+    })
+}
+
+fn benchmark_decision<'a>(
+    primary: &'a str,
+    verifier: &'a str,
+    primary_eligible: bool,
+    verifier_eligible: bool,
+) -> &'a str {
+    match (primary_eligible, verifier_eligible) {
+        (true, false) => primary,
+        (false, true) => verifier,
+        (true, true) | (false, false) => "unresolved",
+    }
+}
+
+#[derive(Debug)]
+struct Alignment {
+    matches: Vec<(usize, usize)>,
+    unmatched_primary: Vec<usize>,
+    unmatched_verifier: Vec<usize>,
+}
+
+fn token_key(text: &str) -> String {
+    let compact: String = text
+        .trim()
+        .to_lowercase()
+        .chars()
+        .filter(|character| character.is_alphanumeric())
+        .collect();
+    if compact.is_empty() {
+        text.trim().to_lowercase()
+    } else {
+        compact
+    }
+}
+
+fn align_words(primary: &[Word], verifier: &[Word]) -> Alignment {
+    let mut matrix = vec![vec![0_usize; verifier.len() + 1]; primary.len() + 1];
+    for primary_index in (0..primary.len()).rev() {
+        for verifier_index in (0..verifier.len()).rev() {
+            matrix[primary_index][verifier_index] = if token_key(&primary[primary_index].text)
+                == token_key(&verifier[verifier_index].text)
+            {
+                matrix[primary_index + 1][verifier_index + 1] + 1
+            } else {
+                matrix[primary_index + 1][verifier_index]
+                    .max(matrix[primary_index][verifier_index + 1])
+            };
+        }
+    }
+    let mut matches = Vec::new();
+    let mut unmatched_primary = Vec::new();
+    let mut unmatched_verifier = Vec::new();
+    let (mut primary_index, mut verifier_index) = (0, 0);
+    while primary_index < primary.len() && verifier_index < verifier.len() {
+        if token_key(&primary[primary_index].text) == token_key(&verifier[verifier_index].text) {
+            matches.push((primary_index, verifier_index));
+            primary_index += 1;
+            verifier_index += 1;
+        } else if matrix[primary_index + 1][verifier_index]
+            >= matrix[primary_index][verifier_index + 1]
+        {
+            unmatched_primary.push(primary_index);
+            primary_index += 1;
+        } else {
+            unmatched_verifier.push(verifier_index);
+            verifier_index += 1;
+        }
+    }
+    unmatched_primary.extend(primary_index..primary.len());
+    unmatched_verifier.extend(verifier_index..verifier.len());
+    Alignment {
+        matches,
+        unmatched_primary,
+        unmatched_verifier,
+    }
+}
+
+fn aligned_boundary_checks(
+    candidate: &[Word],
+    reference: &[Word],
+    matches: &[(usize, usize)],
+    candidate_is_primary: bool,
+    limit: usize,
+    padding_ms: i64,
+) -> Vec<serde_json::Value> {
+    matches
+        .iter()
+        .flat_map(|(primary, verifier)| {
+            let (candidate_index, reference_index) = if candidate_is_primary {
+                (*primary, *verifier)
+            } else {
+                (*verifier, *primary)
+            };
+            [
+                (candidate_index, reference_index, "start"),
+                (candidate_index, reference_index, "end"),
+            ]
+        })
+        .take(limit)
+        .map(|(candidate_index, reference_index, side)| {
+            let candidate_word = &candidate[candidate_index];
+            let reference_word = &reference[reference_index];
+            let boundary_ms = if side == "start" {
+                candidate_word.start_ms
+            } else {
+                candidate_word.end_ms
+            };
+            let expected = if side == "start" {
+                reference_word.start_ms
+            } else {
+                reference_word.end_ms
+            };
+            let status = if (boundary_ms - expected).abs() <= padding_ms {
+                "clean"
+            } else if boundary_ms > reference_word.start_ms + padding_ms
+                && boundary_ms < reference_word.end_ms - padding_ms
+            {
+                "clipped_word"
+            } else if side == "start" && boundary_ms < reference_word.start_ms {
+                "early_start"
+            } else if side == "start" {
+                "late_start"
+            } else {
+                "late_end"
+            };
+            serde_json::json!({
+                "side": side,
+                "boundary_ms": boundary_ms,
+                "word_id": candidate_word.id,
+                "word_text": candidate_word.text,
+                "status": status,
+                "matched_word_id": reference_word.id,
+                "matched_word_start_ms": reference_word.start_ms,
+                "matched_word_end_ms": reference_word.end_ms,
+                "delta_ms": boundary_ms - expected
+            })
+        })
+        .collect()
 }
 
 pub fn build_candidates(
@@ -376,39 +791,70 @@ pub fn build_candidates(
 }
 
 pub fn analyze_local(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, ProjectError> {
-    let transcripts = load_transcripts(project_path)?;
+    let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
+    if dry_run {
+        return Ok(PipelineArtifact {
+            status: "dry-run",
+            path: project_path.join("analysis"),
+            count: sources.sources.len(),
+        });
+    }
+    let provider = SileroVadProvider::discover()?;
     let mut region_count = 0;
-    for transcript in &transcripts {
-        let regions = group_words(&transcript.words, 450)
-            .into_iter()
-            .filter_map(|group| {
-                let first = group.first()?;
-                let last = group.last()?;
-                Some(VadRegion {
-                    start_ms: first.start_ms,
-                    end_ms: last.end_ms,
-                    mean_probability: 1.0,
-                })
+    for source in &sources.sources {
+        let audio_path = project_path.join(format!("cache/audio/{}-16k.f32", source.source_id));
+        extract_audio_f32(Path::new(&source.path), &audio_path, 16_000)?;
+        let signal = provider
+            .analyze(&VadRequest {
+                source_id: source.source_id.clone(),
+                audio_path,
+                sample_rate: 16_000,
+                threshold: 0.5,
             })
-            .collect::<Vec<_>>();
-        region_count += regions.len();
-        if !dry_run {
-            write_json_atomic(
-                &project_path.join(format!("analysis/vad-{}.json", transcript.source_id)),
-                &VadSignal {
-                    schema_version: SCHEMA_VERSION,
-                    source_id: transcript.source_id.clone(),
-                    sample_rate: 16_000,
-                    provider: "heardright-native-word-activity".into(),
-                    regions,
-                },
-            )?;
-        }
+            .map_err(|error| ProjectError::InvalidState(error.to_string()))?;
+        region_count += signal.regions.len();
+        write_json_atomic(
+            &project_path.join(format!("analysis/vad-{}.json", source.source_id)),
+            &signal,
+        )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
         path: project_path.join("analysis"),
         count: region_count,
+    })
+}
+
+pub fn reframe_plan(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, ProjectError> {
+    let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
+    if sources.sources.is_empty() {
+        return Err(ProjectError::NoSources);
+    }
+    let path = project_path.join("analysis/reframe-plan.json");
+    if !dry_run {
+        let sources = sources
+            .sources
+            .iter()
+            .map(|source| {
+                serde_json::json!({
+                    "source_id": source.source_id,
+                    "input_width": source.width,
+                    "input_height": source.height,
+                    "target_aspect": "9:16",
+                    "strategy": "center_crop_fallback",
+                    "requires_review": true
+                })
+            })
+            .collect::<Vec<_>>();
+        write_json_atomic(
+            &path,
+            &serde_json::json!({"schema_version": SCHEMA_VERSION, "sources": sources}),
+        )?;
+    }
+    Ok(PipelineArtifact {
+        status: if dry_run { "dry-run" } else { "created" },
+        path,
+        count: sources.sources.len(),
     })
 }
 
@@ -427,38 +873,48 @@ pub fn build_cut_plan(
         }
     };
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
-    let transcripts = load_transcripts(project_path)?;
+    let candidates: CandidateManifest = read_json(&project_path.join("edit/candidates.json"))?;
+    if candidates.candidates.is_empty() {
+        return Err(ProjectError::InvalidState(
+            "candidate pass must produce at least one candidate before rendering".into(),
+        ));
+    }
     let mut segments = Vec::new();
-    for transcript in &transcripts {
-        for words in group_words(&transcript.words, gap_threshold_ms).into_iter() {
-            let first = words.first().expect("nonempty word group");
-            let last = words.last().expect("nonempty word group");
-            let source_duration = sources
-                .sources
-                .iter()
-                .find(|source| source.source_id == transcript.source_id)
-                .and_then(|source| source.duration_ms);
-            let start = first.start_ms.saturating_sub(head_margin_ms).max(0);
-            let mut end = last.end_ms.saturating_add(tail_margin_ms);
+    for candidate in candidates
+        .candidates
+        .iter()
+        .filter(|candidate| candidate.drop_reason.is_none())
+    {
+        let source_duration = sources
+            .sources
+            .iter()
+            .find(|source| source.source_id == candidate.source_id)
+            .and_then(|source| source.duration_ms);
+        let start = candidate.start_ms.saturating_sub(head_margin_ms).max(0);
+        let mut end = candidate.end_ms.saturating_add(tail_margin_ms);
+        if let Some(duration) = source_duration {
+            end = end.min(duration);
+        }
+        if end - start < 600 {
+            end = start.saturating_add(600);
             if let Some(duration) = source_duration {
                 end = end.min(duration);
             }
-            if end - start < 600 {
-                end = start.saturating_add(600);
-                if let Some(duration) = source_duration {
-                    end = end.min(duration);
-                }
-            }
-            if end > start {
-                segments.push(CutSegment {
-                    id: format!("segment-{:03}", segments.len() + 1),
-                    source_id: transcript.source_id.clone(),
-                    source_start_ms: start,
-                    source_end_ms: end,
-                    reason: variant.into(),
-                });
-            }
         }
+        if end > start {
+            segments.push(CutSegment {
+                id: format!("segment-{:03}", segments.len() + 1),
+                source_id: candidate.source_id.clone(),
+                source_start_ms: start,
+                source_end_ms: end,
+                reason: format!("{}:{}", variant, candidate.beat_label),
+            });
+        }
+    }
+    if segments.is_empty() {
+        return Err(ProjectError::InvalidState(
+            "all editorial candidates are dropped; no cut plan can be rendered".into(),
+        ));
     }
     let path = project_path.join(format!("edit/cut-plan-{variant}.json"));
     if !dry_run {
@@ -595,30 +1051,51 @@ pub fn render_edit(
     let plan_path = project_path.join(format!("edit/cut-plan-{variant}.json"));
     let plan: CutPlan = read_json(&plan_path)?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
-    let source = sources.sources.first().ok_or(ProjectError::NoSources)?;
-    if plan
-        .segments
-        .iter()
-        .any(|segment| segment.source_id != source.source_id)
-    {
-        return Err(ProjectError::InvalidState(
-            "rough render currently requires one registered source".into(),
-        ));
-    }
     let output = project_path.join(format!("render/rough-cuts/{variant}.mp4"));
     if !dry_run {
-        render_segments(
-            Path::new(&source.path),
-            &plan
+        if sources.sources.len() == 1 {
+            let source = sources.sources.first().expect("sources are nonempty");
+            render_segments(
+                Path::new(&source.path),
+                &plan
+                    .segments
+                    .iter()
+                    .map(|segment| RenderSegment {
+                        start_ms: segment.source_start_ms,
+                        end_ms: segment.source_end_ms,
+                    })
+                    .collect::<Vec<_>>(),
+                &output,
+            )?;
+        } else {
+            let inputs = sources
+                .sources
+                .iter()
+                .map(|source| PathBuf::from(&source.path))
+                .collect::<Vec<_>>();
+            let segments = plan
                 .segments
                 .iter()
-                .map(|segment| RenderSegment {
-                    start_ms: segment.source_start_ms,
-                    end_ms: segment.source_end_ms,
+                .map(|segment| {
+                    let input_index = sources
+                        .sources
+                        .iter()
+                        .position(|source| source.source_id == segment.source_id)
+                        .ok_or_else(|| {
+                            ProjectError::InvalidState(format!(
+                                "cut segment {} references a missing source",
+                                segment.id
+                            ))
+                        })?;
+                    Ok(SourceRenderSegment {
+                        input_index,
+                        start_ms: segment.source_start_ms,
+                        end_ms: segment.source_end_ms,
+                    })
                 })
-                .collect::<Vec<_>>(),
-            &output,
-        )?;
+                .collect::<Result<Vec<_>, ProjectError>>()?;
+            render_source_segments(&inputs, &segments, &output)?;
+        }
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
@@ -686,11 +1163,26 @@ pub fn render_final(
     preset: &str,
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
+    let manifest = read_project_manifest(&project_path.join("project.json"))?;
+    let output_preset = manifest
+        .outputs
+        .iter()
+        .find(|candidate| candidate.id == preset)
+        .ok_or_else(|| ProjectError::InvalidState(format!("unknown output preset {preset}")))?;
     let input = project_path.join("render/rough-cuts/natural.mp4");
     let captions = project_path.join("edit/captions.srt");
     let output = project_path.join(format!("render/finals/{preset}.mp4"));
+    if output_preset.aspect == "9:16" && !project_path.join("analysis/reframe-plan.json").is_file()
+    {
+        return Err(ProjectError::InvalidState(
+            "vertical final rendering requires `videoctl reframe plan <project>` first".into(),
+        ));
+    }
     if !dry_run {
-        render_subtitled(&input, &captions, &output)?;
+        let base = project_path.join(format!("render/finals/.{preset}-base.mp4"));
+        render_to_preset(&input, &base, output_preset.width, output_preset.height)?;
+        render_subtitled(&base, &captions, &output)?;
+        fs::remove_file(base)?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
@@ -709,13 +1201,59 @@ pub fn qa_run(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, Pr
         }
     }
     let output = project_path.join("render/finals/youtube.mp4");
-    let fallback = project_path.join("render/rough-cuts/natural.mp4");
-    let media = if output.is_file() { &output } else { &fallback };
+    let benchmark = project_path.join("analysis/bench/transcribe/report.json");
+    let manifest = read_project_manifest(&project_path.join("project.json"))?;
+    let preset = manifest
+        .outputs
+        .iter()
+        .find(|preset| preset.id == "youtube")
+        .ok_or_else(|| {
+            ProjectError::InvalidState("project is missing the youtube preset".into())
+        })?;
+    if !output.is_file() {
+        return Err(ProjectError::InvalidState(format!(
+            "QA requires an explicit final render: {}",
+            output.display()
+        )));
+    }
+    let benchmark_report: serde_json::Value = read_json(&benchmark).map_err(|_| {
+        ProjectError::InvalidState(
+            "QA requires a resolved `videoctl bench transcribe <project>` report".into(),
+        )
+    })?;
+    if benchmark_report
+        .get("decision")
+        .and_then(serde_json::Value::as_str)
+        == Some("unresolved")
+    {
+        return Err(ProjectError::InvalidState(
+            "QA rejects an unresolved transcription benchmark".into(),
+        ));
+    }
+    let media = &output;
     if !dry_run {
         let metadata = probe(media)?;
         if metadata.duration_ms.unwrap_or(0) <= 0 {
             return Err(ProjectError::InvalidState(
                 "rendered output has no duration".into(),
+            ));
+        }
+        if !metadata.has_video || !metadata.has_audio {
+            return Err(ProjectError::InvalidState(
+                "final output must contain both video and audio streams".into(),
+            ));
+        }
+        if metadata.width != Some(preset.width) || metadata.height != Some(preset.height) {
+            return Err(ProjectError::InvalidState(format!(
+                "final output dimensions must be {}x{}",
+                preset.width, preset.height
+            )));
+        }
+        let captions = project_path.join("edit/captions.srt");
+        let evidence = project_path.join("analysis/evidence/manifest.json");
+        if !captions.is_file() || !evidence.is_file() {
+            return Err(ProjectError::InvalidState(
+                "QA requires generated captions and visual evidence".into(),
             ));
         }
         write_json_atomic(
@@ -725,7 +1263,32 @@ pub fn qa_run(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, Pr
                 "status": "pass",
                 "output": media,
                 "duration_ms": metadata.duration_ms,
-                "source_hashes": "unchanged"
+                "source_hashes": "unchanged",
+                "checks": [{
+                    "id": "final.explicit",
+                    "status": "pass",
+                    "evidence": media
+                }, {
+                    "id": "transcript.benchmark",
+                    "status": "pass",
+                    "evidence": benchmark
+                }, {
+                    "id": "media.duration",
+                    "status": "pass",
+                    "evidence": metadata.duration_ms
+                }, {
+                    "id": "media.streams",
+                    "status": "pass",
+                    "evidence": {"video": metadata.has_video, "audio": metadata.has_audio}
+                }, {
+                    "id": "media.dimensions",
+                    "status": "pass",
+                    "evidence": {"width": metadata.width, "height": metadata.height}
+                }, {
+                    "id": "captions.source_and_evidence",
+                    "status": "pass",
+                    "evidence": {"captions": captions, "evidence": evidence}
+                }]
             }),
         )?;
     }
@@ -740,20 +1303,48 @@ pub fn evidence_build(
     project_path: &Path,
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
-    let transcripts = load_transcripts(project_path)?;
     let candidates: CandidateManifest = read_json(&project_path.join("edit/candidates.json"))?;
-    let mut body = String::from("# CutRight evidence\n\n");
-    body.push_str(&format!("Provider: `{}`\n\n", transcripts[0].provider));
-    body.push_str("## Candidate beats\n\n");
-    for candidate in &candidates.candidates {
-        body.push_str(&format!(
-            "- `{}` {}–{}: {}\n",
-            candidate.beat_label, candidate.start_ms, candidate.end_ms, candidate.text
-        ));
-    }
-    let path = project_path.join("analysis/evidence.md");
+    let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
+    let path = project_path.join("analysis/evidence/manifest.json");
     if !dry_run {
-        fs::write(&path, body)?;
+        let boundary_dir = project_path.join("analysis/evidence/boundaries");
+        let mut artifacts = Vec::new();
+        for candidate in &candidates.candidates {
+            let source = sources
+                .sources
+                .iter()
+                .find(|source| source.source_id == candidate.source_id)
+                .ok_or_else(|| {
+                    ProjectError::InvalidState(format!(
+                        "candidate {} references a missing source",
+                        candidate.id
+                    ))
+                })?;
+            for (edge, timestamp_ms) in
+                [("before", candidate.start_ms), ("after", candidate.end_ms)]
+            {
+                let frame = boundary_dir.join(format!("{}-{edge}.jpg", candidate.id));
+                extract_frame(Path::new(&source.path), timestamp_ms, &frame)?;
+                artifacts.push(serde_json::json!({
+                    "kind": "boundary_frame",
+                    "candidate_id": candidate.id,
+                    "edge": edge,
+                    "source_id": source.source_id,
+                    "timestamp_ms": timestamp_ms,
+                    "path": frame.strip_prefix(project_path).unwrap_or(&frame)
+                }));
+            }
+        }
+        let waveform = project_path.join("analysis/evidence/waveforms/natural.png");
+        render_waveform(
+            &project_path.join("render/rough-cuts/natural.mp4"),
+            &waveform,
+        )?;
+        artifacts.push(serde_json::json!({"kind": "waveform", "path": waveform.strip_prefix(project_path).unwrap_or(&waveform)}));
+        write_json_atomic(
+            &path,
+            &serde_json::json!({"schema_version": SCHEMA_VERSION, "artifacts": artifacts}),
+        )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
@@ -854,12 +1445,20 @@ pub fn render_slot(
             "unknown finish slot {slot_id}"
         )));
     }
-    let path = project_path.join(format!("render/slots/{slot_id}.json"));
+    let path = project_path.join(format!("render/slots/{slot_id}.mp4"));
     if !dry_run {
-        write_json_atomic(
-            &path,
-            &serde_json::json!({ "slot_id": slot_id, "status": "rendered" }),
-        )?;
+        match slot_id {
+            "captions" => render_subtitled(
+                &project_path.join("render/rough-cuts/natural.mp4"),
+                &project_path.join("edit/captions.srt"),
+                &path,
+            )?,
+            other => {
+                return Err(ProjectError::InvalidState(format!(
+                    "finish slot {other} has no registered renderer"
+                )))
+            }
+        }
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
@@ -873,17 +1472,27 @@ pub fn package_social(
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
     let final_video = project_path.join("render/finals/youtube.mp4");
+    let vertical_video = project_path.join("render/finals/reels.mp4");
     let caption_file = project_path.join("edit/captions.srt");
     let video_export = project_path.join("exports/youtube/youtube.mp4");
+    let vertical_export = project_path.join("exports/vertical/reels.mp4");
     let caption_export = project_path.join("exports/captions/youtube.srt");
+    let vertical_caption_export = project_path.join("exports/captions/reels.srt");
     if !dry_run {
+        if !final_video.is_file() || !vertical_video.is_file() || !caption_file.is_file() {
+            return Err(ProjectError::InvalidState(
+                "social packaging requires YouTube, vertical, and caption artifacts".into(),
+            ));
+        }
         fs::copy(&final_video, &video_export)?;
+        fs::copy(&vertical_video, &vertical_export)?;
         fs::copy(&caption_file, &caption_export)?;
+        fs::copy(&caption_file, &vertical_caption_export)?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
         path: video_export,
-        count: 2,
+        count: 4,
     })
 }
 
@@ -928,7 +1537,13 @@ fn load_transcripts(project_path: &Path) -> Result<Vec<Transcript>, ProjectError
         fs::read_dir(directory)?
             .filter_map(Result::ok)
             .map(|entry| entry.path())
-            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("json"))
+            .filter(|path| {
+                path.extension().and_then(|ext| ext.to_str()) == Some("json")
+                    && !path
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .is_some_and(|name| name.contains(".whisperx."))
+            })
             .collect::<Vec<_>>()
     } else {
         vec![project_path.join("analysis/transcript.json")]
@@ -1027,6 +1642,9 @@ fn read_project_manifest(path: &Path) -> Result<ProjectManifest, ProjectError> {
 }
 
 fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<(), ProjectError> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
     let bytes = serde_json::to_vec_pretty(value)?;
     let temporary = path.with_extension(format!("json.tmp-{}", std::process::id()));
     let mut file = fs::File::create(&temporary)?;
@@ -1051,6 +1669,7 @@ mod tests {
         assert_eq!(first.status, "created");
         assert_eq!(second.status, "existing");
         assert_eq!(manifest_before, manifest_after);
+        assert!(temp.path().join("analysis/bench/transcribe").is_dir());
     }
 
     #[test]
@@ -1075,6 +1694,179 @@ mod tests {
         assert_eq!(
             hash_file(&source).unwrap(),
             blake3::hash(b"cutright").to_hex().to_string()
+        );
+    }
+
+    #[test]
+    fn transcription_provenance_writes_raw_response_and_envelope() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        let source = SourceEntry {
+            source_id: "cam-a-001".into(),
+            path: "sources/cam-a-001.mov".into(),
+            blake3: "source-hash".into(),
+            duration_ms: Some(1_000),
+            width: Some(1920),
+            height: Some(1080),
+            rotation_degrees: Some(0),
+            is_hdr: Some(false),
+            timebase: None,
+        };
+        let transcript_path = temp.path().join("analysis/transcripts/cam-a-001.json");
+        write_json_atomic(
+            &transcript_path,
+            &Transcript {
+                schema_version: SCHEMA_VERSION,
+                provider: "heardright-parakeet-tdt".into(),
+                source_id: source.source_id.clone(),
+                language: "en".into(),
+                words: Vec::new(),
+                events: Vec::new(),
+            },
+        )
+        .unwrap();
+        let raw = serde_json::json!({ "engine": "heardright", "words": [{ "text": "hello" }] });
+        write_transcription_provenance(
+            temp.path(),
+            &source,
+            &transcript_path,
+            TranscriptionProvenance {
+                raw_response: &raw,
+                provider: "heardright-parakeet-tdt",
+                provider_model: "parakeet-tdt-v3-coreml",
+                warnings: &["fixture warning".into()],
+                provider_label: "heardright",
+            },
+        )
+        .unwrap();
+        let stored_raw: serde_json::Value = read_json(
+            &temp
+                .path()
+                .join("cache/provider-responses/cam-a-001.heardright.raw.json"),
+        )
+        .unwrap();
+        assert_eq!(stored_raw, raw);
+        let envelope: ProviderResponseEnvelope = read_json(
+            &temp
+                .path()
+                .join("analysis/transcripts/cam-a-001.heardright.envelope.json"),
+        )
+        .unwrap();
+        assert_eq!(envelope.provider, "heardright-parakeet-tdt");
+        assert_eq!(envelope.provider_model, "parakeet-tdt-v3-coreml");
+        assert_eq!(
+            envelope.raw_response_path,
+            "cache/provider-responses/cam-a-001.heardright.raw.json"
+        );
+        assert_eq!(
+            envelope.normalised_output_path,
+            "analysis/transcripts/cam-a-001.json"
+        );
+        assert!(!envelope.request_hash.is_empty());
+        assert_eq!(envelope.warnings, vec!["fixture warning"]);
+        let cached = load_cached_transcription(
+            temp.path(),
+            &source,
+            &transcript_path,
+            "heardright-parakeet-tdt",
+            "parakeet-tdt-v3-coreml",
+            "heardright",
+        )
+        .unwrap()
+        .expect("matching provenance should be reusable");
+        assert_eq!(cached.source_id, source.source_id);
+    }
+
+    #[test]
+    fn benchmark_marks_only_inter_word_boundaries_as_clean() {
+        let candidate = vec![Word {
+            id: "candidate".into(),
+            text: "hello".into(),
+            start_ms: 1_000,
+            end_ms: 1_500,
+            confidence: 1.0,
+            speaker: None,
+            kind: "word".into(),
+        }];
+        let reference = vec![Word {
+            id: "reference".into(),
+            text: "hello".into(),
+            start_ms: 1_030,
+            end_ms: 1_470,
+            confidence: 0.0,
+            speaker: None,
+            kind: "word".into(),
+        }];
+        let alignment = align_words(&candidate, &reference);
+        let checks =
+            aligned_boundary_checks(&candidate, &reference, &alignment.matches, true, 2, 40);
+        assert_eq!(checks[0]["status"], "clean");
+        assert_eq!(checks[1]["status"], "clean");
+        let clipped_candidate = vec![Word {
+            start_ms: 1_200,
+            ..candidate[0].clone()
+        }];
+        let clipped_alignment = align_words(&clipped_candidate, &reference);
+        let clipped = aligned_boundary_checks(
+            &clipped_candidate,
+            &reference,
+            &clipped_alignment.matches,
+            true,
+            1,
+            40,
+        );
+        assert_eq!(clipped[0]["status"], "clipped_word");
+        let repeated = vec![
+            Word {
+                text: "go,".into(),
+                ..candidate[0].clone()
+            },
+            Word {
+                text: "go".into(),
+                ..candidate[0].clone()
+            },
+            Word {
+                text: "home".into(),
+                ..candidate[0].clone()
+            },
+        ];
+        let repeated_verifier = vec![
+            Word {
+                text: "go".into(),
+                ..reference[0].clone()
+            },
+            Word {
+                text: "go".into(),
+                ..reference[0].clone()
+            },
+            Word {
+                text: "home.".into(),
+                ..reference[0].clone()
+            },
+        ];
+        let repeated_alignment = align_words(&repeated, &repeated_verifier);
+        assert_eq!(repeated_alignment.matches.len(), 3);
+        assert!(repeated_alignment.unmatched_primary.is_empty());
+        assert!(repeated_alignment.unmatched_verifier.is_empty());
+    }
+
+    #[test]
+    fn transcription_benchmark_requires_a_decisive_provider() {
+        assert_eq!(
+            benchmark_decision("heardright", "whisperx", true, false),
+            "heardright"
+        );
+        assert_eq!(
+            benchmark_decision("heardright", "whisperx", false, true),
+            "whisperx"
+        );
+        assert_eq!(
+            benchmark_decision("heardright", "whisperx", true, true),
+            "unresolved"
+        );
+        assert_eq!(
+            benchmark_decision("heardright", "whisperx", false, false),
+            "unresolved"
         );
     }
 }

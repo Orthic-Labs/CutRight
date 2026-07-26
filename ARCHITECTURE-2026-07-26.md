@@ -27,7 +27,7 @@ flowchart TD
     B --> C[FFmpeg / FFprobe\nmedia execution]
     B --> D[Swift Vision sidecar\nfaces · hands · OCR · saliency]
     B --> E[Node renderers\nRemotion · HyperFrames · libass]
-    B --> F[Model workers\nScrapeRight Parakeet TDT · WhisperX · Silero ONNX]
+    B --> F[Model workers\nHeardRight Parakeet TDT · WhisperX · Silero CoreML]
     B --> G[Optional cloud adapters\nGemini · Twelve Labs\noff by default · budgeted]
     B --> H[Tauri review UI\nrough cut · finish · QA workspaces]
     H -->|decisions.jsonl| B
@@ -69,9 +69,9 @@ The `content` router (`tools/skills/content/SKILL.md`) gets one new route row: *
 
 Ownership boundaries (unchanged from Saul §7.2): Social owns platform/hook/CTA/packaging, Writing owns scripts and on-screen wording, Designer owns thumbnails and static layouts, Motion owns cinematic motion language, the Remotion specialist owns Remotion correctness, demo-recorder stays a separate lane, `/brand <venture>` loads before any content work.
 
-## 1.4 Transcription — ScrapeRight Parakeet TDT primary, WhisperX as the alignment verifier
+## 1.4 Transcription — HeardRight Parakeet TDT primary, WhisperX as the alignment verifier
 
-This is the one place Adrian's workspace is genuinely ahead of the field: ScrapeRight already ships a **locked, local, agent-usable Parakeet TDT v3 path with a CoreML bundle on this Mac** (`scraperight/models/asr/parakeet-tdt-v3/`, engine CLI documented in `scraperight/docs/AGENT-ONBOARDING.md` + `docs/SKILL.md`, bundled ffmpeg/yt-dlp). The content skill already declares ScrapeRight the transcription source of truth.
+This is the one place Adrian's workspace is genuinely ahead of the field: HeardRight already ships a **locked, local, agent-usable Parakeet TDT v3 path with a CoreML bundle on this Mac** (`heardright/model_registry/coreml/parakeet-tdt-v3/`, through `heardright-engine`). It is the local dictation pipeline Adrian has explicitly designated as locked and loaded for CutRight.
 
 But the cutaway skill's hardest-won lesson (its "dead ends" section) is that **cut placement lives or dies on word-edge accuracy**, and that plain ASR word timestamps drift around pauses. Parakeet's TDT decoder emits native word timestamps that are architecturally better than Whisper's (duration-transducer, not attention heuristics) — but "better" is not "verified on Adrian's footage."
 
@@ -79,7 +79,7 @@ But the cutaway skill's hardest-won lesson (its "dead ends" section) is that **c
 
 | Role | Provider | Why |
 |---|---|---|
-| Primary transcript + word timestamps | **ScrapeRight `scraperight-engine` (Parakeet TDT v3, CoreML)** | Already local, already locked, zero cost, agent-onboarded |
+| Primary transcript + word timestamps | **HeardRight `heardright-engine` (Parakeet TDT v3, CoreML)** | Already local, already locked, zero cost, native timed words |
 | Alignment verifier / fallback | **WhisperX** (Python 3.11 venv, wav2vec2 phoneme forced alignment) | The cutaway skill's proven word-edge engine; sub-100 ms alignment |
 | Cloud fallback (optional) | ElevenLabs Scribe or AssemblyAI behind the `TranscriptionProvider` trait | Only when local is unavailable; off by default |
 
@@ -87,7 +87,7 @@ Phase 1 includes `videoctl bench transcribe`: run both local providers on 3 real
 
 ## 1.5 Silero VAD — yes, as Saul specified
 
-ONNX runtime from Rust, frame probabilities stored on the original timebase, profiles calibrated on Adrian's footage, never a destructive pre-edit. Saul §2.2/§2.4 stands unmodified — it is the single most important architectural correction to the Perplexity/Gemini drafts.
+The macOS implementation uses the shipped Silero CoreML bundle through a tiny native worker: recurrent frame probabilities are stored on the original timebase, profiles are calibrated on Adrian's footage, and VAD is never a destructive pre-edit. Saul §2.2/§2.4 stands unmodified — it is the single most important architectural correction to the Perplexity/Gemini drafts.
 
 ## 1.6 Gemini and Twelve Labs — optional, role-separated, current API facts
 

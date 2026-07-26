@@ -1,10 +1,16 @@
 # CutRight — Agentic Video Editing Engine
 
-The local headless pipeline is runnable end to end: Rust owns canonical project JSON, timestamp
+The local headless pipeline has a verified media path: Rust owns canonical project JSON, timestamp
 arithmetic, typed FFprobe/FFmpeg boundaries, BLAKE3 source registration, immutable inputs, and the
-JSON-only `videoctl` CLI. Local transcription routes through HeardRight's locked Parakeet TDT CoreML
-sidecar and preserves its native timed words through cut planning, remapping, captions, renders, QA,
-social packaging, and OTIO export.
+JSON-only `videoctl` CLI. HeardRight's locked Parakeet TDT CoreML path supplies native timed words;
+Silero supplies real speech probabilities; WhisperX is available as an independent word-edge verifier.
+The current pipeline produces candidate-driven rough cuts, burned-caption 16:9 and 9:16 MP4s, visual
+boundary/waveform evidence, explicit-final QA, and YouTube/vertical social packages.
+
+The architecture is still under active implementation. Three real immutable clips are required before
+`videoctl bench transcribe` can authorize either provider for destructive word-edge cuts. The Tauri
+review studio, effects/craft library, color/loudness chain, production OTIO interchange, and full
+multi-source rendering remain tracked architecture phases rather than shipped claims.
 
 ## Local pipeline quick start
 
@@ -15,12 +21,20 @@ cargo run -p videoctl -- project init /path/to/MyVideo.video-project
 cargo run -p videoctl -- ingest /path/to/MyVideo.video-project /path/to/clip.mp4
 cargo run -p videoctl -- transcribe /path/to/MyVideo.video-project --provider heardright
 cargo run -p videoctl -- analyze local /path/to/MyVideo.video-project
+cargo run -p videoctl -- bench transcribe /path/to/MyVideo.video-project
 cargo run -p videoctl -- edit candidates /path/to/MyVideo.video-project
 cargo run -p videoctl -- edit render /path/to/MyVideo.video-project --variant natural
 cargo run -p videoctl -- transcript remap /path/to/MyVideo.video-project
 cargo run -p videoctl -- render final /path/to/MyVideo.video-project --preset youtube
 cargo run -p videoctl -- qa /path/to/MyVideo.video-project
+cargo run -p videoctl -- render final /path/to/MyVideo.video-project --preset reels
+cargo run -p videoctl -- evidence build /path/to/MyVideo.video-project
+cargo run -p videoctl -- package social /path/to/MyVideo.video-project
 ```
+
+`bench transcribe` requires at least three distinct immutable source clips and is intentionally a
+QA prerequisite: without a resolved HeardRight-versus-WhisperX word-edge decision, CutRight refuses
+to call a final render technically approved.
 
 `videoctl project init` is idempotent, creates the canonical package layout, and never overwrites an
 existing manifest or source file. Set `CUTRIGHT_HEARDRIGHT_ENGINE` and
@@ -31,8 +45,9 @@ existing manifest or source file. Set `CUTRIGHT_HEARDRIGHT_ENGINE` and
 The existing `cutaway/` and `finish/` folders remain bridge-period creator skills for visual styling;
 the CutRight control plane owns the reproducible media and timeline path.
 
-The local E2E smoke fixture produced a Parakeet TDT transcript, natural and tight rough cuts, a final
-MP4, captions, QA report, social package, and OTIO export under one project directory.
+The local E2E smoke fixture verifies Parakeet and WhisperX timed words, Silero VAD regions,
+candidate-driven rough cuts, captioned YouTube/reels MP4s, waveform plus boundary-frame evidence,
+explicit-final QA, and both social packages under one project directory.
 
 ## Bridge-period short-form skills
 
