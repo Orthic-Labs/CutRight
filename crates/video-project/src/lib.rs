@@ -11,8 +11,8 @@ use video_core::{
     SourceManifest, SourcePolicy, Timebase, Timeline, TimelineSegment, Track, Transcript, Word,
 };
 use video_media::{
-    extract_audio_f32, extract_frame, probe, render_segments, render_source_segments,
-    render_subtitled, render_to_preset, render_waveform, AudioError, ProbeError, RenderError,
+    extract_audio_f32, extract_frame, probe, render_preset_with_captions, render_segments,
+    render_source_segments, render_subtitled, render_waveform, AudioError, ProbeError, RenderError,
     RenderSegment, SourceRenderSegment,
 };
 use video_providers::{HeardRightProvider, ProviderError, SileroVadProvider, WhisperXProvider};
@@ -1179,10 +1179,14 @@ pub fn render_final(
         ));
     }
     if !dry_run {
-        let base = project_path.join(format!("render/finals/.{preset}-base.mp4"));
-        render_to_preset(&input, &base, output_preset.width, output_preset.height)?;
-        render_subtitled(&base, &captions, &output)?;
-        fs::remove_file(base)?;
+        render_preset_with_captions(
+            &input,
+            &captions,
+            &output,
+            output_preset.width,
+            output_preset.height,
+            output_preset.aspect == "9:16",
+        )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },

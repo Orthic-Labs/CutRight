@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -57,10 +58,26 @@ pub enum RenderError {
     Start(#[source] std::io::Error),
     #[error("ffmpeg failed: {0}")]
     Failed(String),
-    #[error("native caption renderer could not start: {0}")]
+    #[error("caption card worker could not start: {0}")]
     CaptionStart(#[source] std::io::Error),
-    #[error("native caption renderer failed: {0}")]
+    #[error("caption card worker failed: {0}")]
     CaptionFailed(String),
+}
+
+#[derive(Debug, Clone)]
+struct CaptionCue {
+    start_seconds: f64,
+    end_seconds: f64,
+    text: String,
+}
+
+struct CaptionRenderOptions<'a> {
+    width: u32,
+    height: u32,
+    vertical: bool,
+    video_filter: &'a str,
+    audio_filter: Option<&'a str>,
+    rec709_output: bool,
 }
 
 #[derive(Debug, Error)]
@@ -296,11 +313,10 @@ pub fn render_to_preset(
             "output dimensions must be nonzero".into(),
         ));
     }
-    let filter = format!(
-        "scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},setsar=1"
-    );
+    let (filter, rec709_output) = preset_video_filter(input, width, height)?;
     let audio_filter = measured_loudnorm_filter(input)?;
-    let result = Command::new("ffmpeg")
+    let mut command = Command::new("ffmpeg");
+    command
         .args(["-hide_banner", "-loglevel", "error", "-y", "-i"])
         .arg(input)
         .args([
@@ -320,18 +336,20 @@ pub fn render_to_preset(
             "48000",
             "-af",
             &audio_filter,
+            "-movflags",
+            "+faststart",
+        ]);
+    if rec709_output {
+        command.args([
             "-color_primaries",
             "bt709",
             "-color_trc",
             "bt709",
             "-colorspace",
             "bt709",
-            "-movflags",
-            "+faststart",
-        ])
-        .arg(output)
-        .output()
-        .map_err(RenderError::Start)?;
+        ]);
+    }
+    let result = command.arg(output).output().map_err(RenderError::Start)?;
     if result.status.success() {
         Ok(())
     } else {
@@ -493,6 +511,64 @@ pub fn extract_audio_f32(input: &Path, output: &Path, sample_rate: u32) -> Resul
 }
 
 pub fn render_subtitled(input: &Path, captions: &Path, output: &Path) -> Result<(), RenderError> {
+    let metadata = probe(input).map_err(|error| RenderError::Failed(error.to_string()))?;
+    let width = metadata
+        .width
+        .ok_or_else(|| RenderError::Failed("caption input has no width".into()))?;
+    let height = metadata
+        .height
+        .ok_or_else(|| RenderError::Failed("caption input has no height".into()))?;
+    render_captioned(
+        input,
+        captions,
+        output,
+        CaptionRenderOptions {
+            width,
+            height,
+            vertical: false,
+            video_filter: "setsar=1",
+            audio_filter: None,
+            rec709_output: false,
+        },
+    )
+}
+
+pub fn render_preset_with_captions(
+    input: &Path,
+    captions: &Path,
+    output: &Path,
+    width: u32,
+    height: u32,
+    vertical: bool,
+) -> Result<(), RenderError> {
+    if width == 0 || height == 0 {
+        return Err(RenderError::Failed(
+            "output dimensions must be nonzero".into(),
+        ));
+    }
+    let (filter, rec709_output) = preset_video_filter(input, width, height)?;
+    let audio_filter = measured_loudnorm_filter(input)?;
+    render_captioned(
+        input,
+        captions,
+        output,
+        CaptionRenderOptions {
+            width,
+            height,
+            vertical,
+            video_filter: &filter,
+            audio_filter: Some(&audio_filter),
+            rec709_output,
+        },
+    )
+}
+
+fn render_captioned(
+    input: &Path,
+    captions: &Path,
+    output: &Path,
+    options: CaptionRenderOptions<'_>,
+) -> Result<(), RenderError> {
     if !input.is_file() {
         return Err(RenderError::Failed(format!(
             "input does not exist: {}",
@@ -508,69 +584,204 @@ pub fn render_subtitled(input: &Path, captions: &Path, output: &Path) -> Result<
     if input == output {
         return Err(RenderError::OutputIsInput);
     }
-    let sidecar = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join("sidecars/render-worker/captions-macos.swift");
-    if !sidecar.is_file() {
-        return Err(RenderError::CaptionFailed(format!(
-            "caption worker source is missing: {}",
-            sidecar.display()
-        )));
+    let cues = read_srt(captions)?;
+    let cards = render_caption_cards(
+        &cues,
+        output,
+        options.width,
+        options.height,
+        options.vertical,
+    )?;
+    let mut filter = format!("[0:v]{}[v0]", options.video_filter);
+    for (index, cue) in cues.iter().enumerate() {
+        let previous = format!("[v{index}]");
+        let next = format!("[v{}]", index + 1);
+        filter.push_str(&format!(
+            ";{previous}[{}:v]overlay=0:0:enable='between(t,{:.3},{:.3})'{next}",
+            index + 1,
+            cue.start_seconds,
+            cue.end_seconds
+        ));
     }
-    let worker = output
-        .parent()
-        .ok_or_else(|| RenderError::CaptionFailed("caption output has no parent directory".into()))?
-        .join(".cutright-captions-macos");
-    let source_newer = std::fs::metadata(&sidecar)
-        .and_then(|source| source.modified())
-        .ok()
-        .zip(
-            std::fs::metadata(&worker)
-                .and_then(|binary| binary.modified())
-                .ok(),
-        )
-        .is_some_and(|(source, binary)| source > binary);
-    if !worker.is_file() || source_newer {
-        let compile = Command::new("swiftc")
-            .arg(&sidecar)
-            .arg("-O")
-            .arg("-o")
-            .arg(&worker)
-            .output()
-            .map_err(RenderError::CaptionStart)?;
-        if !compile.status.success() {
-            return Err(RenderError::CaptionFailed(
-                String::from_utf8_lossy(&compile.stderr).trim().to_string(),
-            ));
-        }
+    let last = format!("[v{}]", cues.len());
+    let mut command = Command::new("ffmpeg");
+    command
+        .args(["-hide_banner", "-loglevel", "error", "-y", "-i"])
+        .arg(input);
+    for card in &cards {
+        command
+            .args(["-loop", "1", "-framerate", "30", "-i"])
+            .arg(card);
     }
-    let request = serde_json::json!({
-        "input_path": input,
-        "captions_path": captions,
-        "output_path": output,
-    });
-    let mut child = Command::new(worker)
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .map_err(RenderError::CaptionStart)?;
-    child
-        .stdin
-        .as_mut()
-        .expect("piped stdin")
-        .write_all(&serde_json::to_vec(&request).expect("caption request JSON"))
-        .map_err(RenderError::CaptionStart)?;
-    let result = child
-        .wait_with_output()
-        .map_err(RenderError::CaptionStart)?;
+    command
+        .args(["-filter_complex", &filter, "-map", &last, "-map", "0:a?"])
+        .args([
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "slow", "-crf", "18", "-c:a",
+            "aac", "-ar", "48000",
+        ]);
+    if let Some(audio_filter) = options.audio_filter {
+        command.args(["-af", audio_filter]);
+    }
+    if options.rec709_output {
+        command.args([
+            "-color_primaries",
+            "bt709",
+            "-color_trc",
+            "bt709",
+            "-colorspace",
+            "bt709",
+        ]);
+    }
+    command
+        .args(["-shortest", "-movflags", "+faststart"])
+        .arg(output);
+    let result = command.output().map_err(RenderError::Start)?;
     if result.status.success() && output.is_file() {
         Ok(())
     } else {
-        Err(RenderError::CaptionFailed(
+        Err(RenderError::Failed(
             String::from_utf8_lossy(&result.stderr).trim().to_string(),
         ))
     }
+}
+
+fn preset_video_filter(
+    input: &Path,
+    width: u32,
+    height: u32,
+) -> Result<(String, bool), RenderError> {
+    let resize = format!(
+        "scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},setsar=1"
+    );
+    let metadata = probe(input).map_err(|error| RenderError::Failed(error.to_string()))?;
+    if metadata.is_hdr == Some(true) {
+        Ok((
+            format!(
+                "zscale=transfer=linear:npl=100,format=gbrpf32le,tonemap=tonemap=hable:desat=0,zscale=primaries=bt709:transfer=bt709:matrix=bt709,format=yuv420p,{resize}"
+            ),
+            true,
+        ))
+    } else {
+        Ok((resize, false))
+    }
+}
+
+fn read_srt(path: &Path) -> Result<Vec<CaptionCue>, RenderError> {
+    let source = fs::read_to_string(path).map_err(RenderError::CaptionStart)?;
+    source
+        .split("\n\n")
+        .filter(|chunk| !chunk.trim().is_empty())
+        .map(|chunk| {
+            let lines = chunk.lines().collect::<Vec<_>>();
+            let timing = lines.get(1).ok_or_else(|| {
+                RenderError::CaptionFailed("caption cue is missing timing".into())
+            })?;
+            let (start, end) = timing.split_once(" --> ").ok_or_else(|| {
+                RenderError::CaptionFailed("caption cue has invalid timing".into())
+            })?;
+            let start_seconds = parse_srt_timestamp(start)?;
+            let end_seconds = parse_srt_timestamp(end)?;
+            let text = lines.get(2..).unwrap_or_default().join("\n");
+            if end_seconds <= start_seconds || text.trim().is_empty() {
+                return Err(RenderError::CaptionFailed(
+                    "caption cue has invalid range or text".into(),
+                ));
+            }
+            Ok(CaptionCue {
+                start_seconds,
+                end_seconds,
+                text,
+            })
+        })
+        .collect()
+}
+
+fn parse_srt_timestamp(value: &str) -> Result<f64, RenderError> {
+    let normalized = value.replace(',', ".");
+    let parts = normalized.split(':').collect::<Vec<_>>();
+    if parts.len() != 3 {
+        return Err(RenderError::CaptionFailed(
+            "caption timestamp has invalid format".into(),
+        ));
+    }
+    let hours = parts[0]
+        .parse::<f64>()
+        .map_err(|_| RenderError::CaptionFailed("caption timestamp has invalid hours".into()))?;
+    let minutes = parts[1]
+        .parse::<f64>()
+        .map_err(|_| RenderError::CaptionFailed("caption timestamp has invalid minutes".into()))?;
+    let seconds = parts[2]
+        .parse::<f64>()
+        .map_err(|_| RenderError::CaptionFailed("caption timestamp has invalid seconds".into()))?;
+    Ok(hours * 3_600.0 + minutes * 60.0 + seconds)
+}
+
+fn render_caption_cards(
+    cues: &[CaptionCue],
+    output: &Path,
+    width: u32,
+    height: u32,
+    vertical: bool,
+) -> Result<Vec<PathBuf>, RenderError> {
+    let parent = output.parent().ok_or_else(|| {
+        RenderError::CaptionFailed("caption output has no parent directory".into())
+    })?;
+    let cards_dir = parent.join(".cutright-caption-cards");
+    fs::create_dir_all(&cards_dir).map_err(RenderError::CaptionStart)?;
+    let worker = caption_card_worker()?;
+    cues.iter()
+        .enumerate()
+        .map(|(index, cue)| {
+            let card = cards_dir.join(format!("{:04}.png", index + 1));
+            let request = serde_json::json!({
+                "output_path": card,
+                "width": width,
+                "height": height,
+                "text": cue.text,
+                "vertical": vertical,
+            });
+            let mut child = Command::new(&worker)
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::piped())
+                .spawn()
+                .map_err(RenderError::CaptionStart)?;
+            child
+                .stdin
+                .as_mut()
+                .expect("piped stdin")
+                .write_all(&serde_json::to_vec(&request).expect("caption request JSON"))
+                .map_err(RenderError::CaptionStart)?;
+            let result = child
+                .wait_with_output()
+                .map_err(RenderError::CaptionStart)?;
+            if result.status.success() && card.is_file() {
+                Ok(card)
+            } else {
+                Err(RenderError::CaptionFailed(
+                    String::from_utf8_lossy(&result.stderr).trim().to_string(),
+                ))
+            }
+        })
+        .collect()
+}
+
+fn caption_card_worker() -> Result<PathBuf, RenderError> {
+    let worker = std::env::temp_dir().join(format!(
+        "cutright-caption-card-{}",
+        env!("CARGO_PKG_VERSION")
+    ));
+    if !worker.is_file() {
+        fs::write(&worker, include_bytes!(env!("CUTRIGHT_CAPTION_CARD")))
+            .map_err(RenderError::CaptionStart)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&worker, fs::Permissions::from_mode(0o700))
+                .map_err(RenderError::CaptionStart)?;
+        }
+    }
+    Ok(worker)
 }
 
 fn metadata_from_probe(response: ProbeResponse) -> MediaMetadata {
@@ -625,6 +836,7 @@ fn parse_frame_rate(value: &str) -> Option<Timebase> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn parses_probe_metadata_without_shell_fragments() {
@@ -663,5 +875,91 @@ mod tests {
     fn rejects_missing_input_before_starting_ffprobe() {
         let error = probe(Path::new("/does/not/exist.mp4")).unwrap_err();
         assert!(matches!(error, ProbeError::MissingInput(_)));
+    }
+
+    #[test]
+    fn captioned_preset_shows_each_cue_only_during_its_interval() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock after epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("cutright-caption-test-{unique}"));
+        fs::create_dir_all(&root).expect("create test directory");
+        let input = root.join("input.mp4");
+        let captions = root.join("captions.srt");
+        let output = root.join("output.mp4");
+        let generated = Command::new("ffmpeg")
+            .args([
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=black:s=640x360:r=30",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=1000:sample_rate=48000",
+                "-t",
+                "3",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+            ])
+            .arg(&input)
+            .output()
+            .expect("start ffmpeg fixture");
+        assert!(
+            generated.status.success(),
+            "fixture ffmpeg failed: {}",
+            String::from_utf8_lossy(&generated.stderr)
+        );
+        fs::write(
+            &captions,
+            "1\n00:00:00,500 --> 00:00:01,000\nFIRST CUE\n\n2\n00:00:02,000 --> 00:00:02,500\nSECOND CUE\n",
+        )
+        .expect("write captions");
+        render_preset_with_captions(&input, &captions, &output, 640, 360, false)
+            .expect("render captioned preset");
+        let frame_luminance = |time: &str| {
+            let frame = Command::new("ffmpeg")
+                .args(["-hide_banner", "-loglevel", "error", "-ss", time, "-i"])
+                .arg(&output)
+                .args([
+                    "-frames:v",
+                    "1",
+                    "-vf",
+                    "signalstats,metadata=print:file=-",
+                    "-f",
+                    "null",
+                    "-",
+                ])
+                .output()
+                .expect("start frame luminance ffmpeg");
+            assert!(frame.status.success());
+            String::from_utf8(frame.stdout)
+                .expect("frame luminance is UTF-8")
+                .lines()
+                .find_map(|line| {
+                    line.strip_prefix("lavfi.signalstats.YAVG=")
+                        .map(str::parse::<f64>)
+                })
+                .expect("frame luminance is present")
+                .expect("frame luminance is numeric")
+        };
+        let before = frame_luminance("0.25");
+        let first_cue = frame_luminance("0.75");
+        let gap = frame_luminance("1.50");
+        let second_cue = frame_luminance("2.25");
+        let after = frame_luminance("2.75");
+        assert!(before < 17.0 && gap < 17.0 && after < 17.0);
+        assert!(
+            first_cue > before + 0.1 && second_cue > before + 0.1,
+            "luminance before={before}, first={first_cue}, gap={gap}, second={second_cue}, after={after}"
+        );
+        fs::remove_dir_all(root).expect("remove test directory");
     }
 }
