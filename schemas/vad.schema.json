@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/vad.schema.json",
+  "title": "CutRight VAD signal",
+  "type": "object",
+  "required": ["schema_version", "source_id", "sample_rate", "provider", "regions"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "source_id": { "type": "string" },
+    "sample_rate": { "type": "integer", "minimum": 1 },
+    "provider": { "type": "string" },
+    "regions": { "type": "array" }
+  }
+}

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Short-Form Editor Skills — How to use</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --bg-soft:#f6f5f2;
+    --ink:#15140f;
+    --ink-dim:#5d5a52;
+    --ink-faint:#8b877d;
+    --rule:rgba(21,20,15,0.10);
+    --rule-strong:rgba(21,20,15,0.18);
+    --accent:#3b6f3b;            /* quiet editorial green */
+    --serif:'Newsreader',Georgia,'Times New Roman',serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
+    --measure:680px;
+    --pad:clamp(20px,5vw,40px);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.65}
+  ::selection{background:#dbe9cf}
+  a{color:inherit}
+
+  .wrap{max-width:var(--measure);margin:0 auto;padding:0 var(--pad)}
+
+  /* ---- masthead ---- */
+  header{padding:clamp(64px,11vw,128px) 0 clamp(40px,7vw,72px)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
+  h1{font-family:var(--serif);font-weight:400;letter-spacing:-.02em;line-height:1.06;
+     font-size:clamp(38px,7vw,64px);margin-top:22px;text-wrap:balance}
+  .lede{font-family:var(--serif);font-size:clamp(19px,2.4vw,23px);line-height:1.5;color:var(--ink-dim);
+        margin-top:26px;max-width:34em}
+
+  /* ---- sections ---- */
+  section{padding:clamp(44px,7vw,80px) 0;border-top:1px solid var(--rule)}
+  .sec-num{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+  h2{font-family:var(--serif);font-weight:400;letter-spacing:-.015em;line-height:1.12;
+     font-size:clamp(27px,3.6vw,38px);margin-top:14px}
+  h3{font-family:var(--serif);font-weight:500;font-size:21px;letter-spacing:-.01em;margin-top:38px}
+  p{margin-top:18px;color:var(--ink-dim)}
+  p strong{color:var(--ink);font-weight:600}
+  ul{margin-top:18px;padding-left:1.25em;color:var(--ink-dim)}
+  li{margin-top:9px}
+  li::marker{color:var(--ink-faint)}
+
+  code{font-family:var(--mono);font-size:.84em;background:var(--bg-soft);
+       border:1px solid var(--rule);border-radius:5px;padding:.1em .42em}
+  pre{margin-top:22px;background:var(--bg-soft);border:1px solid var(--rule);border-radius:10px;
+      padding:20px 22px;overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.7;color:var(--ink)}
+  pre code{background:none;border:none;padding:0;font-size:inherit}
+
+  /* ---- editor pick cards ---- */
+  .grid{margin-top:30px;display:grid;gap:14px;grid-template-columns:repeat(2,1fr)}
+  @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  .card{border:1px solid var(--rule);border-radius:12px;padding:22px 22px 24px;background:var(--bg)}
+  .card .tag{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+  .card h4{font-family:var(--serif);font-weight:500;font-size:20px;margin-top:10px}
+  .card p{margin-top:10px;font-size:15px;line-height:1.55}
+
+  /* ---- placeholder image blocks ---- */
+  .shot{margin-top:30px;border:1px dashed var(--rule-strong);border-radius:12px;background:
+        repeating-linear-gradient(135deg,var(--bg-soft),var(--bg-soft) 12px,#efeee9 12px,#efeee9 24px);
+        aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px}
+  .shot.vert{aspect-ratio:9/16;max-width:300px;margin-left:auto;margin-right:auto}
+  .shot span{font-family:var(--mono);font-size:12px;letter-spacing:.05em;color:var(--ink-faint);
+             background:var(--bg);padding:7px 14px;border-radius:99px;border:1px solid var(--rule)}
+
+  /* ---- faq ---- */
+  .faq{margin-top:14px}
+  details{border-top:1px solid var(--rule);padding:18px 0}
+  details:last-child{border-bottom:1px solid var(--rule)}
+  summary{font-family:var(--serif);font-size:19px;cursor:pointer;list-style:none;display:flex;
+          justify-content:space-between;gap:16px;align-items:baseline}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:'+';font-family:var(--mono);color:var(--ink-faint);font-size:20px;transition:transform .2s}
+  details[open] summary::after{content:'–'}
+  details p{margin-top:14px;font-size:16px}
+
+  .note{margin-top:26px;border-left:2px solid var(--accent);padding:4px 0 4px 18px;color:var(--ink-dim);font-size:15.5px}
+
+  footer{padding:64px 0 90px;border-top:1px solid var(--rule);color:var(--ink-faint);font-size:13.5px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Claude Code · two skills</div>
+    <h1>Turn a raw clip into a finished short.</h1>
+    <p class="lede">Two Claude Code skills. The first one takes your rambly, redone-takes camera footage
+      and cuts it into a tight little story. The second one makes it look good — zooms, lens effects,
+      animated text. You bring the clip; the AI does the boring part.</p>
+  </div>
+</header>
+
+<main>
+
+<!-- WHAT YOU GET -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">01 — What you get</div>
+    <h2>Two skills that run in order</h2>
+    <p><strong>cutaway</strong> — the rough cut. WhisperX forced alignment finds the exact start and end of
+      every word, so the AI cuts on real word edges, removes only the silences (the gaps where you say
+      nothing), and arranges your best takes into one story: hook → … → call to action. You get a cut list
+      and a matching MP4.</p>
+    <p><strong>finish</strong> — the styling pass. Reframe to vertical, animated zooms and punch-ins, lens
+      effects, an exponential text fade-in, the "authority stack" text look, captions, and sound effects
+      timed to the motion.</p>
+    <div class="note">These skills teach the <strong>method</strong>, not a pile of finished assets. The cut
+      is fully turnkey. The finish skill gives you the techniques — you recreate the look with your own
+      footage, your own sound effects, and your own style graphics. That small library is yours to keep.</div>
+    <div class="shot vert"><span>screenshot: before / after — raw ramble → tight 9:16 cut</span></div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">02 — Install</div>
+    <h2>Drop them into your skills folder</h2>
+    <p>Copy each folder into your Claude Code skills directory:</p>
+<pre><code>cp -R cutaway ~/.claude/skills/shortform-cutaway
+cp -R finish  ~/.claude/skills/shortform-finish</code></pre>
+    <p>Then hand Claude Code a clip and say what you want — <em>"make the rough cut, remove the silences"</em>
+      for cutaway, or once the cut is locked, <em>"finish this short, add the hook zoom"</em> for finish.
+      The skills trigger themselves.</p>
+    <h3>One-time setup for cutaway</h3>
+    <p>The cut needs WhisperX, in its own Python 3.11 virtual environment. One time only:</p>
+<pre><code>python3.11 -m venv ~/wx-env
+~/wx-env/bin/pip install whisperx</code></pre>
+    <p>That's the only dependency. The cut scripts take every path as an argument, so there is nothing to
+      hardcode — point the skill at your venv and your clip and go.</p>
+  </div>
+</section>
+
+<!-- FIRST RUN -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">03 — First run</div>
+    <h2>Which editor do you use?</h2>
+    <p>On the first run each skill asks <strong>which editor you edit in</strong> and follows that branch. The
+      cut math is identical for everyone — the only difference is how the cut <em>lands</em> in your tool.</p>
+    <div class="grid">
+      <div class="card"><div class="tag">a</div><h4>DaVinci Resolve</h4>
+        <p>The cut becomes a timeline. Zooms are built as Fusion comps with animation injected as splines.</p></div>
+      <div class="card"><div class="tag">b</div><h4>Premiere Pro</h4>
+        <p>The cut becomes an EDL/XML you import as a sequence. Zooms and text via keyframes + Essential Graphics.</p></div>
+      <div class="card"><div class="tag">c</div><h4>Remotion</h4>
+        <p>Everything is code. The cut is a playlist of segments; effects are <code>interpolate</code> curves.</p></div>
+      <div class="card"><div class="tag">d</div><h4>Claude-Code-only</h4>
+        <p>No NLE. The cut renders straight to an MP4 with ffmpeg. Nothing else to install.</p></div>
+    </div>
+    <div class="note">No editor? Pick <strong>Claude-Code-only</strong>. It produces a finished, postable MP4
+      on its own.</div>
+  </div>
+</section>
+
+<!-- CUTAWAY WORKFLOW -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">04 — Cutaway</div>
+    <h2>The rough cut, step by step</h2>
+    <ul>
+      <li><strong>Extract the audio</strong> — ffmpeg pulls a mono 16k track from your clip.</li>
+      <li><strong>Align the words</strong> — WhisperX force-aligns every word to the waveform, giving exact
+        start/end times. This is the whole trick: real word edges, not guesses.</li>
+      <li><strong>Pick the red thread</strong> — the AI reads the words and writes a beats list: one clean
+        take per beat, dropping false starts, doubles, ums, and meta chatter, so the story moves forward.</li>
+      <li><strong>Build the cut</strong> — clips snap to whole words; only the no-word gaps are removed. A
+        single dial (<code>GAP</code>) controls punchy vs breathy.</li>
+      <li><strong>Land it in your editor</strong> — timeline, EDL, Remotion segments, or a finished MP4.</li>
+    </ul>
+    <div class="shot"><span>screenshot: cut list landing as a timeline in Resolve</span></div>
+  </div>
+</section>
+
+<!-- FINISH WORKFLOW -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">05 — Finish</div>
+    <h2>The styling pass</h2>
+    <p>Work on a duplicate of the locked cut, then layer in:</p>
+    <ul>
+      <li><strong>Zooms</strong> — a zoom-out hook to open, punch-in/out waves to hide mid-video cuts inside
+        constant motion. Front-loaded ease-out curves; motion blur gated to the move only.</li>
+      <li><strong>Exponential text fade-in</strong> — text blooms in fast then settles slow, with a small
+        upward drift and blur-to-sharp. Never a flat linear fade.</li>
+      <li><strong>The authority-stack text look</strong> — words rise out of a soft fog and speed-ramp to a
+        settle: bold, tight, deliberate. The brand-signature text move.</li>
+      <li><strong>Sound that matches the motion</strong> — whoosh for a zoom, click for a snap, tick for a
+        toggle, each peak-aligned to the exact frame. Plus the reverb-throw move at cut points.</li>
+    </ul>
+    <div class="shot vert"><span>screenshot: hook zoom + authority-stack text on a 9:16 frame</span></div>
+    <div class="note">The finish skill ships the <em>techniques</em> — the curves, the timings, the rules.
+      The graphics and sound effects are yours to build once and reuse. Not sure where to start on the
+      graphics? That's the next section.</div>
+  </div>
+</section>
+
+<!-- MAKE IT YOURS / MOTION GRAPHICS -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">06 — Make it yours</div>
+    <h2>Building your own motion graphics</h2>
+    <p>Here's the honest part again: the finish skill teaches you the <em>moves</em>, but the actual
+      graphics — the little animations, the icons that fly in, the text that snaps — those are yours to
+      build. Good news, you're not starting from a blank canvas. This is exactly how I do it.</p>
+
+    <h3>Jitter — for inspiration and for building</h3>
+    <p><strong><a href="https://jitter.video">jitter.video</a></strong> is basically Figma for motion. It
+      runs in your browser, no After Effects, no learning curve from hell. Use it two ways. One, for
+      <em>inspiration</em> — scroll what people are making, and when a move makes you go "oh, that's
+      clean," screenshot it and rebuild it yourself. Two, for <em>building</em> — make your own branded
+      animations fast and export them.</p>
+
+    <h3>Lottie files — the cheat code</h3>
+    <p><strong>Lottie</strong> is a tiny animation format (under the hood it's just JSON). Jitter exports
+      straight to it, and there are thousands of free ones on <strong>lottiefiles.com</strong>. So the move
+      is simple: find one that's <em>close</em> to what you want, download it, crack it open, and mess with
+      it — recolor it, change the timing, swap the text — until it's yours. Reverse-engineering someone
+      else's animation is honestly the fastest way to learn the moves and stack up a little library that
+      looks like <em>you</em>.</p>
+
+    <h3>Getting it into your edit</h3>
+    <ul>
+      <li><strong>Remotion</strong> — drops in straight. It renders Lottie natively
+        (<code>@remotion/lottie</code>); hand it the JSON and it just plays.</li>
+      <li><strong>Resolve / Premiere</strong> — render the Lottie out as a transparent video (ProRes 4444,
+        or WebM with alpha), then drop it on a track above your footage.</li>
+    </ul>
+    <div class="note">You're not designing from scratch — you're collecting moves you like, making them
+      yours, and reusing them. Do that a handful of times and you suddenly have a style.</div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section>
+  <div class="wrap">
+    <div class="sec-num">07 — FAQ</div>
+    <h2>Questions</h2>
+    <div class="faq">
+      <details><summary>Do I need DaVinci Resolve?</summary>
+        <p>No. Resolve is one of four branches. Remotion, Premiere, or the Claude-Code-only ffmpeg path all
+          work — and the ffmpeg path needs no editor at all, producing a finished MP4 by itself.</p></details>
+      <details><summary>What footage does this work on?</summary>
+        <p>Any 9:16 talking-head clip — you talking to camera, redoing takes, pausing, pointing. The messier
+          the raw take, the more the cutaway earns its keep.</p></details>
+      <details><summary>Why WhisperX and not plain Whisper?</summary>
+        <p>Plain Whisper only guesses word times and drifts badly around pauses — it'll place a word inside a
+          two-second silence. WhisperX force-aligns each word to the audio with a phoneme model, giving exact
+          edges. That accuracy is the difference between "close" and clean.</p></details>
+      <details><summary>Do I get the visual style assets?</summary>
+        <p>No — and that's deliberate. The cut is turnkey, but the finished <em>look</em> is built from your
+          own footage, sound effects, and graphics. The finish skill teaches you exactly how to make each
+          move so the style is genuinely yours.</p></details>
+      <details><summary>Is it fast?</summary>
+        <p>WhisperX adds about one to two minutes per clip on a CPU (much faster on an NVIDIA GPU). After
+          that the cut is near-instant. Most of your time goes into the styling pass, by choice.</p></details>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">shortform-cutaway · shortform-finish — free in The AI Operators</div>
+</footer>
+
+</body>
+</html>

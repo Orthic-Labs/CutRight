@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/sources.schema.json",
+  "title": "CutRight source manifest",
+  "type": "object",
+  "required": ["schema_version", "sources"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source_id", "path", "blake3"],
+        "properties": {
+          "source_id": { "type": "string" },
+          "path": { "type": "string" },
+          "blake3": { "type": "string", "pattern": "^blake3:" },
+          "duration_ms": { "type": ["integer", "null"], "minimum": 0 },
+          "width": { "type": ["integer", "null"], "minimum": 1 },
+          "height": { "type": ["integer", "null"], "minimum": 1 },
+          "rotation_degrees": { "type": ["integer", "null"] },
+          "is_hdr": { "type": ["boolean", "null"] },
+          "timebase": { "type": ["object", "null"] }
+        }
+      }
+    }
+  }
+}

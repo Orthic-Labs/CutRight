@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/candidates.schema.json",
+  "title": "CutRight editorial candidates",
+  "type": "object",
+  "required": ["schema_version", "candidates"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "source_id", "start_ms", "end_ms", "text", "beat_label", "take_rank", "drop_reason"],
+        "properties": {
+          "id": { "type": "string" },
+          "source_id": { "type": "string" },
+          "start_ms": { "type": "integer", "minimum": 0 },
+          "end_ms": { "type": "integer", "minimum": 0 },
+          "text": { "type": "string" },
+          "beat_label": { "type": "string" },
+          "take_rank": { "type": "integer", "minimum": 1 },
+          "drop_reason": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

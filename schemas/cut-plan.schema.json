@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/cut-plan.schema.json",
+  "title": "CutRight deterministic cut plan",
+  "type": "object",
+  "required": ["schema_version", "variant", "gap_threshold_ms", "head_margin_ms", "tail_margin_ms", "segments"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "variant": { "enum": ["tight", "natural"] },
+    "gap_threshold_ms": { "type": "integer", "minimum": 0 },
+    "head_margin_ms": { "type": "integer", "minimum": 0 },
+    "tail_margin_ms": { "type": "integer", "minimum": 0 },
+    "segments": { "type": "array" }
+  }
+}

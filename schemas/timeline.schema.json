@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/timeline.schema.json",
+  "title": "CutRight canonical timeline",
+  "type": "object",
+  "required": ["schema_version", "timebase", "tracks"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "timebase": { "type": "object", "required": ["fps_num", "fps_den"] },
+    "tracks": { "type": "array" }
+  }
+}

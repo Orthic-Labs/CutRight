@@ -1,0 +1,11 @@
+# beats.example.txt — the RED THREAD format (SYNTHETIC example, not real footage)
+# one beat per line:  START END label
+# START/END are seconds (read from your WhisperX words); label is just a note to yourself.
+# Pick ONE clean take per beat so the story moves forward. Drop folds, doubles, ums, meta.
+2.4 6.1 hook
+41.0 48.7 what-it-is
+88.2 96.5 how-step-1
+130.4 138.0 how-step-2
+201.6 209.9 result
+255.0 263.3 value
+300.1 305.8 cta

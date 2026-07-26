@@ -1,0 +1,4 @@
+/target/
+/.cache/
+*.swp
+.DS_Store

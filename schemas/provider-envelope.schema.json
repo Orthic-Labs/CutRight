@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/provider-envelope.schema.json",
+  "title": "CutRight provider response envelope",
+  "type": "object",
+  "required": ["provider", "provider_model", "request_hash", "created_at", "cost", "raw_response_path", "normalised_output_path", "warnings"],
+  "properties": {
+    "provider": { "type": "string" },
+    "provider_model": { "type": "string" },
+    "request_hash": { "type": "string", "pattern": "^blake3:" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "cost": { "type": "object" },
+    "raw_response_path": { "type": "string" },
+    "normalised_output_path": { "type": "string" },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  }
+}

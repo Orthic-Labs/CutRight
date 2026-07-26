@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/visual-evidence.schema.json",
+  "title": "CutRight visual evidence",
+  "type": "object",
+  "required": ["schema_version", "source_id", "coordinate_system", "samples"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "source_id": { "type": "string" },
+    "coordinate_system": { "const": "normalized-top-left" },
+    "samples": { "type": "array" }
+  }
+}

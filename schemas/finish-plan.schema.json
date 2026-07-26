@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/finish-plan.schema.json",
+  "title": "CutRight finish plan",
+  "type": "object",
+  "required": ["schema_version", "base_timeline", "slots"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "base_timeline": { "type": "string" },
+    "slots": { "type": "array" }
+  }
+}
