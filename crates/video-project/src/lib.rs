@@ -1,19 +1,22 @@
 use chrono::Utc;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use thiserror::Error;
 use video_core::{
     models::{ProviderCost, ProviderResponseEnvelope, SourceEntry, SCHEMA_VERSION},
     providers::{TranscriptionProvider, TranscriptionRequest, VadProvider, VadRequest},
     Candidate, CandidateManifest, CutPlan, CutSegment, OutputPreset, ProjectManifest, ReviewMode,
-    SourceManifest, SourcePolicy, Timebase, Timeline, TimelineSegment, Track, Transcript, Word,
+    SourceManifest, SourcePolicy, Timebase, Timeline, TimelineSegment, Track, Transcript,
+    VadSignal, Word,
 };
 use video_media::{
-    extract_audio_f32, extract_frame, probe, render_preset_with_captions, render_segments,
-    render_source_segments, render_subtitled, render_waveform, AudioError, ProbeError, RenderError,
-    RenderSegment, SourceRenderSegment,
+    compose_decision_evidence, extract_audio_f32, extract_frame, probe, render_boundary_probe,
+    render_preset_with_captions, render_preset_with_captions_and_reframe, render_segments,
+    render_source_segments, render_waveform, render_waveform_range, AudioError, ProbeError,
+    ReframeAnchor, RenderError, RenderSegment, SourceRenderSegment,
 };
 use video_providers::{HeardRightProvider, ProviderError, SileroVadProvider, WhisperXProvider};
 
@@ -100,6 +103,30 @@ pub struct PipelineArtifact {
     pub status: &'static str,
     pub path: PathBuf,
     pub count: usize,
+}
+
+#[derive(Debug, Deserialize)]
+struct ReframePlan {
+    approved: bool,
+    anchors: Vec<ReframePlanAnchor>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ReframePlanAnchor {
+    output_start_ms: i64,
+    output_end_ms: i64,
+    source_id: String,
+    center_x: f64,
+    center_y: f64,
+    approved: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct VisionAnchorResponse {
+    found: bool,
+    center_x: f64,
+    center_y: f64,
+    confidence: f64,
 }
 
 pub fn init_project(path: &Path, dry_run: bool) -> Result<InitResult, ProjectError> {
@@ -524,7 +551,7 @@ pub fn bench_transcribe(
         let primary_transcript: Transcript = read_json(&primary_path)?;
         let verifier_transcript: Transcript = read_json(&verifier_path)?;
         let alignment = align_words(&primary_transcript.words, &verifier_transcript.words);
-        let primary_checks = aligned_boundary_checks(
+        let mut primary_checks = aligned_boundary_checks(
             &primary_transcript.words,
             &verifier_transcript.words,
             &alignment.matches,
@@ -552,6 +579,27 @@ pub fn bench_transcribe(
         total_verifier_non_clean += verifier_non_clean;
         total_primary_unmatched += alignment.unmatched_primary.len();
         total_verifier_unmatched += alignment.unmatched_verifier.len();
+        for (index, check) in primary_checks.iter_mut().enumerate() {
+            let boundary_ms = check
+                .get("boundary_ms")
+                .and_then(serde_json::Value::as_i64)
+                .ok_or_else(|| {
+                    ProjectError::InvalidState("benchmark check has no boundary".into())
+                })?;
+            let probe = project_path.join(format!(
+                "analysis/bench/transcribe/probes/{}/{index:03}-{}.mp4",
+                source.source_id,
+                check["side"].as_str().unwrap_or("boundary")
+            ));
+            render_boundary_probe(Path::new(&source.path), boundary_ms, &probe)?;
+            check
+                .as_object_mut()
+                .expect("benchmark check is an object")
+                .insert(
+                    "render_probe".into(),
+                    serde_json::Value::String(relative_artifact_path(project_path, &probe)),
+                );
+        }
         clips.push(serde_json::json!({
             "source_id": source.source_id,
             "source_path": source.path,
@@ -690,7 +738,7 @@ fn aligned_boundary_checks(
     limit: usize,
     padding_ms: i64,
 ) -> Vec<serde_json::Value> {
-    matches
+    let boundaries = matches
         .iter()
         .flat_map(|(primary, verifier)| {
             let (candidate_index, reference_index) = if candidate_is_primary {
@@ -703,8 +751,10 @@ fn aligned_boundary_checks(
                 (candidate_index, reference_index, "end"),
             ]
         })
-        .take(limit)
-        .map(|(candidate_index, reference_index, side)| {
+        .collect::<Vec<_>>();
+    evenly_spaced(&boundaries, limit)
+        .into_iter()
+        .map(|&(candidate_index, reference_index, side)| {
             let candidate_word = &candidate[candidate_index];
             let reference_word = &reference[reference_index];
             let boundary_ms = if side == "start" {
@@ -742,6 +792,21 @@ fn aligned_boundary_checks(
                 "delta_ms": boundary_ms - expected
             })
         })
+        .collect()
+}
+
+fn evenly_spaced<T>(items: &[T], limit: usize) -> Vec<&T> {
+    if limit == 0 || items.is_empty() {
+        return Vec::new();
+    }
+    if items.len() <= limit {
+        return items.iter().collect();
+    }
+    if limit == 1 {
+        return vec![&items[items.len() / 2]];
+    }
+    (0..limit)
+        .map(|index| &items[index * (items.len() - 1) / (limit - 1)])
         .collect()
 }
 
@@ -830,32 +895,110 @@ pub fn reframe_plan(project_path: &Path, dry_run: bool) -> Result<PipelineArtifa
     if sources.sources.is_empty() {
         return Err(ProjectError::NoSources);
     }
+    let timeline: Timeline = read_json(&project_path.join("edit/timeline.json")).map_err(|_| {
+        ProjectError::InvalidState(
+            "reframe planning requires edit/timeline.json; run `videoctl edit render <project> --variant natural` first".into(),
+        )
+    })?;
+    let timeline_segments = &timeline
+        .tracks
+        .first()
+        .ok_or_else(|| ProjectError::InvalidState("timeline has no main track".into()))?
+        .segments;
     let path = project_path.join("analysis/reframe-plan.json");
     if !dry_run {
-        let sources = sources
-            .sources
-            .iter()
-            .map(|source| {
-                serde_json::json!({
-                    "source_id": source.source_id,
-                    "input_width": source.width,
-                    "input_height": source.height,
-                    "target_aspect": "9:16",
-                    "strategy": "center_crop_fallback",
-                    "requires_review": true
-                })
-            })
-            .collect::<Vec<_>>();
+        let worker = vision_anchor_worker()?;
+        let mut anchors = Vec::with_capacity(timeline_segments.len());
+        for segment in timeline_segments {
+            let source = sources
+                .sources
+                .iter()
+                .find(|source| source.source_id == segment.source_id)
+                .ok_or_else(|| {
+                    ProjectError::InvalidState(format!(
+                        "reframe segment {} references a missing source",
+                        segment.id
+                    ))
+                })?;
+            let frame = project_path.join(format!("cache/frames/reframe-{}.jpg", segment.id));
+            extract_frame(
+                Path::new(&source.path),
+                segment.source_start_ms + (segment.source_end_ms - segment.source_start_ms) / 2,
+                &frame,
+            )?;
+            let vision = detect_vision_anchor(&worker, &frame)?;
+            anchors.push(serde_json::json!({
+                "source_id": segment.source_id,
+                "output_start_ms": segment.output_start_ms,
+                "output_end_ms": segment.output_end_ms,
+                "center_x": vision.center_x,
+                "center_y": vision.center_y,
+                "strategy": if vision.found { "vision_face" } else { "manual_anchor_required" },
+                "confidence": vision.confidence,
+                "approved": false
+            }));
+        }
         write_json_atomic(
             &path,
-            &serde_json::json!({"schema_version": SCHEMA_VERSION, "sources": sources}),
+            &serde_json::json!({
+                "schema_version": SCHEMA_VERSION,
+                "kind": "timeline_reframe_plan",
+                "target_aspect": "9:16",
+                "approved": false,
+                "requires_review": true,
+                "anchors": anchors
+            }),
         )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
         path,
-        count: sources.sources.len(),
+        count: timeline_segments.len(),
     })
+}
+
+fn vision_anchor_worker() -> Result<PathBuf, ProjectError> {
+    let worker = std::env::temp_dir().join(format!(
+        "cutright-vision-anchor-{}",
+        env!("CARGO_PKG_VERSION")
+    ));
+    if !worker.is_file() {
+        fs::write(&worker, include_bytes!(env!("CUTRIGHT_VISION_ANCHOR")))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&worker, fs::Permissions::from_mode(0o700))?;
+        }
+    }
+    Ok(worker)
+}
+
+fn detect_vision_anchor(worker: &Path, frame: &Path) -> Result<VisionAnchorResponse, ProjectError> {
+    let request = serde_json::json!({ "image_path": frame });
+    let mut child = Command::new(worker)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    child
+        .stdin
+        .as_mut()
+        .expect("piped vision stdin")
+        .write_all(&serde_json::to_vec(&request)?)?;
+    let output = child.wait_with_output()?;
+    if !output.status.success() {
+        return Err(ProjectError::InvalidState(format!(
+            "Vision reframe anchor failed: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        )));
+    }
+    let anchor: VisionAnchorResponse = serde_json::from_slice(&output.stdout)?;
+    if !(0.0..=1.0).contains(&anchor.center_x) || !(0.0..=1.0).contains(&anchor.center_y) {
+        return Err(ProjectError::InvalidState(
+            "Vision reframe anchor returned invalid normalized coordinates".into(),
+        ));
+    }
+    Ok(anchor)
 }
 
 pub fn build_cut_plan(
@@ -879,6 +1022,20 @@ pub fn build_cut_plan(
             "candidate pass must produce at least one candidate before rendering".into(),
         ));
     }
+    let vad_by_source = sources
+        .sources
+        .iter()
+        .map(|source| {
+            let path = project_path.join(format!("analysis/vad-{}.json", source.source_id));
+            let signal: VadSignal = read_json(&path).map_err(|_| {
+                ProjectError::InvalidState(format!(
+                    "cut planning requires VAD for {}; run `videoctl analyze local <project>` first",
+                    source.source_id
+                ))
+            })?;
+            Ok((source.source_id.clone(), signal))
+        })
+        .collect::<Result<std::collections::HashMap<_, _>, ProjectError>>()?;
     let mut segments = Vec::new();
     for candidate in candidates
         .candidates
@@ -890,8 +1047,13 @@ pub fn build_cut_plan(
             .iter()
             .find(|source| source.source_id == candidate.source_id)
             .and_then(|source| source.duration_ms);
-        let start = candidate.start_ms.saturating_sub(head_margin_ms).max(0);
-        let mut end = candidate.end_ms.saturating_add(tail_margin_ms);
+        let vad = vad_by_source.get(&candidate.source_id).ok_or_else(|| {
+            ProjectError::InvalidState(format!("missing VAD for {}", candidate.source_id))
+        })?;
+        let (speech_start, speech_end) =
+            vad_adjusted_bounds(candidate.start_ms, candidate.end_ms, vad);
+        let start = speech_start.saturating_sub(head_margin_ms).max(0);
+        let mut end = speech_end.saturating_add(tail_margin_ms);
         if let Some(duration) = source_duration {
             end = end.min(duration);
         }
@@ -952,6 +1114,21 @@ pub fn build_cut_plan(
                 .len()
         },
     })
+}
+
+fn vad_adjusted_bounds(start_ms: i64, end_ms: i64, vad: &VadSignal) -> (i64, i64) {
+    const ADJACENCY_MS: i64 = 300;
+    let mut start = start_ms;
+    let mut end = end_ms;
+    for region in &vad.regions {
+        if region.start_ms <= start_ms && region.end_ms + ADJACENCY_MS >= start_ms {
+            start = start.min(region.start_ms);
+        }
+        if region.end_ms >= end_ms && region.start_ms - ADJACENCY_MS <= end_ms {
+            end = end.max(region.end_ms);
+        }
+    }
+    (start, end)
 }
 
 pub fn validate_edit(project_path: &Path) -> Result<PipelineArtifact, ProjectError> {
@@ -1172,27 +1349,84 @@ pub fn render_final(
     let input = project_path.join("render/rough-cuts/natural.mp4");
     let captions = project_path.join("edit/captions.srt");
     let output = project_path.join(format!("render/finals/{preset}.mp4"));
-    if output_preset.aspect == "9:16" && !project_path.join("analysis/reframe-plan.json").is_file()
-    {
-        return Err(ProjectError::InvalidState(
-            "vertical final rendering requires `videoctl reframe plan <project>` first".into(),
-        ));
-    }
+    let reframe_anchors = if output_preset.aspect == "9:16" {
+        Some(load_approved_reframe_anchors(project_path)?)
+    } else {
+        None
+    };
     if !dry_run {
-        render_preset_with_captions(
-            &input,
-            &captions,
-            &output,
-            output_preset.width,
-            output_preset.height,
-            output_preset.aspect == "9:16",
-        )?;
+        if let Some(anchors) = reframe_anchors.as_deref() {
+            render_preset_with_captions_and_reframe(
+                &input,
+                &captions,
+                &output,
+                output_preset.width,
+                output_preset.height,
+                true,
+                Some(anchors),
+            )?;
+        } else {
+            render_preset_with_captions(
+                &input,
+                &captions,
+                &output,
+                output_preset.width,
+                output_preset.height,
+                false,
+            )?;
+        }
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
         path: output,
         count: 1,
     })
+}
+
+fn load_approved_reframe_anchors(project_path: &Path) -> Result<Vec<ReframeAnchor>, ProjectError> {
+    let path = project_path.join("analysis/reframe-plan.json");
+    let plan: ReframePlan = read_json(&path).map_err(|_| {
+        ProjectError::InvalidState(
+            "vertical final rendering requires an approved `analysis/reframe-plan.json`".into(),
+        )
+    })?;
+    if !plan.approved
+        || plan.anchors.is_empty()
+        || plan.anchors.iter().any(|anchor| !anchor.approved)
+    {
+        return Err(ProjectError::InvalidState(
+            "vertical final rendering requires every reframe anchor to be explicitly approved"
+                .into(),
+        ));
+    }
+    let timeline: Timeline = read_json(&project_path.join("edit/timeline.json"))?;
+    let segments = &timeline
+        .tracks
+        .first()
+        .ok_or_else(|| ProjectError::InvalidState("timeline has no main track".into()))?
+        .segments;
+    if plan.anchors.len() != segments.len()
+        || plan.anchors.iter().zip(segments).any(|(anchor, segment)| {
+            anchor.source_id != segment.source_id
+                || anchor.output_start_ms != segment.output_start_ms
+                || anchor.output_end_ms != segment.output_end_ms
+                || !(0.0..=1.0).contains(&anchor.center_x)
+                || !(0.0..=1.0).contains(&anchor.center_y)
+        })
+    {
+        return Err(ProjectError::InvalidState(
+            "reframe anchors must exactly cover the output timeline with normalized centers".into(),
+        ));
+    }
+    Ok(plan
+        .anchors
+        .into_iter()
+        .map(|anchor| ReframeAnchor {
+            output_start_ms: anchor.output_start_ms,
+            center_x: anchor.center_x,
+            center_y: anchor.center_y,
+        })
+        .collect())
 }
 
 pub fn qa_run(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, ProjectError> {
@@ -1324,9 +1558,14 @@ pub fn evidence_build(
                         candidate.id
                     ))
                 })?;
-            for (edge, timestamp_ms) in
-                [("before", candidate.start_ms), ("after", candidate.end_ms)]
-            {
+            let decision_start = candidate.start_ms.saturating_sub(750).max(0);
+            let decision_end = candidate.end_ms.saturating_add(750);
+            let mut frames = Vec::new();
+            for (edge, timestamp_ms) in [
+                ("before", decision_start),
+                ("decision", candidate.start_ms),
+                ("after", candidate.end_ms),
+            ] {
                 let frame = boundary_dir.join(format!("{}-{edge}.jpg", candidate.id));
                 extract_frame(Path::new(&source.path), timestamp_ms, &frame)?;
                 artifacts.push(serde_json::json!({
@@ -1337,7 +1576,27 @@ pub fn evidence_build(
                     "timestamp_ms": timestamp_ms,
                     "path": frame.strip_prefix(project_path).unwrap_or(&frame)
                 }));
+                frames.push(frame);
             }
+            let waveform =
+                project_path.join(format!("analysis/evidence/waveforms/{}.png", candidate.id));
+            render_waveform_range(
+                Path::new(&source.path),
+                decision_start,
+                decision_end,
+                &waveform,
+            )?;
+            let composite =
+                project_path.join(format!("analysis/evidence/filmstrips/{}.png", candidate.id));
+            compose_decision_evidence(&frames, &waveform, &composite)?;
+            artifacts.push(serde_json::json!({
+                "kind": "decision_filmstrip",
+                "candidate_id": candidate.id,
+                "source_id": source.source_id,
+                "start_ms": decision_start,
+                "end_ms": decision_end,
+                "path": composite.strip_prefix(project_path).unwrap_or(&composite)
+            }));
         }
         let waveform = project_path.join("analysis/evidence/waveforms/natural.png");
         render_waveform(
@@ -1363,12 +1622,42 @@ pub fn propose_shorts(
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
     let candidates: CandidateManifest = read_json(&project_path.join("edit/candidates.json"))?;
-    let selected = candidates
+    let mut ranked = candidates
         .candidates
         .iter()
+        .filter(|candidate| candidate.drop_reason.is_none())
+        .cloned()
+        .collect::<Vec<_>>();
+    ranked.sort_by(|left, right| {
+        let left_score = (
+            left.end_ms - left.start_ms,
+            std::cmp::Reverse(left.take_rank),
+        );
+        let right_score = (
+            right.end_ms - right.start_ms,
+            std::cmp::Reverse(right.take_rank),
+        );
+        right_score.cmp(&left_score)
+    });
+    let mut source_ids = std::collections::HashSet::new();
+    let mut selected = ranked
+        .iter()
+        .filter(|candidate| source_ids.insert(candidate.source_id.clone()))
         .take(count as usize)
         .cloned()
         .collect::<Vec<_>>();
+    if selected.len() < count as usize {
+        let selected_ids = selected
+            .iter()
+            .map(|candidate| candidate.id.clone())
+            .collect::<std::collections::HashSet<_>>();
+        let remaining = ranked
+            .into_iter()
+            .filter(|candidate| !selected_ids.contains(&candidate.id))
+            .take(count as usize - selected.len())
+            .collect::<Vec<_>>();
+        selected.extend(remaining);
+    }
     let path = project_path.join("edit/shorts.json");
     if !dry_run {
         write_json_atomic(
@@ -1376,6 +1665,7 @@ pub fn propose_shorts(
             &serde_json::json!({
                 "schema_version": SCHEMA_VERSION,
                 "status": "proposed",
+                "strategy": "duration_then_take_rank_with_source_diversity",
                 "variants": selected
             }),
         )?;
@@ -1392,6 +1682,7 @@ pub fn finish_validate(
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
     let timeline: Timeline = read_json(&project_path.join("edit/timeline.json"))?;
+    let manifest = read_project_manifest(&project_path.join("project.json"))?;
     if timeline
         .tracks
         .iter()
@@ -1408,14 +1699,18 @@ pub fn finish_validate(
             &serde_json::json!({
                 "schema_version": SCHEMA_VERSION,
                 "base_timeline": "edit/timeline.json",
-                "slots": [{
-                    "id": "captions",
-                    "kind": "caption",
-                    "renderer": "ffmpeg-or-sidecar",
-                    "effect_id": "caption.srt.v1",
+                "slots": manifest.outputs.iter().map(|preset| serde_json::json!({
+                    "id": format!("final-{}", preset.id),
+                    "kind": "final_delivery",
+                    "renderer": "render.final",
+                    "effect_id": "delivery.render_final.v1",
+                    "preset": preset.id,
+                    "width": preset.width,
+                    "height": preset.height,
+                    "requires_reframe_approval": preset.aspect == "9:16",
                     "output_start_ms": 0,
                     "output_end_ms": timeline.tracks[0].segments.last().map(|segment| segment.output_end_ms).unwrap_or(0)
-                }]
+                })).collect::<Vec<_>>()
             }),
         )?;
     }
@@ -1436,39 +1731,35 @@ pub fn render_slot(
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
     let finish: serde_json::Value = read_json(&project_path.join("finish/finish-plan.json"))?;
-    let exists = finish
+    let slot = finish
         .get("slots")
         .and_then(serde_json::Value::as_array)
-        .is_some_and(|slots| {
+        .and_then(|slots| {
             slots
                 .iter()
-                .any(|slot| slot.get("id").and_then(serde_json::Value::as_str) == Some(slot_id))
-        });
-    if !exists {
-        return Err(ProjectError::InvalidState(format!(
-            "unknown finish slot {slot_id}"
-        )));
-    }
-    let path = project_path.join(format!("render/slots/{slot_id}.mp4"));
-    if !dry_run {
-        match slot_id {
-            "captions" => render_subtitled(
-                &project_path.join("render/rough-cuts/natural.mp4"),
-                &project_path.join("edit/captions.srt"),
-                &path,
-            )?,
-            other => {
-                return Err(ProjectError::InvalidState(format!(
-                    "finish slot {other} has no registered renderer"
-                )))
-            }
+                .find(|slot| slot.get("id").and_then(serde_json::Value::as_str) == Some(slot_id))
+        })
+        .ok_or_else(|| ProjectError::InvalidState(format!("unknown finish slot {slot_id}")))?;
+    let renderer = slot
+        .get("renderer")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| {
+            ProjectError::InvalidState(format!("finish slot {slot_id} has no renderer"))
+        })?;
+    match renderer {
+        "render.final" => {
+            let preset = slot
+                .get("preset")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| {
+                    ProjectError::InvalidState(format!("finish slot {slot_id} has no preset"))
+                })?;
+            render_final(project_path, preset, dry_run)
         }
+        other => Err(ProjectError::InvalidState(format!(
+            "finish slot {slot_id} has unsupported renderer {other}"
+        ))),
     }
-    Ok(PipelineArtifact {
-        status: if dry_run { "dry-run" } else { "created" },
-        path,
-        count: 1,
-    })
 }
 
 pub fn package_social(
@@ -1502,21 +1793,33 @@ pub fn package_social(
 
 pub fn export_otio(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, ProjectError> {
     let timeline: Timeline = read_json(&project_path.join("edit/timeline.json"))?;
+    let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
+    let rate = timeline.timebase.fps_num as f64 / timeline.timebase.fps_den as f64;
     let children = timeline.tracks[0]
         .segments
         .iter()
         .map(|segment| {
-            serde_json::json!({
+            let source = sources
+                .sources
+                .iter()
+                .find(|source| source.source_id == segment.source_id)
+                .ok_or_else(|| ProjectError::InvalidState(format!("missing source {}", segment.source_id)))?;
+            let source_duration = segment.source_end_ms - segment.source_start_ms;
+            Ok(serde_json::json!({
                 "OTIO_SCHEMA": "Clip.2",
                 "name": segment.id,
-                "source_id": segment.source_id,
-                "source_start_ms": segment.source_start_ms,
-                "source_end_ms": segment.source_end_ms,
-                "output_start_ms": segment.output_start_ms,
-                "output_end_ms": segment.output_end_ms
-            })
+                "media_reference": {
+                    "OTIO_SCHEMA": "ExternalReference.1",
+                    "target_url": format!("file://{}", source.path.replace(' ', "%20"))
+                },
+                "source_range": {
+                    "OTIO_SCHEMA": "TimeRange.1",
+                    "start_time": {"OTIO_SCHEMA": "RationalTime.1", "value": segment.source_start_ms as f64 * rate / 1000.0, "rate": rate},
+                    "duration": {"OTIO_SCHEMA": "RationalTime.1", "value": source_duration as f64 * rate / 1000.0, "rate": rate}
+                }
+            }))
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, ProjectError>>()?;
     let path = project_path.join("exports/interchange/timeline.otio.json");
     if !dry_run {
         write_json_atomic(
@@ -1524,7 +1827,10 @@ pub fn export_otio(project_path: &Path, dry_run: bool) -> Result<PipelineArtifac
             &serde_json::json!({
                 "OTIO_SCHEMA": "Timeline.1",
                 "name": "CutRight",
-                "tracks": [{ "OTIO_SCHEMA": "Track.1", "kind": "Video", "children": children }]
+                "tracks": {
+                    "OTIO_SCHEMA": "Stack.1",
+                    "children": [{ "OTIO_SCHEMA": "Track.1", "kind": "Video", "children": children }]
+                }
             }),
         )?;
     }
@@ -1663,6 +1969,30 @@ fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<(), Project
 mod tests {
     use super::*;
 
+    fn sample_timeline() -> Timeline {
+        Timeline {
+            schema_version: SCHEMA_VERSION,
+            timebase: Timebase {
+                fps_num: 30,
+                fps_den: 1,
+            },
+            tracks: vec![Track {
+                id: "main".into(),
+                track_type: "video".into(),
+                segments: vec![TimelineSegment {
+                    id: "segment-001".into(),
+                    source_id: "source-001".into(),
+                    source_start_ms: 1_000,
+                    source_end_ms: 3_000,
+                    output_start_ms: 0,
+                    output_end_ms: 2_000,
+                    speed: 1.0,
+                    reason: "fixture".into(),
+                }],
+            }],
+        }
+    }
+
     #[test]
     fn init_is_idempotent_and_keeps_manifest() {
         let temp = tempfile::tempdir().unwrap();
@@ -1782,6 +2112,68 @@ mod tests {
     }
 
     #[test]
+    fn finish_validation_creates_one_delivery_slot_per_preset() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        write_json_atomic(&temp.path().join("edit/timeline.json"), &sample_timeline()).unwrap();
+
+        let result = finish_validate(temp.path(), false).unwrap();
+        assert_eq!(result.count, 1);
+        let plan: video_core::FinishPlan = read_json(&result.path).unwrap();
+        assert_eq!(plan.slots.len(), 3);
+        assert_eq!(plan.slots[0].id, "final-youtube");
+        assert_eq!(plan.slots[0].renderer, "render.final");
+        assert_eq!(plan.slots[0].effect_id, "delivery.render_final.v1");
+    }
+
+    #[test]
+    fn otio_export_has_standard_timeline_clip_and_media_reference_schemas() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        write_json_atomic(&temp.path().join("edit/timeline.json"), &sample_timeline()).unwrap();
+        write_json_atomic(
+            &temp.path().join("sources/manifest.json"),
+            &SourceManifest {
+                schema_version: SCHEMA_VERSION,
+                sources: vec![SourceEntry {
+                    source_id: "source-001".into(),
+                    path: "/captures/cam one.mov".into(),
+                    blake3: "fixture".into(),
+                    duration_ms: Some(10_000),
+                    width: Some(1920),
+                    height: Some(1080),
+                    rotation_degrees: Some(0),
+                    is_hdr: Some(false),
+                    timebase: Some(Timebase {
+                        fps_num: 30,
+                        fps_den: 1,
+                    }),
+                }],
+            },
+        )
+        .unwrap();
+
+        let result = export_otio(temp.path(), false).unwrap();
+        let otio: serde_json::Value = read_json(&result.path).unwrap();
+        assert_eq!(otio["OTIO_SCHEMA"], "Timeline.1");
+        let clip = &otio["tracks"]["children"][0]["children"][0];
+        assert_eq!(clip["OTIO_SCHEMA"], "Clip.2");
+        assert_eq!(
+            clip["media_reference"]["OTIO_SCHEMA"],
+            "ExternalReference.1"
+        );
+        assert_eq!(clip["source_range"]["OTIO_SCHEMA"], "TimeRange.1");
+        assert_eq!(
+            clip["source_range"]["start_time"]["OTIO_SCHEMA"],
+            "RationalTime.1"
+        );
+        assert_eq!(
+            clip["media_reference"]["target_url"],
+            "file:///captures/cam%20one.mov"
+        );
+    }
+
+    #[test]
     fn benchmark_marks_only_inter_word_boundaries_as_clean() {
         let candidate = vec![Word {
             id: "candidate".into(),
@@ -1816,7 +2208,7 @@ mod tests {
             &reference,
             &clipped_alignment.matches,
             true,
-            1,
+            2,
             40,
         );
         assert_eq!(clipped[0]["status"], "clipped_word");
@@ -1852,6 +2244,33 @@ mod tests {
         assert_eq!(repeated_alignment.matches.len(), 3);
         assert!(repeated_alignment.unmatched_primary.is_empty());
         assert!(repeated_alignment.unmatched_verifier.is_empty());
+    }
+
+    #[test]
+    fn vad_expands_candidate_bounds_to_enclosing_speech() {
+        let signal = VadSignal {
+            schema_version: SCHEMA_VERSION,
+            source_id: "source-a".into(),
+            sample_rate: 16_000,
+            provider: "silero-coreml".into(),
+            regions: vec![video_core::VadRegion {
+                start_ms: 900,
+                end_ms: 2_100,
+                mean_probability: 0.9,
+            }],
+        };
+        assert_eq!(vad_adjusted_bounds(1_000, 2_000, &signal), (900, 2_100));
+        assert_eq!(vad_adjusted_bounds(3_000, 3_200, &signal), (3_000, 3_200));
+    }
+
+    #[test]
+    fn benchmark_sampling_spans_the_full_clip() {
+        let boundaries = (0..100).collect::<Vec<_>>();
+        let sampled = evenly_spaced(&boundaries, 5)
+            .into_iter()
+            .copied()
+            .collect::<Vec<_>>();
+        assert_eq!(sampled, vec![0, 24, 49, 74, 99]);
     }
 
     #[test]

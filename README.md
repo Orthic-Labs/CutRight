@@ -7,10 +7,10 @@ Silero supplies real speech probabilities; WhisperX is available as an independe
 The current pipeline produces candidate-driven rough cuts, burned-caption 16:9 and 9:16 MP4s, visual
 boundary/waveform evidence, explicit-final QA, and YouTube/vertical social packages.
 
-The architecture is still under active implementation. Three real immutable clips are required before
-`videoctl bench transcribe` can authorize either provider for destructive word-edge cuts. The Tauri
-review studio, effects/craft library, color/loudness chain, production OTIO interchange, and full
-multi-source rendering remain tracked architecture phases rather than shipped claims.
+Three real immutable clips are required before `videoctl bench transcribe` can authorize either
+provider for destructive word-edge cuts. Cloud analysis, effect/preset libraries, proxy generation,
+preference learning, and the Studio’s authoring surface are intentionally not part of this local
+pipeline.
 
 ## Local pipeline quick start
 
@@ -20,15 +20,18 @@ cargo run -p videoctl -- doctor
 cargo run -p videoctl -- project init /path/to/MyVideo.video-project
 cargo run -p videoctl -- ingest /path/to/MyVideo.video-project /path/to/clip.mp4
 cargo run -p videoctl -- transcribe /path/to/MyVideo.video-project --provider heardright
+cargo run -p videoctl -- transcribe /path/to/MyVideo.video-project --provider whisperx
 cargo run -p videoctl -- analyze local /path/to/MyVideo.video-project
-cargo run -p videoctl -- bench transcribe /path/to/MyVideo.video-project
 cargo run -p videoctl -- edit candidates /path/to/MyVideo.video-project
 cargo run -p videoctl -- edit render /path/to/MyVideo.video-project --variant natural
 cargo run -p videoctl -- transcript remap /path/to/MyVideo.video-project
+cargo run -p videoctl -- bench transcribe /path/to/MyVideo.video-project
 cargo run -p videoctl -- render final /path/to/MyVideo.video-project --preset youtube
-cargo run -p videoctl -- qa /path/to/MyVideo.video-project
+cargo run -p videoctl -- reframe plan /path/to/MyVideo.video-project
+# Review and explicitly approve every anchor in analysis/reframe-plan.json.
 cargo run -p videoctl -- render final /path/to/MyVideo.video-project --preset reels
 cargo run -p videoctl -- evidence build /path/to/MyVideo.video-project
+cargo run -p videoctl -- qa /path/to/MyVideo.video-project
 cargo run -p videoctl -- package social /path/to/MyVideo.video-project
 ```
 
@@ -38,9 +41,15 @@ to call a final render technically approved.
 
 `videoctl project init` is idempotent, creates the canonical package layout, and never overwrites an
 existing manifest or source file. Set `CUTRIGHT_HEARDRIGHT_ENGINE` and
-`CUTRIGHT_HEARDRIGHT_MODELS_DIR` when HeardRight is not installed at its standard local paths. See
-[schemas/](schemas/), [ARCHITECTURE-2026-07-26.md](ARCHITECTURE-2026-07-26.md), and
-[skills/content-video-editor/SKILL.md](skills/content-video-editor/SKILL.md).
+`CUTRIGHT_HEARDRIGHT_MODELS_DIR` when HeardRight is not installed at its standard local paths.
+Rough cuts require macOS `h264_videotoolbox`; HDR input additionally requires an FFmpeg build with
+`zscale`. Development uses the ignored `.cutright-tools/ffmpeg-zimg` build when present; deploys can
+set `CUTRIGHT_FFMPEG` to an equivalent executable. See [schemas/](schemas/) and
+[docs/PHASE-1-TRANSCRIPTION-BENCHMARK.md](docs/PHASE-1-TRANSCRIPTION-BENCHMARK.md).
+
+Vertical delivery is deliberately blocked until `reframe plan` has a human-reviewed plan with the
+top-level `approved` flag and every anchor’s `approved` flag set to `true`. CutRight will not silently
+center-crop a 16:9 rough cut into a vertical final.
 
 The existing `cutaway/` and `finish/` folders remain bridge-period creator skills for visual styling;
 the CutRight control plane owns the reproducible media and timeline path.

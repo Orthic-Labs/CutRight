@@ -3,7 +3,8 @@ use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::sync::Mutex;
 use thiserror::Error;
 use video_core::{
     providers::{
@@ -48,10 +49,18 @@ pub enum ProviderError {
     WhisperXScriptMissing,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct HeardRightProvider {
     engine: PathBuf,
     models: PathBuf,
+    session: Mutex<Option<HeardRightSession>>,
+}
+
+#[derive(Debug)]
+struct HeardRightSession {
+    child: Child,
+    stdin: ChildStdin,
+    stdout: BufReader<ChildStdout>,
 }
 
 #[derive(Debug, Clone)]
@@ -398,14 +407,14 @@ impl HeardRightProvider {
         if !bundle.join("pipeline.json").is_file() {
             return Err(ProviderError::ModelsMissing);
         }
-        Ok(Self { engine, models })
+        Ok(Self {
+            engine,
+            models,
+            session: Mutex::new(None),
+        })
     }
 
-    pub fn transcribe(
-        &self,
-        source_id: &str,
-        media: &Path,
-    ) -> Result<TranscriptionOutput, ProviderError> {
+    fn start_session(&self) -> Result<HeardRightSession, ProviderError> {
         let mut child = Command::new(&self.engine)
             .arg(&self.models)
             .env_remove("HEARDRIGHT_ENGINE_TEST_MODE")
@@ -413,9 +422,37 @@ impl HeardRightProvider {
             .env("HR_COREML_MODEL_DIR", self.models.join("parakeet-tdt-v3"))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::inherit())
             .spawn()
             .map_err(ProviderError::Start)?;
+        Ok(HeardRightSession {
+            stdin: child
+                .stdin
+                .take()
+                .expect("HeardRight session stdin is piped"),
+            stdout: BufReader::new(
+                child
+                    .stdout
+                    .take()
+                    .expect("HeardRight session stdout is piped"),
+            ),
+            child,
+        })
+    }
+
+    pub fn transcribe(
+        &self,
+        source_id: &str,
+        media: &Path,
+    ) -> Result<TranscriptionOutput, ProviderError> {
+        let mut session = self
+            .session
+            .lock()
+            .map_err(|_| ProviderError::Engine("HeardRight session lock poisoned".into()))?;
+        if session.is_none() {
+            *session = Some(self.start_session()?);
+        }
+        let session = session.as_mut().expect("session is initialized");
         let request = serde_json::json!({
             "protocol_major": 1,
             "protocol_minor": 0,
@@ -426,21 +463,26 @@ impl HeardRightProvider {
             "trace_id": "cutright-transcribe",
             "payload": { "kind": "file_transcription_request", "path": media },
         });
-        child
+        session
             .stdin
-            .as_mut()
-            .expect("piped stdin")
             .write_all(format!("{}\n", request).as_bytes())
             .map_err(ProviderError::Start)?;
-        let stdout = child.stdout.take().expect("piped stdout");
-        let mut response = None;
-        for line in BufReader::new(stdout).lines() {
-            let line = line.map_err(ProviderError::Start)?;
+        let frame = loop {
+            let mut line = String::new();
+            let bytes = session
+                .stdout
+                .read_line(&mut line)
+                .map_err(ProviderError::Start)?;
+            if bytes == 0 {
+                return Err(ProviderError::Engine(
+                    "HeardRight engine closed stdout before returning a result; inspect stderr above"
+                        .into(),
+                ));
+            }
             let frame: Value = serde_json::from_str(&line).map_err(ProviderError::Json)?;
             match frame.get("schema_name").and_then(Value::as_str) {
                 Some("file_transcription_result") => {
-                    response = Some(frame);
-                    break;
+                    break frame;
                 }
                 Some("engine_error") => {
                     return Err(ProviderError::Engine(
@@ -453,9 +495,7 @@ impl HeardRightProvider {
                 }
                 _ => {}
             }
-        }
-        let _ = child.kill();
-        let frame = response.ok_or_else(|| ProviderError::Engine("no result frame".into()))?;
+        };
         let payload = frame
             .get("payload")
             .ok_or_else(|| ProviderError::Engine("result frame has no payload".into()))?;
@@ -512,6 +552,17 @@ impl HeardRightProvider {
     }
 }
 
+impl Drop for HeardRightProvider {
+    fn drop(&mut self) {
+        if let Ok(session) = self.session.get_mut() {
+            if let Some(session) = session.as_mut() {
+                let _ = session.child.kill();
+                let _ = session.child.wait();
+            }
+        }
+    }
+}
+
 impl TranscriptionProvider for HeardRightProvider {
     fn id(&self) -> &'static str {
         "heardright-parakeet-tdt"
@@ -531,5 +582,52 @@ impl TranscriptionProvider for HeardRightProvider {
                 reason: error.to_string(),
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn keeps_one_engine_session_for_multiple_transcriptions() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock after epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("cutright-engine-test-{unique}"));
+        fs::create_dir_all(&root).expect("create engine test directory");
+        let starts = root.join("starts.log");
+        let engine = root.join("fake-engine");
+        fs::write(
+            &engine,
+            format!(
+                "#!/bin/sh\nprintf 'started\\n' >> '{}'\nwhile IFS= read -r line; do\n  printf '%s\\n' '{{\"schema_name\":\"file_transcription_result\",\"payload\":{{\"text\":\"hello\",\"words\":[{{\"text\":\"hello\",\"start_ms\":0,\"end_ms\":100}}]}}}}'\ndone\n",
+                starts.display()
+            ),
+        )
+        .expect("write fake engine");
+        fs::set_permissions(&engine, fs::Permissions::from_mode(0o700))
+            .expect("make fake engine executable");
+        let provider = HeardRightProvider {
+            engine,
+            models: root.clone(),
+            session: Mutex::new(None),
+        };
+        let first = provider.transcribe("one", Path::new("/tmp/one.mp4"));
+        let second = provider.transcribe("two", Path::new("/tmp/two.mp4"));
+        assert_eq!(first.expect("first result").transcript.words.len(), 1);
+        assert_eq!(second.expect("second result").transcript.source_id, "two");
+        drop(provider);
+        assert_eq!(
+            fs::read_to_string(&starts)
+                .expect("read starts")
+                .lines()
+                .count(),
+            1
+        );
+        fs::remove_dir_all(root).expect("remove engine test directory");
     }
 }

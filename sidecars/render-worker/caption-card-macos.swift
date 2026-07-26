@@ -9,6 +9,7 @@ struct Request: Decodable {
   let vertical: Bool
 }
 
+// swiftlint:disable:next function_body_length
 func render(_ request: Request) throws {
   guard request.width > 0, request.height > 0 else {
     throw NSError(domain: "CutRight", code: 1, userInfo: [NSLocalizedDescriptionKey: "invalid caption size"])
@@ -52,10 +53,10 @@ func render(_ request: Request) throws {
     width: min(CGFloat(request.width) * 0.86, textSize.width + horizontalPadding * 2),
     height: textSize.height + verticalPadding * 2
   )
-  let y = request.vertical ? CGFloat(request.height) * 0.48 : CGFloat(request.height) * 0.10
+  let verticalPosition = request.vertical ? CGFloat(request.height) * 0.48 : CGFloat(request.height) * 0.10
   let box = NSRect(
     x: (CGFloat(request.width) - boxSize.width) / 2,
-    y: min(y, CGFloat(request.height) - boxSize.height - verticalPadding),
+    y: min(verticalPosition, CGFloat(request.height) - boxSize.height - verticalPadding),
     width: boxSize.width,
     height: boxSize.height
   )

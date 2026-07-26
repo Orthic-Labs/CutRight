@@ -46,6 +46,13 @@ pub struct SourceRenderSegment {
     pub end_ms: i64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ReframeAnchor {
+    pub output_start_ms: i64,
+    pub center_x: f64,
+    pub center_y: f64,
+}
+
 #[derive(Debug, Error)]
 pub enum RenderError {
     #[error("render requires at least one segment")]
@@ -58,6 +65,8 @@ pub enum RenderError {
     Start(#[source] std::io::Error),
     #[error("ffmpeg failed: {0}")]
     Failed(String),
+    #[error("required FFmpeg capability is unavailable: {0}")]
+    CapabilityMissing(String),
     #[error("caption card worker could not start: {0}")]
     CaptionStart(#[source] std::io::Error),
     #[error("caption card worker failed: {0}")]
@@ -171,12 +180,14 @@ pub fn render_segments(
         }
     }
 
+    let source_filter = source_video_filter(input)?;
     let mut filter = String::new();
     for (index, segment) in segments.iter().enumerate() {
         let start = segment.start_ms as f64 / 1_000.0;
         let end = segment.end_ms as f64 / 1_000.0;
         filter.push_str(&format!(
-            "[0:v]trim=start={start:.3}:end={end:.3},setpts=PTS-STARTPTS[v{index}];"
+            "[0:v]{},trim=start={start:.3}:end={end:.3},setpts=PTS-STARTPTS[v{index}];",
+            source_filter.filter
         ));
         filter.push_str(&format!(
             "[0:a]atrim=start={start:.3}:end={end:.3},asetpts=PTS-STARTPTS[a{index}];"
@@ -187,7 +198,8 @@ pub fn render_segments(
     }
     filter.push_str(&format!("concat=n={}:v=1:a=1[outv][outa]", segments.len()));
 
-    let output_result = Command::new("ffmpeg")
+    let mut command = Command::new(ffmpeg_binary());
+    command
         .args(["-hide_banner", "-loglevel", "error", "-y", "-i"])
         .arg(input)
         .args([
@@ -198,9 +210,19 @@ pub fn render_segments(
             "-map",
             "[outa]",
         ])
-        .args([
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac",
-        ])
+        .args(preview_video_args()?)
+        .args(["-c:a", "aac"]);
+    if source_filter.rec709_output {
+        command.args([
+            "-color_primaries",
+            "bt709",
+            "-color_trc",
+            "bt709",
+            "-colorspace",
+            "bt709",
+        ]);
+    }
+    let output_result = command
         .args(["-movflags", "+faststart"])
         .arg(output)
         .output()
@@ -238,13 +260,17 @@ pub fn render_source_segments(
             });
         }
     }
+    let source_filters = inputs
+        .iter()
+        .map(|input| source_video_filter(input))
+        .collect::<Result<Vec<_>, _>>()?;
     let mut filter = String::new();
     for (index, segment) in segments.iter().enumerate() {
         let start = segment.start_ms as f64 / 1_000.0;
         let end = segment.end_ms as f64 / 1_000.0;
         filter.push_str(&format!(
-            "[{}:v]trim=start={start:.3}:end={end:.3},setpts=PTS-STARTPTS[v{index}];",
-            segment.input_index
+            "[{}:v]{},trim=start={start:.3}:end={end:.3},setpts=PTS-STARTPTS[v{index}];",
+            segment.input_index, source_filters[segment.input_index].filter
         ));
         filter.push_str(&format!(
             "[{}:a]atrim=start={start:.3}:end={end:.3},asetpts=PTS-STARTPTS[a{index}];",
@@ -255,12 +281,13 @@ pub fn render_source_segments(
         filter.push_str(&format!("[v{index}][a{index}]"));
     }
     filter.push_str(&format!("concat=n={}:v=1:a=1[outv][outa]", segments.len()));
-    let mut command = Command::new("ffmpeg");
+    let rec709_output = source_filters.iter().any(|filter| filter.rec709_output);
+    let mut command = Command::new(ffmpeg_binary());
     command.args(["-hide_banner", "-loglevel", "error", "-y"]);
     for input in inputs {
         command.args(["-i"]).arg(input);
     }
-    let result = command
+    command
         .args([
             "-filter_complex",
             &filter,
@@ -269,22 +296,81 @@ pub fn render_source_segments(
             "-map",
             "[outa]",
         ])
-        .args([
-            "-c:v",
-            "libx264",
-            "-preset",
-            "veryfast",
-            "-crf",
-            "23",
-            "-c:a",
-            "aac",
-            "-movflags",
-            "+faststart",
-        ])
+        .args(preview_video_args()?)
+        .args(["-c:a", "aac"]);
+    if rec709_output {
+        command.args([
+            "-color_primaries",
+            "bt709",
+            "-color_trc",
+            "bt709",
+            "-colorspace",
+            "bt709",
+        ]);
+    }
+    let result = command
+        .args(["-movflags", "+faststart"])
         .arg(output)
         .output()
         .map_err(RenderError::Start)?;
     if result.status.success() {
+        Ok(())
+    } else {
+        Err(RenderError::Failed(
+            String::from_utf8_lossy(&result.stderr).trim().to_string(),
+        ))
+    }
+}
+
+pub fn render_boundary_probe(
+    input: &Path,
+    boundary_ms: i64,
+    output: &Path,
+) -> Result<(), RenderError> {
+    if !input.is_file() {
+        return Err(RenderError::Failed(format!(
+            "input does not exist: {}",
+            input.display()
+        )));
+    }
+    if input == output {
+        return Err(RenderError::OutputIsInput);
+    }
+    let metadata = probe(input).map_err(|error| RenderError::Failed(error.to_string()))?;
+    let start_ms = boundary_ms.saturating_sub(800).max(0);
+    let mut end_ms = boundary_ms.saturating_add(800);
+    if let Some(duration) = metadata.duration_ms {
+        end_ms = end_ms.min(duration);
+    }
+    if boundary_ms <= start_ms || end_ms <= boundary_ms {
+        return Err(RenderError::InvalidSegment { start_ms, end_ms });
+    }
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent).map_err(RenderError::Start)?;
+    }
+    let start = start_ms as f64 / 1_000.0;
+    let boundary = boundary_ms as f64 / 1_000.0;
+    let end = end_ms as f64 / 1_000.0;
+    let filter = format!(
+        "[0:v]trim=start={start:.3}:end={boundary:.3},setpts=PTS-STARTPTS[v0];[0:a]atrim=start={start:.3}:end={boundary:.3},asetpts=PTS-STARTPTS[a0];[0:v]trim=start={boundary:.3}:end={end:.3},setpts=PTS-STARTPTS[v1];[0:a]atrim=start={boundary:.3}:end={end:.3},asetpts=PTS-STARTPTS[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[outv][outa]"
+    );
+    let result = Command::new(ffmpeg_binary())
+        .args(["-hide_banner", "-loglevel", "error", "-y", "-i"])
+        .arg(input)
+        .args([
+            "-filter_complex",
+            &filter,
+            "-map",
+            "[outv]",
+            "-map",
+            "[outa]",
+        ])
+        .args(preview_video_args()?)
+        .args(["-c:a", "aac", "-movflags", "+faststart"])
+        .arg(output)
+        .output()
+        .map_err(RenderError::Start)?;
+    if result.status.success() && output.is_file() {
         Ok(())
     } else {
         Err(RenderError::Failed(
@@ -313,9 +399,9 @@ pub fn render_to_preset(
             "output dimensions must be nonzero".into(),
         ));
     }
-    let (filter, rec709_output) = preset_video_filter(input, width, height)?;
+    let (filter, rec709_output) = preset_video_filter(input, width, height, None)?;
     let audio_filter = measured_loudnorm_filter(input)?;
-    let mut command = Command::new("ffmpeg");
+    let mut command = Command::new(ffmpeg_binary());
     command
         .args(["-hide_banner", "-loglevel", "error", "-y", "-i"])
         .arg(input)
@@ -360,7 +446,7 @@ pub fn render_to_preset(
 }
 
 fn measured_loudnorm_filter(input: &Path) -> Result<String, RenderError> {
-    let measurement = Command::new("ffmpeg")
+    let measurement = Command::new(ffmpeg_binary())
         .args(["-hide_banner", "-nostats", "-i"])
         .arg(input)
         .args([
@@ -417,7 +503,7 @@ pub fn extract_frame(input: &Path, timestamp_ms: i64, output: &Path) -> Result<(
         std::fs::create_dir_all(parent).map_err(RenderError::Start)?;
     }
     let timestamp = format!("{:.3}", timestamp_ms.max(0) as f64 / 1_000.0);
-    let result = Command::new("ffmpeg")
+    let result = Command::new(ffmpeg_binary())
         .args([
             "-hide_banner",
             "-loglevel",
@@ -451,12 +537,88 @@ pub fn render_waveform(input: &Path, output: &Path) -> Result<(), RenderError> {
     if let Some(parent) = output.parent() {
         std::fs::create_dir_all(parent).map_err(RenderError::Start)?;
     }
-    let result = Command::new("ffmpeg")
+    let result = Command::new(ffmpeg_binary())
         .args(["-hide_banner", "-loglevel", "error", "-y", "-i"])
         .arg(input)
         .args([
             "-filter_complex",
             "showwavespic=s=1200x240:colors=0x44D7B6",
+            "-frames:v",
+            "1",
+        ])
+        .arg(output)
+        .output()
+        .map_err(RenderError::Start)?;
+    if result.status.success() && output.is_file() {
+        Ok(())
+    } else {
+        Err(RenderError::Failed(
+            String::from_utf8_lossy(&result.stderr).trim().to_string(),
+        ))
+    }
+}
+
+pub fn render_waveform_range(
+    input: &Path,
+    start_ms: i64,
+    end_ms: i64,
+    output: &Path,
+) -> Result<(), RenderError> {
+    if !input.is_file() {
+        return Err(RenderError::Failed(format!(
+            "input does not exist: {}",
+            input.display()
+        )));
+    }
+    if end_ms <= start_ms {
+        return Err(RenderError::InvalidSegment { start_ms, end_ms });
+    }
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent).map_err(RenderError::Start)?;
+    }
+    let start = start_ms as f64 / 1_000.0;
+    let end = end_ms as f64 / 1_000.0;
+    let filter = format!(
+        "atrim=start={start:.3}:end={end:.3},asetpts=PTS-STARTPTS,showwavespic=s=1200x180:colors=0x44D7B6"
+    );
+    let result = Command::new(ffmpeg_binary())
+        .args(["-hide_banner", "-loglevel", "error", "-y", "-i"])
+        .arg(input)
+        .args(["-filter_complex", &filter, "-frames:v", "1"])
+        .arg(output)
+        .output()
+        .map_err(RenderError::Start)?;
+    if result.status.success() && output.is_file() {
+        Ok(())
+    } else {
+        Err(RenderError::Failed(
+            String::from_utf8_lossy(&result.stderr).trim().to_string(),
+        ))
+    }
+}
+
+pub fn compose_decision_evidence(
+    frames: &[PathBuf],
+    waveform: &Path,
+    output: &Path,
+) -> Result<(), RenderError> {
+    if frames.len() != 3 || frames.iter().any(|frame| !frame.is_file()) || !waveform.is_file() {
+        return Err(RenderError::Failed(
+            "decision evidence requires three frames and one waveform".into(),
+        ));
+    }
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent).map_err(RenderError::Start)?;
+    }
+    let result = Command::new(ffmpeg_binary())
+        .args(["-hide_banner", "-loglevel", "error", "-y"])
+        .args(["-i"]).arg(&frames[0])
+        .args(["-i"]).arg(&frames[1])
+        .args(["-i"]).arg(&frames[2])
+        .args(["-i"]).arg(waveform)
+        .args([
+            "-filter_complex",
+            "[0:v]scale=400:225[a];[1:v]scale=400:225[b];[2:v]scale=400:225[c];[a][b][c]hstack=inputs=3[filmstrip];[3:v]scale=1200:180[wave];[filmstrip][wave]vstack=inputs=2",
             "-frames:v",
             "1",
         ])
@@ -486,7 +648,7 @@ pub fn extract_audio_f32(input: &Path, output: &Path, sample_rate: u32) -> Resul
     if let Some(parent) = output.parent() {
         std::fs::create_dir_all(parent).map_err(AudioError::Start)?;
     }
-    let result = Command::new("ffmpeg")
+    let result = Command::new(ffmpeg_binary())
         .args(["-hide_banner", "-loglevel", "error", "-y", "-i"])
         .arg(input)
         .args([
@@ -541,12 +703,24 @@ pub fn render_preset_with_captions(
     height: u32,
     vertical: bool,
 ) -> Result<(), RenderError> {
+    render_preset_with_captions_and_reframe(input, captions, output, width, height, vertical, None)
+}
+
+pub fn render_preset_with_captions_and_reframe(
+    input: &Path,
+    captions: &Path,
+    output: &Path,
+    width: u32,
+    height: u32,
+    vertical: bool,
+    reframe_anchors: Option<&[ReframeAnchor]>,
+) -> Result<(), RenderError> {
     if width == 0 || height == 0 {
         return Err(RenderError::Failed(
             "output dimensions must be nonzero".into(),
         ));
     }
-    let (filter, rec709_output) = preset_video_filter(input, width, height)?;
+    let (filter, rec709_output) = preset_video_filter(input, width, height, reframe_anchors)?;
     let audio_filter = measured_loudnorm_filter(input)?;
     render_captioned(
         input,
@@ -604,7 +778,7 @@ fn render_captioned(
         ));
     }
     let last = format!("[v{}]", cues.len());
-    let mut command = Command::new("ffmpeg");
+    let mut command = Command::new(ffmpeg_binary());
     command
         .args(["-hide_banner", "-loglevel", "error", "-y", "-i"])
         .arg(input);
@@ -649,12 +823,16 @@ fn preset_video_filter(
     input: &Path,
     width: u32,
     height: u32,
+    reframe_anchors: Option<&[ReframeAnchor]>,
 ) -> Result<(String, bool), RenderError> {
-    let resize = format!(
-        "scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},setsar=1"
-    );
     let metadata = probe(input).map_err(|error| RenderError::Failed(error.to_string()))?;
+    let resize = reframe_filter(&metadata, width, height, reframe_anchors)?;
     if metadata.is_hdr == Some(true) {
+        if !ffmpeg_has_filter("zscale")? {
+            return Err(RenderError::CapabilityMissing(
+                "HDR delivery requires FFmpeg built with the zscale filter; install a zimg-enabled FFmpeg build".into(),
+            ));
+        }
         Ok((
             format!(
                 "zscale=transfer=linear:npl=100,format=gbrpf32le,tonemap=tonemap=hable:desat=0,zscale=primaries=bt709:transfer=bt709:matrix=bt709,format=yuv420p,{resize}"
@@ -663,6 +841,129 @@ fn preset_video_filter(
         ))
     } else {
         Ok((resize, false))
+    }
+}
+
+struct SourceVideoFilter {
+    filter: String,
+    rec709_output: bool,
+}
+
+fn source_video_filter(input: &Path) -> Result<SourceVideoFilter, RenderError> {
+    let metadata = probe(input).map_err(|error| RenderError::Failed(error.to_string()))?;
+    if metadata.is_hdr == Some(true) {
+        let (filter, _) = preset_video_filter(input, 1, 1, None)?;
+        let tone_map = filter
+            .strip_suffix(",scale=1:1:force_original_aspect_ratio=increase,crop=1:1,setsar=1")
+            .ok_or_else(|| RenderError::Failed("invalid HDR normalization filter".into()))?;
+        Ok(SourceVideoFilter {
+            filter: tone_map.to_string(),
+            rec709_output: true,
+        })
+    } else {
+        Ok(SourceVideoFilter {
+            filter: "null".into(),
+            rec709_output: false,
+        })
+    }
+}
+
+fn reframe_filter(
+    metadata: &MediaMetadata,
+    width: u32,
+    height: u32,
+    anchors: Option<&[ReframeAnchor]>,
+) -> Result<String, RenderError> {
+    let Some(anchors) = anchors.filter(|anchors| !anchors.is_empty()) else {
+        return Ok(format!(
+            "scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},setsar=1"
+        ));
+    };
+    let input_width = metadata
+        .width
+        .ok_or_else(|| RenderError::Failed("reframe input has no width".into()))?
+        as f64;
+    let input_height = metadata
+        .height
+        .ok_or_else(|| RenderError::Failed("reframe input has no height".into()))?
+        as f64;
+    let scale = (width as f64 / input_width).max(height as f64 / input_height);
+    let scaled_width = (input_width * scale).round().max(width as f64) as u32;
+    let scaled_height = (input_height * scale).round().max(height as f64) as u32;
+    let crop_x = |anchor: &ReframeAnchor| {
+        ((scaled_width as f64 * anchor.center_x.clamp(0.0, 1.0) - width as f64 / 2.0)
+            .clamp(0.0, (scaled_width - width) as f64))
+        .round() as u32
+    };
+    let crop_y = |anchor: &ReframeAnchor| {
+        ((scaled_height as f64 * anchor.center_y.clamp(0.0, 1.0) - height as f64 / 2.0)
+            .clamp(0.0, (scaled_height - height) as f64))
+        .round() as u32
+    };
+    let initial = anchors[0];
+    let commands = anchors
+        .iter()
+        .map(|anchor| {
+            format!(
+                "{:.3} crop@reframe x {};{:.3} crop@reframe y {}",
+                anchor.output_start_ms.max(0) as f64 / 1_000.0,
+                crop_x(anchor),
+                anchor.output_start_ms.max(0) as f64 / 1_000.0,
+                crop_y(anchor)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(";");
+    Ok(format!(
+        "scale={scaled_width}:{scaled_height},sendcmd=c='{commands}',crop@reframe={width}:{height}:x={}:y={},setsar=1",
+        crop_x(&initial),
+        crop_y(&initial)
+    ))
+}
+
+fn preview_video_args() -> Result<Vec<&'static str>, RenderError> {
+    if !ffmpeg_has_encoder("h264_videotoolbox")? {
+        return Err(RenderError::CapabilityMissing(
+            "rough preview rendering requires h264_videotoolbox on macOS".into(),
+        ));
+    }
+    Ok(vec!["-c:v", "h264_videotoolbox", "-b:v", "10M"])
+}
+
+fn ffmpeg_has_filter(name: &str) -> Result<bool, RenderError> {
+    ffmpeg_list_contains("-filters", name)
+}
+
+fn ffmpeg_has_encoder(name: &str) -> Result<bool, RenderError> {
+    ffmpeg_list_contains("-encoders", name)
+}
+
+fn ffmpeg_list_contains(flag: &str, name: &str) -> Result<bool, RenderError> {
+    let output = Command::new(ffmpeg_binary())
+        .args(["-hide_banner", flag])
+        .output()
+        .map_err(RenderError::Start)?;
+    if !output.status.success() {
+        return Err(RenderError::Failed(
+            String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        ));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .any(|line| line.split_whitespace().any(|token| token == name)))
+}
+
+fn ffmpeg_binary() -> PathBuf {
+    if let Some(path) = std::env::var_os("CUTRIGHT_FFMPEG") {
+        return PathBuf::from(path);
+    }
+    let bundled = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join(".cutright-tools/ffmpeg-zimg/bin/ffmpeg");
+    if bundled.is_file() {
+        bundled
+    } else {
+        PathBuf::from("ffmpeg")
     }
 }
 
@@ -875,6 +1176,263 @@ mod tests {
     fn rejects_missing_input_before_starting_ffprobe() {
         let error = probe(Path::new("/does/not/exist.mp4")).unwrap_err();
         assert!(matches!(error, ProbeError::MissingInput(_)));
+    }
+
+    #[test]
+    fn reframe_filter_schedules_each_anchor() {
+        let metadata = MediaMetadata {
+            duration_ms: Some(2_000),
+            has_video: true,
+            has_audio: true,
+            width: Some(640),
+            height: Some(360),
+            rotation_degrees: None,
+            is_hdr: Some(false),
+            timebase: None,
+        };
+        let anchors = [
+            ReframeAnchor {
+                output_start_ms: 0,
+                center_x: 0.25,
+                center_y: 0.5,
+            },
+            ReframeAnchor {
+                output_start_ms: 1_000,
+                center_x: 0.75,
+                center_y: 0.5,
+            },
+        ];
+        let filter = reframe_filter(&metadata, 360, 640, Some(&anchors)).expect("filter");
+        assert!(filter.contains("sendcmd"));
+        assert!(filter.contains("0.000 crop@reframe x"));
+        assert!(filter.contains("1.000 crop@reframe x"));
+        assert!(filter.contains("crop@reframe=360:640"));
+    }
+
+    #[test]
+    fn rendered_reframe_follows_timeline_anchors() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock after epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("cutright-reframe-test-{unique}"));
+        fs::create_dir_all(&root).expect("create reframe test directory");
+        let input = root.join("input.mp4");
+        let captions = root.join("captions.srt");
+        let output = root.join("output.mp4");
+        let generated = Command::new("ffmpeg")
+            .args([
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=red:s=320x360:r=30",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=blue:s=320x360:r=30",
+                "-filter_complex",
+                "[0:v][1:v]hstack",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=1000:sample_rate=48000",
+                "-t",
+                "2",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+            ])
+            .arg(&input)
+            .output()
+            .expect("start reframe fixture ffmpeg");
+        assert!(generated.status.success());
+        fs::write(&captions, "").expect("write empty captions");
+        let anchors = [
+            ReframeAnchor {
+                output_start_ms: 0,
+                center_x: 0.25,
+                center_y: 0.5,
+            },
+            ReframeAnchor {
+                output_start_ms: 1_000,
+                center_x: 0.75,
+                center_y: 0.5,
+            },
+        ];
+        render_preset_with_captions_and_reframe(
+            &input,
+            &captions,
+            &output,
+            360,
+            640,
+            true,
+            Some(&anchors),
+        )
+        .expect("render reframed preset");
+        let luminance = |time: &str| {
+            let frame = Command::new("ffmpeg")
+                .args(["-hide_banner", "-loglevel", "error", "-ss", time, "-i"])
+                .arg(&output)
+                .args([
+                    "-frames:v",
+                    "1",
+                    "-vf",
+                    "crop=10:10:0:0,signalstats,metadata=print:file=-",
+                    "-f",
+                    "null",
+                    "-",
+                ])
+                .output()
+                .expect("start reframe luminance ffmpeg");
+            assert!(frame.status.success());
+            String::from_utf8(frame.stdout)
+                .expect("frame luminance is UTF-8")
+                .lines()
+                .find_map(|line| {
+                    line.strip_prefix("lavfi.signalstats.YAVG=")
+                        .map(str::parse::<f64>)
+                })
+                .expect("frame luminance is present")
+                .expect("frame luminance is numeric")
+        };
+        assert!(luminance("0.25") > luminance("1.25") + 20.0);
+        fs::remove_dir_all(root).expect("remove reframe test directory");
+    }
+
+    #[test]
+    fn boundary_probe_renders_a_short_av_edit() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock after epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("cutright-boundary-test-{unique}"));
+        fs::create_dir_all(&root).expect("create boundary test directory");
+        let input = root.join("input.mp4");
+        let output = root.join("probe.mp4");
+        let generated = Command::new("ffmpeg")
+            .args([
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=black:s=640x360:r=30",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=1000:sample_rate=48000",
+                "-t",
+                "3",
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+            ])
+            .arg(&input)
+            .output()
+            .expect("start boundary fixture ffmpeg");
+        assert!(generated.status.success());
+        render_boundary_probe(&input, 1_500, &output).expect("render boundary probe");
+        let metadata = probe(&output).expect("probe rendered boundary");
+        assert!(metadata.has_video && metadata.has_audio);
+        assert!(metadata
+            .duration_ms
+            .is_some_and(|duration| (1_500..=1_700).contains(&duration)));
+        fs::remove_dir_all(root).expect("remove boundary test directory");
+    }
+
+    #[test]
+    fn hdr_preview_is_tone_mapped_and_tagged_rec709() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock after epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("cutright-hdr-test-{unique}"));
+        fs::create_dir_all(&root).expect("create HDR test directory");
+        let input = root.join("input-hdr.mp4");
+        let output = root.join("preview.mp4");
+        let generated = Command::new(ffmpeg_binary())
+            .args([
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=s=320x180:r=30",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=1000:sample_rate=48000",
+                "-t",
+                "1",
+                "-c:v",
+                "hevc_videotoolbox",
+                "-pix_fmt",
+                "p010le",
+                "-color_primaries",
+                "bt2020",
+                "-color_trc",
+                "smpte2084",
+                "-colorspace",
+                "bt2020nc",
+                "-bsf:v",
+                "hevc_metadata=colour_primaries=9:transfer_characteristics=16:matrix_coefficients=9",
+                "-c:a",
+                "aac",
+            ])
+            .arg(&input)
+            .output()
+            .expect("start HDR fixture ffmpeg");
+        assert!(
+            generated.status.success(),
+            "HDR fixture ffmpeg failed: {}",
+            String::from_utf8_lossy(&generated.stderr)
+        );
+        assert_eq!(probe(&input).expect("probe HDR fixture").is_hdr, Some(true));
+
+        render_segments(
+            &input,
+            &[RenderSegment {
+                start_ms: 0,
+                end_ms: 900,
+            }],
+            &output,
+        )
+        .expect("tone-map HDR preview");
+
+        let tags = Command::new("ffprobe")
+            .args([
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=color_transfer,color_primaries,color_space",
+                "-of",
+                "default=noprint_wrappers=1",
+            ])
+            .arg(&output)
+            .output()
+            .expect("probe HDR preview tags");
+        assert!(tags.status.success());
+        let tags = String::from_utf8(tags.stdout).expect("tags are UTF-8");
+        assert!(tags.contains("color_transfer=bt709"), "{tags}");
+        assert!(tags.contains("color_primaries=bt709"), "{tags}");
+        assert!(tags.contains("color_space=bt709"), "{tags}");
+        assert_eq!(
+            probe(&output).expect("probe HDR preview").is_hdr,
+            Some(false)
+        );
+        fs::remove_dir_all(root).expect("remove HDR test directory");
     }
 
     #[test]
