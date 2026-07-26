@@ -37,10 +37,8 @@ pub enum ProviderError {
     MissingTimedWords,
     #[error("CutRight Silero VAD model was not found; set CUTRIGHT_SILERO_MODEL")]
     VadModelMissing,
-    #[error("CutRight Silero VAD worker source was not found; set CUTRIGHT_SILERO_VAD_WORKER")]
+    #[error("CutRight Silero VAD worker binary was not found; set CUTRIGHT_SILERO_VAD_BIN")]
     VadWorkerMissing,
-    #[error("could not build CutRight Silero VAD worker: {0}")]
-    VadWorkerBuild(String),
     #[error("CutRight Silero VAD worker failed: {0}")]
     VadWorker(String),
     #[error("WhisperX Python was not found; set CUTRIGHT_WHISPERX_PYTHON")]
@@ -211,7 +209,6 @@ impl TranscriptionProvider for WhisperXProvider {
 #[derive(Debug, Clone)]
 pub struct SileroVadProvider {
     model: PathBuf,
-    worker_source: PathBuf,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -236,58 +233,27 @@ impl SileroVadProvider {
         if !model.is_dir() {
             return Err(ProviderError::VadModelMissing);
         }
-        let worker_source = env::var_os("CUTRIGHT_SILERO_VAD_WORKER")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("../..")
-                    .join("sidecars/model-worker/silero-vad-macos.swift")
-            });
-        if !worker_source.is_file() {
-            return Err(ProviderError::VadWorkerMissing);
-        }
-        Ok(Self {
-            model,
-            worker_source,
-        })
+        Ok(Self { model })
     }
 
-    fn worker_binary(&self, audio_path: &Path) -> Result<PathBuf, ProviderError> {
+    fn worker_binary(&self) -> Result<PathBuf, ProviderError> {
         if let Some(path) = env::var_os("CUTRIGHT_SILERO_VAD_BIN").map(PathBuf::from) {
             if path.is_file() {
                 return Ok(path);
             }
             return Err(ProviderError::VadWorkerMissing);
         }
-        let cache = audio_path
-            .parent()
-            .and_then(Path::parent)
-            .ok_or(ProviderError::VadWorkerMissing)?;
-        let worker_dir = cache.join("sidecars");
-        fs::create_dir_all(&worker_dir).map_err(ProviderError::Start)?;
-        let binary = worker_dir.join("silero-vad-macos");
-        let source_is_newer = fs::metadata(&self.worker_source)
-            .and_then(|source| source.modified())
-            .ok()
-            .zip(
-                fs::metadata(&binary)
-                    .and_then(|binary| binary.modified())
-                    .ok(),
-            )
-            .is_some_and(|(source, binary)| source > binary);
-        if !binary.is_file() || source_is_newer {
-            let output = Command::new("swiftc")
-                .arg(&self.worker_source)
-                .arg("-O")
-                .arg("-o")
-                .arg(&binary)
-                .output()
+        let binary =
+            std::env::temp_dir().join(format!("cutright-silero-vad-{}", env!("CARGO_PKG_VERSION")));
+        let embedded = include_bytes!(env!("CUTRIGHT_SILERO_VAD"));
+        if fs::read(&binary).ok().as_deref() != Some(embedded.as_slice()) {
+            fs::write(&binary, embedded).map_err(ProviderError::Start)?;
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&binary, fs::Permissions::from_mode(0o700))
                 .map_err(ProviderError::Start)?;
-            if !output.status.success() {
-                return Err(ProviderError::VadWorkerBuild(
-                    String::from_utf8_lossy(&output.stderr).trim().to_string(),
-                ));
-            }
         }
         Ok(binary)
     }
@@ -305,12 +271,12 @@ impl VadProvider for SileroVadProvider {
                 reason: "Silero CoreML worker requires 16000 Hz PCM".into(),
             });
         }
-        let binary = self.worker_binary(&request.audio_path).map_err(|error| {
-            CoreProviderError::Unavailable {
+        let binary = self
+            .worker_binary()
+            .map_err(|error| CoreProviderError::Unavailable {
                 provider: self.id().into(),
                 reason: error.to_string(),
-            }
-        })?;
+            })?;
         let request_json = serde_json::json!({
             "audio_path": request.audio_path,
             "model_path": self.model,
@@ -590,6 +556,23 @@ mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn materializes_the_build_time_silero_worker() {
+        let provider = SileroVadProvider {
+            model: PathBuf::new(),
+        };
+        let worker = provider.worker_binary().expect("materialize Silero worker");
+        assert!(worker.is_file());
+        assert_eq!(
+            fs::read(&worker).expect("read materialized worker"),
+            include_bytes!(env!("CUTRIGHT_SILERO_VAD"))
+        );
+        assert_ne!(
+            worker.extension().and_then(|value| value.to_str()),
+            Some("swift")
+        );
+    }
 
     #[test]
     fn keeps_one_engine_session_for_multiple_transcriptions() {
