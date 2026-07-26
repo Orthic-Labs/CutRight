@@ -1,0 +1,27 @@
+{
+  "gate": "studio-motion",
+  "verdict": "pass",
+  "captured_at": "2026-07-26T19:05:00+05:30",
+  "environment": {
+    "frontend": "Vite QA fixture",
+    "browser": "Google Chrome headless on macOS",
+    "build": "pnpm build"
+  },
+  "crossfade": {
+    "before": "motion-swap-before.png",
+    "after": "motion-swap-after.png",
+    "trigger": "A key from natural to tight at the same word",
+    "computed_transition": "opacity 220ms cubic-bezier(0.22, 1, 0.36, 1)",
+    "verified": [
+      "both videos remain paintable during the transition",
+      "inactive video has opacity: 0 and pointer-events: none",
+      "outgoing video pauses before the swap handler changes the active variant"
+    ]
+  },
+  "reduced_motion": {
+    "capture": "reduced-variant.png",
+    "browser_flag": "--force-prefers-reduced-motion",
+    "verified": "the reduced-motion stylesheet sets transition and animation durations to 0ms while preserving visible state labels"
+  },
+  "functional_evidence": "apps/studio/.cache/qa-actions.json; pnpm qa:functional completed with no console errors or warnings"
+}

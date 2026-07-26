@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{Read, Write};
@@ -105,6 +105,87 @@ pub struct PipelineArtifact {
     pub count: usize,
 }
 
+/// Read-only, Studio-facing summary of a project. Optional artifacts are omitted when their
+/// producing pipeline stage has not run (or the artifact is unreadable).
+#[derive(Debug, Serialize)]
+pub struct ProjectSnapshot {
+    pub schema_version: u32,
+    pub project_path: PathBuf,
+    pub manifest: ProjectManifest,
+    pub generated_at: DateTime<Utc>,
+    pub sources: Vec<SourceSnapshot>,
+    pub stages: PipelineStages,
+    pub variants: Vec<VariantSnapshot>,
+    pub finals: Vec<FinalSnapshot>,
+    pub qa: Option<serde_json::Value>,
+    pub bench: Option<BenchSnapshot>,
+    pub reframe_plan: Option<serde_json::Value>,
+    pub decisions_path: PathBuf,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SourceSnapshot {
+    #[serde(flatten)]
+    pub source: SourceEntry,
+    pub file_present: bool,
+    pub transcript: Option<PathBuf>,
+    pub stages: SourceStages,
+    pub waveform_png: Option<PathBuf>,
+    pub poster_jpg: Option<PathBuf>,
+}
+
+#[derive(Debug, Serialize, Default)]
+pub struct SourceStages {
+    pub ingested: bool,
+    pub transcribed: bool,
+    pub analyzed: bool,
+    pub in_candidates: bool,
+    pub in_cut: bool,
+}
+
+#[derive(Debug, Serialize, Default)]
+pub struct PipelineStages {
+    pub ingested: bool,
+    pub transcribed: bool,
+    pub analyzed: bool,
+    pub candidates: bool,
+    pub rough_cut: bool,
+    #[serde(rename = "final")]
+    pub final_render: bool,
+    pub qa: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct VariantSnapshot {
+    pub id: String,
+    pub mp4: Option<PathBuf>,
+    pub mp4_mtime: Option<DateTime<Utc>>,
+    pub fps: Option<f64>,
+    pub cut_plan: Option<CutPlan>,
+    pub output_transcript: Option<PathBuf>,
+    pub srt: Option<PathBuf>,
+    pub segment_count: Option<usize>,
+    pub duration_ms: Option<i64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FinalSnapshot {
+    pub preset: String,
+    pub aspect: String,
+    pub width: u32,
+    pub height: u32,
+    pub mp4: PathBuf,
+    pub mp4_mtime: Option<DateTime<Utc>>,
+    pub fps: Option<f64>,
+    pub duration_ms: Option<i64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BenchSnapshot {
+    pub decision: Option<String>,
+    pub report: PathBuf,
+}
+
 #[derive(Debug, Deserialize)]
 struct ReframePlan {
     approved: bool,
@@ -127,6 +208,197 @@ struct VisionAnchorResponse {
     center_x: f64,
     center_y: f64,
     confidence: f64,
+}
+
+/// Returns the filesystem-backed state Studio needs without mutating or hashing the project.
+pub fn project_snapshot(project_path: &Path) -> Result<ProjectSnapshot, ProjectError> {
+    let project_path = project_path.canonicalize()?;
+    let manifest = read_project_manifest(&project_path.join("project.json"))?;
+    let source_manifest_path = project_path.join("sources/manifest.json");
+    let sources_manifest = read_json_if_file::<SourceManifest>(&source_manifest_path);
+    let candidates =
+        read_json_if_file::<CandidateManifest>(&project_path.join("edit/candidates.json"));
+    let variant_ids = ["tight", "natural"];
+    let variant_plans = variant_ids
+        .iter()
+        .map(|id| {
+            (
+                *id,
+                read_json_if_file::<CutPlan>(
+                    &project_path.join(format!("edit/cut-plan-{id}.json")),
+                ),
+            )
+        })
+        .collect::<std::collections::HashMap<_, _>>();
+
+    let sources: Vec<SourceSnapshot> = sources_manifest
+        .as_ref()
+        .map(|manifest| {
+            manifest
+                .sources
+                .iter()
+                .cloned()
+                .map(|mut source| {
+                    let source_path = absolute_path(&project_path, Path::new(&source.path));
+                    source.path = source_path.to_string_lossy().into_owned();
+                    let transcript = existing_path(
+                        project_path
+                            .join(format!("analysis/transcripts/{}.json", source.source_id)),
+                    );
+                    let analyzed = project_path
+                        .join(format!("analysis/vad-{}.json", source.source_id))
+                        .is_file();
+                    let in_candidates = candidates.as_ref().is_some_and(|items| {
+                        items
+                            .candidates
+                            .iter()
+                            .any(|candidate| candidate.source_id == source.source_id)
+                    });
+                    let in_cut = variant_plans.values().flatten().any(|plan| {
+                        plan.segments
+                            .iter()
+                            .any(|segment| segment.source_id == source.source_id)
+                    });
+                    SourceSnapshot {
+                        file_present: source_path.is_file(),
+                        transcript,
+                        stages: SourceStages {
+                            ingested: true,
+                            transcribed: project_path
+                                .join(format!("analysis/transcripts/{}.json", source.source_id))
+                                .is_file(),
+                            analyzed,
+                            in_candidates,
+                            in_cut,
+                        },
+                        waveform_png: existing_path(
+                            project_path.join(format!("cache/waveforms/{}.png", source.source_id)),
+                        ),
+                        poster_jpg: existing_path(
+                            project_path.join(format!("cache/frames/{}.jpg", source.source_id)),
+                        ),
+                        source,
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let variants = variant_ids
+        .iter()
+        .map(|id| snapshot_variant(&project_path, id, variant_plans.get(id).cloned().flatten()))
+        .collect::<Vec<_>>();
+    let finals = manifest
+        .outputs
+        .iter()
+        .filter_map(|preset| snapshot_final(&project_path, preset))
+        .collect::<Vec<_>>();
+    let stages = PipelineStages {
+        ingested: !sources.is_empty(),
+        transcribed: !sources.is_empty() && sources.iter().all(|source| source.stages.transcribed),
+        analyzed: !sources.is_empty() && sources.iter().all(|source| source.stages.analyzed),
+        candidates: candidates.is_some(),
+        rough_cut: variants.iter().any(|variant| variant.mp4.is_some()),
+        final_render: !finals.is_empty(),
+        qa: project_path.join("qa/report.json").is_file(),
+    };
+    let bench_path = project_path.join("analysis/bench/transcribe/report.json");
+
+    Ok(ProjectSnapshot {
+        schema_version: SCHEMA_VERSION,
+        project_path: project_path.clone(),
+        manifest,
+        generated_at: Utc::now(),
+        sources,
+        stages,
+        variants,
+        finals,
+        qa: read_value_if_file(&project_path.join("qa/report.json")),
+        bench: read_value_if_file(&bench_path).map(|report| BenchSnapshot {
+            decision: report
+                .get("decision")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned),
+            report: bench_path,
+        }),
+        reframe_plan: read_value_if_file(&project_path.join("analysis/reframe-plan.json")),
+        decisions_path: project_path.join("feedback/decisions.jsonl"),
+    })
+}
+
+fn snapshot_variant(project_path: &Path, id: &str, cut_plan: Option<CutPlan>) -> VariantSnapshot {
+    let mp4_path = project_path.join(format!("render/rough-cuts/{id}.mp4"));
+    let metadata = mp4_path.is_file().then(|| probe(&mp4_path).ok()).flatten();
+    VariantSnapshot {
+        id: id.to_string(),
+        mp4: existing_path(mp4_path.clone()),
+        mp4_mtime: file_mtime(&mp4_path),
+        fps: metadata
+            .as_ref()
+            .and_then(|value| value.timebase.as_ref())
+            .map(fps),
+        output_transcript: existing_path(
+            project_path.join(format!("edit/output-transcript-{id}.json")),
+        ),
+        srt: existing_path(project_path.join(format!("edit/captions-{id}.srt"))),
+        segment_count: cut_plan.as_ref().map(|plan| plan.segments.len()),
+        duration_ms: metadata.and_then(|value| value.duration_ms),
+        cut_plan,
+    }
+}
+
+fn snapshot_final(project_path: &Path, preset: &OutputPreset) -> Option<FinalSnapshot> {
+    let mp4 = project_path.join(format!("render/finals/{}.mp4", preset.id));
+    if !mp4.is_file() {
+        return None;
+    }
+    let metadata = probe(&mp4).ok();
+    Some(FinalSnapshot {
+        preset: preset.id.clone(),
+        aspect: preset.aspect.clone(),
+        width: preset.width,
+        height: preset.height,
+        mp4: mp4.clone(),
+        mp4_mtime: file_mtime(&mp4),
+        fps: metadata
+            .as_ref()
+            .and_then(|value| value.timebase.as_ref())
+            .map(fps),
+        duration_ms: metadata.and_then(|value| value.duration_ms),
+    })
+}
+
+fn existing_path(path: PathBuf) -> Option<PathBuf> {
+    path.is_file().then_some(path)
+}
+
+fn absolute_path(project_path: &Path, path: &Path) -> PathBuf {
+    let path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        project_path.join(path)
+    };
+    path.canonicalize().unwrap_or(path)
+}
+
+fn file_mtime(path: &Path) -> Option<DateTime<Utc>> {
+    fs::metadata(path)
+        .ok()?
+        .modified()
+        .ok()
+        .map(DateTime::<Utc>::from)
+}
+
+fn fps(timebase: &Timebase) -> f64 {
+    f64::from(timebase.fps_num) / f64::from(timebase.fps_den)
+}
+
+fn read_json_if_file<T: serde::de::DeserializeOwned>(path: &Path) -> Option<T> {
+    path.is_file().then(|| read_json(path).ok()).flatten()
+}
+
+fn read_value_if_file(path: &Path) -> Option<serde_json::Value> {
+    read_json_if_file(path)
 }
 
 pub fn init_project(path: &Path, dry_run: bool) -> Result<InitResult, ProjectError> {
@@ -1285,7 +1557,31 @@ pub fn remap_transcript(
     project_path: &Path,
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
-    let plan: CutPlan = read_json(&project_path.join("edit/cut-plan.json"))?;
+    remap_transcript_with_variant(project_path, None, dry_run)
+}
+
+pub fn remap_transcript_for_variant(
+    project_path: &Path,
+    variant: &str,
+    dry_run: bool,
+) -> Result<PipelineArtifact, ProjectError> {
+    validate_variant(variant)?;
+    remap_transcript_with_variant(project_path, Some(variant), dry_run)
+}
+
+pub fn remap_transcript_with_variant(
+    project_path: &Path,
+    variant: Option<&str>,
+    dry_run: bool,
+) -> Result<PipelineArtifact, ProjectError> {
+    if let Some(variant) = variant {
+        validate_variant(variant)?;
+    }
+    let plan_path = match variant {
+        Some(variant) => project_path.join(format!("edit/cut-plan-{variant}.json")),
+        None => project_path.join("edit/cut-plan.json"),
+    };
+    let plan: CutPlan = read_json(&plan_path)?;
     let transcripts = load_transcripts(project_path)?;
     let mut output_words = Vec::new();
     let mut output_cursor = 0;
@@ -1304,6 +1600,7 @@ pub fn remap_transcript(
                 let source_end = word.end_ms.min(segment.source_end_ms);
                 output_words.push(Word {
                     id: format!("ow_{:06}", output_words.len()),
+                    source_word_id: Some(format!("{}:{}", transcript.source_id, word.id)),
                     text: word.text.clone(),
                     start_ms: output_start + source_start - segment.source_start_ms,
                     end_ms: output_start + source_end - segment.source_start_ms,
@@ -1323,16 +1620,32 @@ pub fn remap_transcript(
         words: output_words,
         events: Vec::new(),
     };
-    let path = project_path.join("edit/output-transcript.json");
+    let path = match variant {
+        Some(variant) => project_path.join(format!("edit/output-transcript-{variant}.json")),
+        None => project_path.join("edit/output-transcript.json"),
+    };
     if !dry_run {
         write_json_atomic(&path, &transcript)?;
-        write_srt(&project_path.join("edit/captions.srt"), &transcript.words)?;
+        let captions_path = match variant {
+            Some(variant) => project_path.join(format!("edit/captions-{variant}.srt")),
+            None => project_path.join("edit/captions.srt"),
+        };
+        write_srt(&captions_path, &transcript.words)?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
         path,
         count: transcript.words.len(),
     })
+}
+
+fn validate_variant(variant: &str) -> Result<(), ProjectError> {
+    match variant {
+        "tight" | "natural" => Ok(()),
+        _ => Err(ProjectError::InvalidState(format!(
+            "unknown edit variant {variant}; use tight or natural"
+        ))),
+    }
 }
 
 pub fn render_final(
@@ -2007,6 +2320,106 @@ mod tests {
     }
 
     #[test]
+    fn snapshot_of_manifest_only_project_has_no_completed_stages() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+
+        let snapshot = project_snapshot(temp.path()).unwrap();
+
+        assert!(snapshot.sources.is_empty());
+        assert!(!snapshot.stages.ingested);
+        assert!(!snapshot.stages.transcribed);
+        assert!(!snapshot.stages.analyzed);
+        assert!(!snapshot.stages.candidates);
+        assert!(!snapshot.stages.rough_cut);
+        assert!(!snapshot.stages.final_render);
+        assert!(!snapshot.stages.qa);
+        assert_eq!(
+            snapshot.decisions_path,
+            temp.path()
+                .canonicalize()
+                .unwrap()
+                .join("feedback/decisions.jsonl")
+        );
+    }
+
+    #[test]
+    fn variant_remap_preserves_unique_compound_source_word_ids() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        let source_word = |source_id: &str| Transcript {
+            schema_version: SCHEMA_VERSION,
+            provider: "fixture".into(),
+            source_id: source_id.into(),
+            language: "en".into(),
+            words: vec![Word {
+                id: "w_000000".into(),
+                source_word_id: None,
+                text: source_id.into(),
+                start_ms: 0,
+                end_ms: 100,
+                confidence: 1.0,
+                speaker: None,
+                kind: "word".into(),
+            }],
+            events: Vec::new(),
+        };
+        write_json_atomic(
+            &temp.path().join("analysis/transcripts/source-a.json"),
+            &source_word("source-a"),
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("analysis/transcripts/source-b.json"),
+            &source_word("source-b"),
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("edit/cut-plan-tight.json"),
+            &CutPlan {
+                schema_version: SCHEMA_VERSION,
+                variant: "tight".into(),
+                gap_threshold_ms: 0,
+                head_margin_ms: 0,
+                tail_margin_ms: 0,
+                segments: vec![
+                    CutSegment {
+                        id: "one".into(),
+                        source_id: "source-a".into(),
+                        source_start_ms: 0,
+                        source_end_ms: 100,
+                        reason: "fixture".into(),
+                    },
+                    CutSegment {
+                        id: "two".into(),
+                        source_id: "source-b".into(),
+                        source_start_ms: 0,
+                        source_end_ms: 100,
+                        reason: "fixture".into(),
+                    },
+                ],
+            },
+        )
+        .unwrap();
+
+        let result = remap_transcript_for_variant(temp.path(), "tight", false).unwrap();
+        assert_eq!(
+            result.path,
+            temp.path().join("edit/output-transcript-tight.json")
+        );
+        assert!(temp.path().join("edit/captions-tight.srt").is_file());
+        let output: Transcript = read_json(&result.path).unwrap();
+        let ids = output
+            .words
+            .iter()
+            .map(|word| word.source_word_id.clone().unwrap())
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(ids.len(), 2);
+        assert!(ids.contains("source-a:w_000000"));
+        assert!(ids.contains("source-b:w_000000"));
+    }
+
+    #[test]
     fn init_rejects_a_newer_manifest_schema() {
         let temp = tempfile::tempdir().unwrap();
         fs::create_dir_all(temp.path()).unwrap();
@@ -2177,6 +2590,7 @@ mod tests {
     fn benchmark_marks_only_inter_word_boundaries_as_clean() {
         let candidate = vec![Word {
             id: "candidate".into(),
+            source_word_id: None,
             text: "hello".into(),
             start_ms: 1_000,
             end_ms: 1_500,
@@ -2186,6 +2600,7 @@ mod tests {
         }];
         let reference = vec![Word {
             id: "reference".into(),
+            source_word_id: None,
             text: "hello".into(),
             start_ms: 1_030,
             end_ms: 1_470,

@@ -179,6 +179,7 @@ impl TranscriptionProvider for WhisperXProvider {
             previous_end_ms = end_ms;
             words.push(Word {
                 id: format!("wx_{index:06}"),
+                source_word_id: None,
                 text,
                 start_ms,
                 end_ms,
@@ -485,6 +486,7 @@ impl HeardRightProvider {
                 .map(|(index, word)| {
                     Ok(Word {
                         id: format!("w_{index:06}"),
+                        source_word_id: None,
                         text: word
                             .get("text")
                             .and_then(Value::as_str)

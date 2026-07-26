@@ -8,9 +8,12 @@
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "build": "tsc && vite build",
+    "test": "vitest run --environment jsdom",
     "tauri": "tauri",
     "qa:browser": "bash scripts/qa-browser.sh",
-    "qa:browser:stop": "bash scripts/qa-browser-stop.sh"
+    "qa:browser:stop": "bash scripts/qa-browser-stop.sh",
+    "qa:functional": "node scripts/qa-functional.mjs",
+    "qa:shot": "node scripts/qa-shot.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
@@ -23,6 +26,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "typescript": "^6.0.3",
-    "vite": "^8.1.3"
+    "vite": "^8.1.3",
+    "vitest": "^4.0.18",
+    "jsdom": "^27.4.0"
   }
 }

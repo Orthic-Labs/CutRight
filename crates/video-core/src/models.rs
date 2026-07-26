@@ -133,6 +133,8 @@ pub struct CutSegment {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Word {
     pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_word_id: Option<String>,
     pub text: String,
     pub start_ms: i64,
     pub end_ms: i64,
@@ -245,6 +247,7 @@ mod tests {
             language: "en".into(),
             words: vec![Word {
                 id: "w_000001".into(),
+                source_word_id: Some("cam-a-001:w_000001".into()),
                 text: "Today".into(),
                 start_ms: 812,
                 end_ms: 1_084,
@@ -257,6 +260,16 @@ mod tests {
         let value = serde_json::to_value(&transcript).unwrap();
         let decoded: Transcript = serde_json::from_value(value).unwrap();
         assert_eq!(decoded, transcript);
+    }
+
+    #[test]
+    fn legacy_word_without_source_word_id_deserializes() {
+        let word: Word = serde_json::from_value(serde_json::json!({
+            "id": "w_000001", "text": "Today", "start_ms": 0, "end_ms": 100,
+            "confidence": 1.0, "speaker": null, "kind": "word"
+        }))
+        .unwrap();
+        assert_eq!(word.source_word_id, None);
     }
 
     #[test]

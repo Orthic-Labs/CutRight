@@ -1,0 +1,4 @@
+import { describe, expect, it } from "vitest";
+import { findWord, swapTarget, type Word } from "./word-lock";
+const a: Word[] = [{ id: "a", text: "one", start_ms: 0, end_ms: 10, source_word_id: "s:1" }, { id: "b", text: "two", start_ms: 11, end_ms: 20, source_word_id: "s:2" }, { id: "c", text: "three", start_ms: 21, end_ms: 30, source_word_id: "s:3" }];
+describe("word locked compare", () => { it("uses previous word in a gap", () => expect(findWord(a, 10).word?.id).toBe("a")); it("handles preroll", () => expect(swapTarget(a, a, -1).seek_ms).toBe(0)); it("finds the same source word", () => expect(swapTarget(a, [a[1]], 15).seek_ms).toBe(11)); it("seeks the last word and pauses on a tail miss", () => expect(swapTarget(a, [a[0]], 25)).toMatchObject({ seek_ms: 0, paused: true })); it("refuses empty variants", () => expect(swapTarget(a, [], 3).refused).toBe(true)); });

@@ -144,7 +144,11 @@ enum EditCommand {
 
 #[derive(Debug, Subcommand)]
 enum TranscriptCommand {
-    Remap(PathCommand),
+    Remap {
+        project: PathBuf,
+        #[arg(long)]
+        variant: Option<String>,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -290,13 +294,18 @@ fn run(cli: Cli) -> Result<Value, String> {
         } => video_project::build_cut_plan(&project, &variant, cli.dry_run)
             .and_then(|_| video_project::compile_timeline(&project, cli.dry_run))
             .and_then(|_| video_project::render_edit(&project, &variant, cli.dry_run))
+            .and_then(|_| {
+                video_project::remap_transcript_for_variant(&project, &variant, cli.dry_run)
+            })
             .map(|result| json!({ "event": "edit.render", "result": result }))
             .map_err(|error| error.to_string()),
         Command::Transcript {
-            command: TranscriptCommand::Remap(args),
-        } => video_project::remap_transcript(&args.project, cli.dry_run)
-            .map(|result| json!({ "event": "transcript.remap", "result": result }))
-            .map_err(|error| error.to_string()),
+            command: TranscriptCommand::Remap { project, variant },
+        } => {
+            video_project::remap_transcript_with_variant(&project, variant.as_deref(), cli.dry_run)
+                .map(|result| json!({ "event": "transcript.remap", "result": result }))
+                .map_err(|error| error.to_string())
+        }
         Command::Render {
             command: RenderCommand::Final { project, preset },
         } => video_project::render_final(&project, &preset, cli.dry_run)
