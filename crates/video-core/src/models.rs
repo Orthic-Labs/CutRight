@@ -99,6 +99,11 @@ pub struct Candidate {
     pub beat_label: String,
     pub take_rank: u32,
     pub drop_reason: Option<DropReason>,
+    /// Number of filler words/disfluencies detected in this candidate. Recorded
+    /// for the cut plan and human review; only acted on by
+    /// [`FillerPolicy::Automatic`].
+    #[serde(default)]
+    pub filler_count: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -109,6 +114,21 @@ pub enum DropReason {
     Meta,
     Filler,
     Tangent,
+}
+
+/// How aggressively candidate generation treats detected filler words and
+/// false starts. The default records suggestions without dropping anything, so
+/// a human still approves removals.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum FillerPolicy {
+    /// Keep all fillers; do not even record suggestions.
+    Preserve,
+    /// Record filler/false-start suggestions on candidates but drop nothing.
+    #[default]
+    SuggestOnly,
+    /// Drop candidates that are pure filler or repeated false starts.
+    Automatic,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -366,6 +386,7 @@ mod tests {
                 beat_label: "hook".into(),
                 take_rank: 1,
                 drop_reason: None,
+                filler_count: 0,
             }],
         };
         let cut_plan = CutPlan {

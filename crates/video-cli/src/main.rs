@@ -45,7 +45,10 @@ enum Command {
         #[command(subcommand)]
         command: EditCommand,
     },
-    Review(PathCommand),
+    Review {
+        #[command(subcommand)]
+        command: ReviewCommand,
+    },
     #[command(name = "transcript")]
     Transcript {
         #[command(subcommand)]
@@ -61,7 +64,7 @@ enum Command {
         #[command(subcommand)]
         command: RenderCommand,
     },
-    Qa(PathCommand),
+    Qa(QaArgs),
     Package {
         #[command(subcommand)]
         command: PackageCommand,
@@ -75,11 +78,34 @@ enum Command {
 #[derive(Debug, Subcommand)]
 enum ProjectCommand {
     Init { folder: PathBuf },
+    Migrate { folder: PathBuf },
 }
 
 #[derive(Debug, Args)]
 struct PathCommand {
     project: PathBuf,
+}
+
+#[derive(Debug, Args)]
+struct VariantPathCommand {
+    project: PathBuf,
+    #[arg(
+        long,
+        help = "tight|natural; defaults to the reviewed selection, else natural"
+    )]
+    variant: Option<String>,
+}
+
+#[derive(Debug, Args)]
+struct QaArgs {
+    project: PathBuf,
+    #[arg(
+        long,
+        help = "tight|natural; defaults to the reviewed selection, else natural"
+    )]
+    variant: Option<String>,
+    #[arg(long, default_value = "youtube")]
+    preset: String,
 }
 
 #[derive(Debug, Args)]
@@ -123,7 +149,17 @@ enum AnalyzeCommand {
 
 #[derive(Debug, Subcommand)]
 enum ReframeCommand {
-    Plan(PathCommand),
+    Plan(VariantPathCommand),
+}
+
+#[derive(Debug, Subcommand)]
+enum ReviewCommand {
+    Open(PathCommand),
+    Select {
+        project: PathBuf,
+        #[arg(long)]
+        variant: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -134,7 +170,7 @@ enum EvidenceCommand {
 #[derive(Debug, Subcommand)]
 enum EditCommand {
     Candidates(PathCommand),
-    Validate(PathCommand),
+    Validate(VariantPathCommand),
     Render {
         project: PathBuf,
         #[arg(long)]
@@ -168,7 +204,7 @@ enum ShortsCommand {
 
 #[derive(Debug, Subcommand)]
 enum FinishCommand {
-    Validate(PathCommand),
+    Validate(VariantPathCommand),
 }
 
 #[derive(Debug, Args)]
@@ -189,6 +225,11 @@ enum RenderCommand {
         project: PathBuf,
         #[arg(long)]
         preset: String,
+        #[arg(
+            long,
+            help = "tight|natural; defaults to the reviewed selection, else natural"
+        )]
+        variant: Option<String>,
     },
 }
 
@@ -199,7 +240,7 @@ enum PackageCommand {
 
 #[derive(Debug, Subcommand)]
 enum ExportCommand {
-    Otio(PathCommand),
+    Otio(VariantPathCommand),
 }
 
 fn main() -> ExitCode {
@@ -234,6 +275,11 @@ fn run(cli: Cli) -> Result<Value, String> {
             command: ProjectCommand::Init { folder },
         } => video_project::init_project(&folder, cli.dry_run)
             .map(|result| json!({ "event": "project.init", "result": result }))
+            .map_err(|error| error.to_string()),
+        Command::Project {
+            command: ProjectCommand::Migrate { folder },
+        } => video_project::migrate_project(&folder)
+            .map(|result| json!({ "event": "project.migrate", "result": result }))
             .map_err(|error| error.to_string()),
         Command::Ingest(args) => {
             video_project::ingest_sources(&args.project, &args.sources, cli.dry_run)
@@ -271,7 +317,7 @@ fn run(cli: Cli) -> Result<Value, String> {
             .map_err(|error| error.to_string()),
         Command::Reframe {
             command: ReframeCommand::Plan(args),
-        } => video_project::reframe_plan(&args.project, cli.dry_run)
+        } => video_project::reframe_plan(&args.project, args.variant.as_deref(), cli.dry_run)
             .map(|result| json!({ "event": "reframe.plan", "result": result }))
             .map_err(|error| error.to_string()),
         Command::Evidence {
@@ -286,13 +332,13 @@ fn run(cli: Cli) -> Result<Value, String> {
             .map_err(|error| error.to_string()),
         Command::Edit {
             command: EditCommand::Validate(args),
-        } => video_project::validate_edit(&args.project)
+        } => video_project::validate_edit(&args.project, args.variant.as_deref())
             .map(|result| json!({ "event": "edit.validate", "result": result }))
             .map_err(|error| error.to_string()),
         Command::Edit {
             command: EditCommand::Render { project, variant },
         } => video_project::build_cut_plan(&project, &variant, cli.dry_run)
-            .and_then(|_| video_project::compile_timeline(&project, cli.dry_run))
+            .and_then(|_| video_project::compile_timeline(&project, &variant, cli.dry_run))
             .and_then(|_| video_project::render_edit(&project, &variant, cli.dry_run))
             .and_then(|_| {
                 video_project::remap_transcript_for_variant(&project, &variant, cli.dry_run)
@@ -307,20 +353,30 @@ fn run(cli: Cli) -> Result<Value, String> {
                 .map_err(|error| error.to_string())
         }
         Command::Render {
-            command: RenderCommand::Final { project, preset },
-        } => video_project::render_final(&project, &preset, cli.dry_run)
+            command:
+                RenderCommand::Final {
+                    project,
+                    preset,
+                    variant,
+                },
+        } => video_project::render_final(&project, &preset, variant.as_deref(), cli.dry_run)
             .map(|result| json!({ "event": "render.final", "result": result }))
             .map_err(|error| error.to_string()),
         Command::Render {
             command: RenderCommand::Preview(args),
         } => video_project::build_cut_plan(&args.project, "tight", cli.dry_run)
-            .and_then(|_| video_project::compile_timeline(&args.project, cli.dry_run))
+            .and_then(|_| video_project::compile_timeline(&args.project, "tight", cli.dry_run))
             .and_then(|_| video_project::render_edit(&args.project, "tight", cli.dry_run))
             .map(|result| json!({ "event": "render.preview", "result": result }))
             .map_err(|error| error.to_string()),
-        Command::Qa(args) => video_project::qa_run(&args.project, cli.dry_run)
-            .map(|result| json!({ "event": "qa.run", "result": result }))
-            .map_err(|error| error.to_string()),
+        Command::Qa(args) => video_project::qa_run(
+            &args.project,
+            args.variant.as_deref(),
+            &args.preset,
+            cli.dry_run,
+        )
+        .map(|result| json!({ "event": "qa.run", "result": result }))
+        .map_err(|error| error.to_string()),
         Command::Shorts(args) => match args.command {
             ShortsCommand::Propose { project, count } => {
                 video_project::propose_shorts(&project, count, cli.dry_run)
@@ -330,7 +386,7 @@ fn run(cli: Cli) -> Result<Value, String> {
         },
         Command::Finish {
             command: FinishCommand::Validate(args),
-        } => video_project::finish_validate(&args.project, cli.dry_run)
+        } => video_project::finish_validate(&args.project, args.variant.as_deref(), cli.dry_run)
             .map(|result| json!({ "event": "finish.validate", "result": result }))
             .map_err(|error| error.to_string()),
         Command::Slot(args) => match args.command {
@@ -347,15 +403,22 @@ fn run(cli: Cli) -> Result<Value, String> {
             .map_err(|error| error.to_string()),
         Command::Export {
             command: ExportCommand::Otio(args),
-        } => video_project::export_otio(&args.project, cli.dry_run)
+        } => video_project::export_otio(&args.project, args.variant.as_deref(), cli.dry_run)
             .map(|result| json!({ "event": "export.otio", "result": result }))
             .map_err(|error| error.to_string()),
-        Command::Review(args) => Ok(json!({
+        Command::Review {
+            command: ReviewCommand::Open(args),
+        } => Ok(json!({
             "event": "review.open",
             "status": "ready",
             "project": args.project,
             "artifacts": ["edit/candidates.json", "edit/cut-plan.json", "edit/timeline.json"]
         })),
+        Command::Review {
+            command: ReviewCommand::Select { project, variant },
+        } => video_project::select_variant(&project, &variant, "cli")
+            .map(|result| json!({ "event": "review.select", "result": result }))
+            .map_err(|error| error.to_string()),
         command => Ok(not_implemented(command_name(&command), cli.dry_run)),
     }
 }
@@ -392,7 +455,7 @@ fn command_name(command: &Command) -> String {
         Command::Reframe { .. } => "reframe plan",
         Command::Evidence { .. } => "evidence build",
         Command::Edit { .. } => "edit",
-        Command::Review(_) => "review open",
+        Command::Review { .. } => "review",
         Command::Transcript { .. } => "transcript remap",
         Command::Shorts(_) => "shorts propose",
         Command::Finish { .. } => "finish validate",

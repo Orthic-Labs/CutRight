@@ -14,19 +14,29 @@ use video_core::{
     Transcript, VadRegion, VadSignal, Word, SCHEMA_VERSION,
 };
 
-const DEFAULT_ENGINE: &str =
-    "/Volumes/D/claude/heardright/tauri-app-next/heardright-engine/target/release/heardright-engine";
-const DEFAULT_MODELS: &str = "/Volumes/D/claude/heardright/model_registry/coreml";
-const DEFAULT_SILERO_MODEL: &str =
-    "/Volumes/D/claude/heardright/tauri-app-next/src-tauri/resources/vad/silero_vad_16k.mlmodelc";
+/// Fallback WhisperX interpreter. WhisperX is the optional alignment verifier
+/// and is intentionally the only provider that still carries a workspace-local
+/// default path; it is not part of the HeardRight local-audio boundary.
 const DEFAULT_WHISPERX_PYTHON: &str = "/Volumes/D/claude/cutright/.venv-whisperx/bin/python";
+
+/// Default Silero speech threshold forwarded to HeardRight's file-VAD
+/// capability when a caller does not supply one. HeardRight owns the model and
+/// runtime; CutRight only supplies media and policy.
+const DEFAULT_VAD_THRESHOLD: f32 = 0.5;
+/// Sample rate CutRight expects for VAD input. HeardRight reports the rate it
+/// actually analyzed at in the result; this is only a request hint.
+const DEFAULT_VAD_SAMPLE_RATE: u32 = 16_000;
+/// Minimum speech region duration (ms) requested from HeardRight's file-VAD.
+const DEFAULT_MIN_SPEECH_MS: u32 = 160;
+/// Minimum silence duration (ms) requested from HeardRight's file-VAD.
+const DEFAULT_MIN_SILENCE_MS: u32 = 180;
 
 #[derive(Debug, Error)]
 pub enum ProviderError {
-    #[error("HeardRight engine was not found; set CUTRIGHT_HEARDRIGHT_ENGINE")]
+    #[error(
+        "HeardRight engine was not found; set CUTRIGHT_HEARDRIGHT_ENGINE or put heardright-engine on PATH"
+    )]
     EngineMissing,
-    #[error("HeardRight model directory was not found; set CUTRIGHT_HEARDRIGHT_MODELS_DIR")]
-    ModelsMissing,
     #[error("HeardRight engine could not start: {0}")]
     Start(#[source] std::io::Error),
     #[error("HeardRight engine request failed: {0}")]
@@ -35,22 +45,19 @@ pub enum ProviderError {
     Json(#[source] serde_json::Error),
     #[error("HeardRight returned transcript text without native timed words")]
     MissingTimedWords,
-    #[error("CutRight Silero VAD model was not found; set CUTRIGHT_SILERO_MODEL")]
-    VadModelMissing,
-    #[error("CutRight Silero VAD worker binary was not found; set CUTRIGHT_SILERO_VAD_BIN")]
-    VadWorkerMissing,
-    #[error("CutRight Silero VAD worker failed: {0}")]
-    VadWorker(String),
     #[error("WhisperX Python was not found; set CUTRIGHT_WHISPERX_PYTHON")]
     WhisperXPythonMissing,
     #[error("WhisperX alignment script was not found; set CUTRIGHT_WHISPERX_SCRIPT")]
     WhisperXScriptMissing,
 }
 
+/// One supervised HeardRight engine session. Implements both the transcription
+/// provider and the file-VAD provider over the same JSON-line stdin/stdout
+/// protocol, so CutRight runs a single engine process and never reaches into
+/// HeardRight's model internals.
 #[derive(Debug)]
 pub struct HeardRightProvider {
     engine: PathBuf,
-    models: PathBuf,
     session: Mutex<Option<HeardRightSession>>,
 }
 
@@ -207,186 +214,41 @@ impl TranscriptionProvider for WhisperXProvider {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SileroVadProvider {
-    model: PathBuf,
-}
-
-#[derive(Debug, serde::Deserialize)]
-struct SileroResponse {
-    provider: String,
-    sample_rate: u32,
-    regions: Vec<SileroRegion>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-struct SileroRegion {
-    start_ms: i64,
-    end_ms: i64,
-    mean_probability: f32,
-}
-
-impl SileroVadProvider {
-    pub fn discover() -> Result<Self, ProviderError> {
-        let model = env::var_os("CUTRIGHT_SILERO_MODEL")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from(DEFAULT_SILERO_MODEL));
-        if !model.is_dir() {
-            return Err(ProviderError::VadModelMissing);
-        }
-        Ok(Self { model })
-    }
-
-    fn worker_binary(&self) -> Result<PathBuf, ProviderError> {
-        if let Some(path) = env::var_os("CUTRIGHT_SILERO_VAD_BIN").map(PathBuf::from) {
-            if path.is_file() {
-                return Ok(path);
-            }
-            return Err(ProviderError::VadWorkerMissing);
-        }
-        let binary =
-            std::env::temp_dir().join(format!("cutright-silero-vad-{}", env!("CARGO_PKG_VERSION")));
-        let embedded = include_bytes!(env!("CUTRIGHT_SILERO_VAD"));
-        if fs::read(&binary).ok().as_deref() != Some(embedded.as_slice()) {
-            fs::write(&binary, embedded).map_err(ProviderError::Start)?;
-        }
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(&binary, fs::Permissions::from_mode(0o700))
-                .map_err(ProviderError::Start)?;
-        }
-        Ok(binary)
-    }
-}
-
-impl VadProvider for SileroVadProvider {
-    fn id(&self) -> &'static str {
-        "silero-coreml"
-    }
-
-    fn analyze(&self, request: &VadRequest) -> Result<VadSignal, CoreProviderError> {
-        if request.sample_rate != 16_000 {
-            return Err(CoreProviderError::Rejected {
-                provider: self.id().into(),
-                reason: "Silero CoreML worker requires 16000 Hz PCM".into(),
-            });
-        }
-        let binary = self
-            .worker_binary()
-            .map_err(|error| CoreProviderError::Unavailable {
-                provider: self.id().into(),
-                reason: error.to_string(),
-            })?;
-        let request_json = serde_json::json!({
-            "audio_path": request.audio_path,
-            "model_path": self.model,
-            "threshold": request.threshold,
-            "sample_rate": request.sample_rate,
-            "min_speech_ms": 160,
-            "min_silence_ms": 180,
-        });
-        let mut child = Command::new(binary)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|error| CoreProviderError::Unavailable {
-                provider: self.id().into(),
-                reason: error.to_string(),
-            })?;
-        child
-            .stdin
-            .as_mut()
-            .expect("piped stdin")
-            .write_all(&serde_json::to_vec(&request_json).expect("request JSON"))
-            .map_err(|error| CoreProviderError::Unavailable {
-                provider: self.id().into(),
-                reason: error.to_string(),
-            })?;
-        let output = child
-            .wait_with_output()
-            .map_err(|error| CoreProviderError::Unavailable {
-                provider: self.id().into(),
-                reason: error.to_string(),
-            })?;
-        if !output.status.success() {
-            return Err(CoreProviderError::Rejected {
-                provider: self.id().into(),
-                reason: String::from_utf8_lossy(&output.stderr).trim().to_string(),
-            });
-        }
-        let output: SileroResponse = serde_json::from_slice(&output.stdout).map_err(|error| {
-            CoreProviderError::Rejected {
-                provider: self.id().into(),
-                reason: format!("invalid worker response: {error}"),
-            }
-        })?;
-        if output.provider != self.id() || output.sample_rate != request.sample_rate {
-            return Err(CoreProviderError::Rejected {
-                provider: self.id().into(),
-                reason: "worker response identity or sample rate mismatch".into(),
-            });
-        }
-        Ok(VadSignal {
-            schema_version: SCHEMA_VERSION,
-            source_id: request.source_id.clone(),
-            sample_rate: request.sample_rate,
-            provider: output.provider,
-            regions: output
-                .regions
-                .into_iter()
-                .map(|region| VadRegion {
-                    start_ms: region.start_ms,
-                    end_ms: region.end_ms,
-                    mean_probability: region.mean_probability,
-                })
-                .collect(),
-        })
-    }
-}
-
 impl HeardRightProvider {
+    /// Resolve the HeardRight engine location.
+    ///
+    /// Discovery order (hardening plan §9.3):
+    /// 1. explicit `CUTRIGHT_HEARDRIGHT_ENGINE` (or `HEARDRIGHT_ENGINE_BIN`)
+    ///    development override;
+    /// 2. `heardright-engine` resolved on `PATH`;
+    /// 3. a clear [`ProviderError::EngineMissing`] result.
+    ///
+    /// There is deliberately no hard-coded absolute default and no
+    /// model-directory path: HeardRight resolves its own models and runtime.
     pub fn discover() -> Result<Self, ProviderError> {
         let engine = env::var_os("CUTRIGHT_HEARDRIGHT_ENGINE")
             .or_else(|| env::var_os("HEARDRIGHT_ENGINE_BIN"))
             .map(PathBuf::from)
-            .or_else(|| {
-                let path = PathBuf::from(DEFAULT_ENGINE);
-                path.is_file().then_some(path)
-            })
             .unwrap_or_else(|| PathBuf::from("heardright-engine"));
-        let models = env::var_os("CUTRIGHT_HEARDRIGHT_MODELS_DIR")
-            .or_else(|| env::var_os("HR_MODELS_DIR"))
-            .map(PathBuf::from)
-            .or_else(|| {
-                let path = PathBuf::from(DEFAULT_MODELS);
-                path.is_dir().then_some(path)
-            })
-            .unwrap_or_else(|| PathBuf::from(DEFAULT_MODELS));
+        // A bare command name resolves on PATH at spawn time; a path that
+        // already carries components must exist now or we fail clearly.
         if engine.components().count() > 1 && !engine.is_file() {
             return Err(ProviderError::EngineMissing);
         }
-        if !models.is_dir() {
-            return Err(ProviderError::ModelsMissing);
-        }
-        let bundle = models.join("parakeet-tdt-v3");
-        if !bundle.join("pipeline.json").is_file() {
-            return Err(ProviderError::ModelsMissing);
-        }
         Ok(Self {
             engine,
-            models,
             session: Mutex::new(None),
         })
     }
 
     fn start_session(&self) -> Result<HeardRightSession, ProviderError> {
+        // HeardRight owns model discovery, runtime loading, and platform
+        // backend choice. CutRight passes no model-directory paths; the
+        // HR_ASR_BACKEND value is a policy hint, not an internal model
+        // location.
         let mut child = Command::new(&self.engine)
-            .arg(&self.models)
             .env_remove("HEARDRIGHT_ENGINE_TEST_MODE")
             .env("HR_ASR_BACKEND", "parakeet-tdt")
-            .env("HR_COREML_MODEL_DIR", self.models.join("parakeet-tdt-v3"))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
@@ -407,11 +269,11 @@ impl HeardRightProvider {
         })
     }
 
-    pub fn transcribe(
-        &self,
-        source_id: &str,
-        media: &Path,
-    ) -> Result<TranscriptionOutput, ProviderError> {
+    /// Send one request frame over the supervised session and wait for the
+    /// frame whose `schema_name` matches `result_schema`. Returns the full
+    /// result frame. `engine_error` frames and a closed stdout surface as
+    /// explicit errors — there is never a silent fallback to a bundled model.
+    fn request(&self, request: Value, result_schema: &str) -> Result<Value, ProviderError> {
         let mut session = self
             .session
             .lock()
@@ -420,21 +282,11 @@ impl HeardRightProvider {
             *session = Some(self.start_session()?);
         }
         let session = session.as_mut().expect("session is initialized");
-        let request = serde_json::json!({
-            "protocol_major": 1,
-            "protocol_minor": 0,
-            "schema_name": "file_transcription_request",
-            "schema_version": 1,
-            "engine_version": "cutright/0.1.0",
-            "request_id": format!("cutright-{}", std::process::id()),
-            "trace_id": "cutright-transcribe",
-            "payload": { "kind": "file_transcription_request", "path": media },
-        });
         session
             .stdin
             .write_all(format!("{}\n", request).as_bytes())
             .map_err(ProviderError::Start)?;
-        let frame = loop {
+        loop {
             let mut line = String::new();
             let bytes = session
                 .stdout
@@ -448,9 +300,7 @@ impl HeardRightProvider {
             }
             let frame: Value = serde_json::from_str(&line).map_err(ProviderError::Json)?;
             match frame.get("schema_name").and_then(Value::as_str) {
-                Some("file_transcription_result") => {
-                    break frame;
-                }
+                Some(name) if name == result_schema => return Ok(frame),
                 Some("engine_error") => {
                     return Err(ProviderError::Engine(
                         frame
@@ -462,7 +312,25 @@ impl HeardRightProvider {
                 }
                 _ => {}
             }
-        };
+        }
+    }
+
+    pub fn transcribe(
+        &self,
+        source_id: &str,
+        media: &Path,
+    ) -> Result<TranscriptionOutput, ProviderError> {
+        let request = serde_json::json!({
+            "protocol_major": 1,
+            "protocol_minor": 0,
+            "schema_name": "file_transcription_request",
+            "schema_version": 1,
+            "engine_version": "cutright/0.1.0",
+            "request_id": format!("cutright-{}", std::process::id()),
+            "trace_id": "cutright-transcribe",
+            "payload": { "kind": "file_transcription_request", "path": media },
+        });
+        let frame = self.request(request, "file_transcription_result")?;
         let payload = frame
             .get("payload")
             .ok_or_else(|| ProviderError::Engine("result frame has no payload".into()))?;
@@ -518,6 +386,88 @@ impl HeardRightProvider {
             warnings: Vec::new(),
         })
     }
+
+    /// Run HeardRight's file-VAD capability (`file_vad_regions_v1`) on one
+    /// audio file and parse the result into CutRight's [`VadSignal`].
+    ///
+    /// CutRight supplies the media path and detection policy only; HeardRight
+    /// resolves its own Silero model and runtime and reports the sample rate it
+    /// analyzed at. Fails clearly if HeardRight is unavailable or does not yet
+    /// expose the capability — never a silent fallback to a bundled model.
+    pub fn analyze_file_vad(&self, request: &VadRequest) -> Result<VadSignal, ProviderError> {
+        let frame_request = serde_json::json!({
+            "protocol_major": 1,
+            "protocol_minor": 0,
+            "schema_name": "file_vad_request",
+            "schema_version": 1,
+            "engine_version": "cutright/0.1.0",
+            "request_id": format!("cutright-{}", std::process::id()),
+            "trace_id": "cutright-vad",
+            "payload": {
+                "kind": "file_vad_request",
+                "path": request.audio_path,
+                "threshold": request.threshold,
+                "min_speech_ms": DEFAULT_MIN_SPEECH_MS,
+                "min_silence_ms": DEFAULT_MIN_SILENCE_MS,
+            },
+        });
+        let frame = self.request(frame_request, "file_vad_result")?;
+        let payload = frame
+            .get("payload")
+            .ok_or_else(|| ProviderError::Engine("file_vad_result frame has no payload".into()))?;
+        parse_vad_result(&request.source_id, payload)
+    }
+}
+
+/// Parse a HeardRight `file_vad_result` payload into CutRight's [`VadSignal`].
+///
+/// The provider label always reflects HeardRight (`heardright-silero`); the
+/// sample rate is taken from the engine result so CutRight never assumes a
+/// model input rate. Regions are validated to be non-inverted.
+fn parse_vad_result(source_id: &str, payload: &Value) -> Result<VadSignal, ProviderError> {
+    let sample_rate = payload
+        .get("sample_rate")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| ProviderError::Engine("file_vad_result has no sample_rate".into()))?
+        as u32;
+    let raw_regions = payload
+        .get("regions")
+        .and_then(Value::as_array)
+        .ok_or_else(|| ProviderError::Engine("file_vad_result has no regions".into()))?;
+    let mut regions = Vec::with_capacity(raw_regions.len());
+    for (index, region) in raw_regions.iter().enumerate() {
+        let start_ms = region
+            .get("start_ms")
+            .and_then(Value::as_i64)
+            .ok_or_else(|| ProviderError::Engine(format!("vad region {index} has no start_ms")))?;
+        let end_ms = region
+            .get("end_ms")
+            .and_then(Value::as_i64)
+            .ok_or_else(|| ProviderError::Engine(format!("vad region {index} has no end_ms")))?;
+        let mean_probability = region
+            .get("mean_probability")
+            .and_then(Value::as_f64)
+            .ok_or_else(|| {
+                ProviderError::Engine(format!("vad region {index} has no mean_probability"))
+            })? as f32;
+        if end_ms < start_ms {
+            return Err(ProviderError::Engine(format!(
+                "vad region {index} ends before it starts"
+            )));
+        }
+        regions.push(VadRegion {
+            start_ms,
+            end_ms,
+            mean_probability,
+        });
+    }
+    Ok(VadSignal {
+        schema_version: SCHEMA_VERSION,
+        source_id: source_id.to_string(),
+        sample_rate,
+        provider: "heardright-silero".into(),
+        regions,
+    })
 }
 
 impl Drop for HeardRightProvider {
@@ -546,10 +496,65 @@ impl TranscriptionProvider for HeardRightProvider {
     ) -> Result<TranscriptionOutput, CoreProviderError> {
         HeardRightProvider::transcribe(self, &request.source_id, &request.source_path).map_err(
             |error| CoreProviderError::Unavailable {
-                provider: self.id().into(),
+                provider: TranscriptionProvider::id(self).into(),
                 reason: error.to_string(),
             },
         )
+    }
+}
+
+impl VadProvider for HeardRightProvider {
+    fn id(&self) -> &'static str {
+        "heardright-silero"
+    }
+
+    fn analyze(&self, request: &VadRequest) -> Result<VadSignal, CoreProviderError> {
+        self.analyze_file_vad(request)
+            .map_err(|error| CoreProviderError::Unavailable {
+                provider: VadProvider::id(self).into(),
+                reason: error.to_string(),
+            })
+    }
+}
+
+/// Thin CutRight client for HeardRight's file-VAD capability.
+///
+/// CutRight does not bundle a Silero model or worker and does not reference any
+/// HeardRight-internal model path. It invokes the HeardRight engine (the same
+/// supervised JSON-line session used for transcription) and lets HeardRight
+/// resolve its own model and runtime.
+///
+/// # HeardRight location
+/// The engine is resolved via `CUTRIGHT_HEARDRIGHT_ENGINE` (or
+/// `HEARDRIGHT_ENGINE_BIN`), falling back to `heardright-engine` on `PATH`.
+/// There is no hard-coded absolute default. If HeardRight is unavailable the
+/// call fails with a clear [`ProviderError`]; there is never a silent fallback
+/// to a bundled model.
+pub mod audio_vad {
+    use crate::{
+        HeardRightProvider, ProviderError, DEFAULT_VAD_SAMPLE_RATE, DEFAULT_VAD_THRESHOLD,
+    };
+    use std::path::Path;
+    use video_core::{providers::VadRequest, VadSignal};
+
+    /// Analyze one audio file through HeardRight's file-VAD capability.
+    ///
+    /// The `source_id` defaults to the file stem. Use
+    /// [`HeardRightProvider::analyze_file_vad`] directly to control the full
+    /// [`VadRequest`] (explicit source id, threshold, expected sample rate).
+    pub fn analyze_file(audio_path: &Path) -> Result<VadSignal, ProviderError> {
+        let source_id = audio_path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or("audio")
+            .to_string();
+        let provider = HeardRightProvider::discover()?;
+        provider.analyze_file_vad(&VadRequest {
+            source_id,
+            audio_path: audio_path.to_path_buf(),
+            sample_rate: DEFAULT_VAD_SAMPLE_RATE,
+            threshold: DEFAULT_VAD_THRESHOLD,
+        })
     }
 }
 
@@ -559,31 +564,33 @@ mod tests {
     use std::os::unix::fs::PermissionsExt;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    #[test]
-    fn materializes_the_build_time_silero_worker() {
-        let provider = SileroVadProvider {
-            model: PathBuf::new(),
-        };
-        let worker = provider.worker_binary().expect("materialize Silero worker");
-        assert!(worker.is_file());
-        assert_eq!(
-            fs::read(&worker).expect("read materialized worker"),
-            include_bytes!(env!("CUTRIGHT_SILERO_VAD"))
-        );
-        assert_ne!(
-            worker.extension().and_then(|value| value.to_str()),
-            Some("swift")
-        );
-    }
-
-    #[test]
-    fn keeps_one_engine_session_for_multiple_transcriptions() {
+    fn unique_temp_dir(prefix: &str) -> PathBuf {
         let unique = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("clock after epoch")
             .as_nanos();
-        let root = std::env::temp_dir().join(format!("cutright-engine-test-{unique}"));
+        let root = std::env::temp_dir().join(format!("{prefix}-{unique}"));
         fs::create_dir_all(&root).expect("create engine test directory");
+        root
+    }
+
+    fn write_fake_engine(root: &Path, response_line: &str) -> PathBuf {
+        let engine = root.join("fake-engine");
+        fs::write(
+            &engine,
+            format!(
+                "#!/bin/sh\nwhile IFS= read -r line; do\n  printf '%s\\n' '{response_line}'\ndone\n"
+            ),
+        )
+        .expect("write fake engine");
+        fs::set_permissions(&engine, fs::Permissions::from_mode(0o700))
+            .expect("make fake engine executable");
+        engine
+    }
+
+    #[test]
+    fn keeps_one_engine_session_for_multiple_transcriptions() {
+        let root = unique_temp_dir("cutright-engine-test");
         let starts = root.join("starts.log");
         let engine = root.join("fake-engine");
         fs::write(
@@ -598,7 +605,6 @@ mod tests {
             .expect("make fake engine executable");
         let provider = HeardRightProvider {
             engine,
-            models: root.clone(),
             session: Mutex::new(None),
         };
         let first = provider.transcribe("one", Path::new("/tmp/one.mp4"));
@@ -614,5 +620,141 @@ mod tests {
             1
         );
         fs::remove_dir_all(root).expect("remove engine test directory");
+    }
+
+    #[test]
+    fn parses_heardright_vad_result_into_vad_signal() {
+        let payload = serde_json::json!({
+            "sample_rate": 16_000,
+            "provider": "heardright-silero",
+            "model_revision": "silero-v6",
+            "threshold": 0.5,
+            "min_speech_ms": 160,
+            "min_silence_ms": 180,
+            "regions": [
+                { "start_ms": 120, "end_ms": 940, "mean_probability": 0.91 },
+                { "start_ms": 1_500, "end_ms": 2_300, "mean_probability": 0.77 }
+            ],
+        });
+        let signal = parse_vad_result("source-a", &payload).expect("parse vad result");
+        assert_eq!(signal.schema_version, SCHEMA_VERSION);
+        assert_eq!(signal.source_id, "source-a");
+        assert_eq!(signal.sample_rate, 16_000);
+        assert_eq!(signal.provider, "heardright-silero");
+        assert_eq!(signal.regions.len(), 2);
+        assert_eq!(signal.regions[0].start_ms, 120);
+        assert_eq!(signal.regions[0].end_ms, 940);
+        assert!((signal.regions[0].mean_probability - 0.91).abs() < 1e-6);
+        assert_eq!(signal.regions[1].start_ms, 1_500);
+        assert_eq!(signal.regions[1].end_ms, 2_300);
+    }
+
+    #[test]
+    fn parse_vad_result_accepts_an_empty_region_list() {
+        let payload = serde_json::json!({ "sample_rate": 16_000, "regions": [] });
+        let signal = parse_vad_result("silent", &payload).expect("parse empty regions");
+        assert!(signal.regions.is_empty());
+        assert_eq!(signal.provider, "heardright-silero");
+    }
+
+    #[test]
+    fn parse_vad_result_rejects_missing_fields() {
+        let no_regions = serde_json::json!({ "sample_rate": 16_000 });
+        assert!(parse_vad_result("source-a", &no_regions).is_err());
+        let no_sample_rate = serde_json::json!({ "regions": [] });
+        assert!(parse_vad_result("source-a", &no_sample_rate).is_err());
+        let bad_region = serde_json::json!({
+            "sample_rate": 16_000,
+            "regions": [{ "start_ms": 100 }],
+        });
+        assert!(parse_vad_result("source-a", &bad_region).is_err());
+    }
+
+    #[test]
+    fn parse_vad_result_rejects_an_inverted_region() {
+        let payload = serde_json::json!({
+            "sample_rate": 16_000,
+            "regions": [{ "start_ms": 900, "end_ms": 100, "mean_probability": 0.5 }],
+        });
+        let error = parse_vad_result("source-a", &payload).expect_err("inverted region rejected");
+        assert!(matches!(error, ProviderError::Engine(_)));
+    }
+
+    #[test]
+    fn analyzes_file_vad_through_a_fake_engine() {
+        let root = unique_temp_dir("cutright-vad-test");
+        let engine = write_fake_engine(
+            &root,
+            "{\"schema_name\":\"file_vad_result\",\"payload\":{\"sample_rate\":16000,\"provider\":\"heardright-silero\",\"model_revision\":\"silero-v6\",\"threshold\":0.5,\"min_speech_ms\":160,\"min_silence_ms\":180,\"regions\":[{\"start_ms\":100,\"end_ms\":900,\"mean_probability\":0.9}]}}",
+        );
+        let provider = HeardRightProvider {
+            engine,
+            session: Mutex::new(None),
+        };
+        let signal = provider
+            .analyze_file_vad(&VadRequest {
+                source_id: "source-a".into(),
+                audio_path: PathBuf::from("/tmp/source-a-16k.f32"),
+                sample_rate: 16_000,
+                threshold: 0.5,
+            })
+            .expect("fake engine returns a vad result");
+        assert_eq!(signal.provider, "heardright-silero");
+        assert_eq!(signal.source_id, "source-a");
+        assert_eq!(signal.sample_rate, 16_000);
+        assert_eq!(signal.regions.len(), 1);
+        assert_eq!(signal.regions[0].start_ms, 100);
+        assert_eq!(signal.regions[0].end_ms, 900);
+        drop(provider);
+        fs::remove_dir_all(root).expect("remove vad test directory");
+    }
+
+    #[test]
+    fn file_vad_surfaces_an_engine_error_clearly() {
+        let root = unique_temp_dir("cutright-vad-error-test");
+        let engine = write_fake_engine(
+            &root,
+            "{\"schema_name\":\"engine_error\",\"error\":{\"message\":\"file_vad_regions_v1 not supported\"}}",
+        );
+        let provider = HeardRightProvider {
+            engine,
+            session: Mutex::new(None),
+        };
+        let error = provider
+            .analyze_file_vad(&VadRequest {
+                source_id: "source-a".into(),
+                audio_path: PathBuf::from("/tmp/source-a-16k.f32"),
+                sample_rate: 16_000,
+                threshold: 0.5,
+            })
+            .expect_err("engine_error must surface");
+        match error {
+            ProviderError::Engine(message) => assert!(message.contains("file_vad_regions_v1")),
+            other => panic!("expected ProviderError::Engine, got {other:?}"),
+        }
+        drop(provider);
+        fs::remove_dir_all(root).expect("remove vad error test directory");
+    }
+
+    #[test]
+    fn file_vad_fails_clearly_when_the_engine_is_unreachable() {
+        let root = unique_temp_dir("cutright-vad-missing-test");
+        let provider = HeardRightProvider {
+            engine: root.join("does-not-exist/heardright-engine"),
+            session: Mutex::new(None),
+        };
+        let error = provider
+            .analyze_file_vad(&VadRequest {
+                source_id: "source-a".into(),
+                audio_path: PathBuf::from("/tmp/source-a-16k.f32"),
+                sample_rate: 16_000,
+                threshold: 0.5,
+            })
+            .expect_err("missing engine must fail clearly");
+        assert!(
+            matches!(error, ProviderError::Start(_)),
+            "unexpected: {error:?}"
+        );
+        fs::remove_dir_all(root).expect("remove vad missing test directory");
     }
 }

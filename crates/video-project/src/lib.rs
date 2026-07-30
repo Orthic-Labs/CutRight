@@ -8,9 +8,9 @@ use thiserror::Error;
 use video_core::{
     models::{ProviderCost, ProviderResponseEnvelope, SourceEntry, SCHEMA_VERSION},
     providers::{TranscriptionProvider, TranscriptionRequest, VadProvider, VadRequest},
-    Candidate, CandidateManifest, CutPlan, CutSegment, OutputPreset, ProjectManifest, ReviewMode,
-    SourceManifest, SourcePolicy, Timebase, Timeline, TimelineSegment, Track, Transcript,
-    VadSignal, Word,
+    Candidate, CandidateManifest, CutPlan, CutSegment, DropReason, FillerPolicy, OutputPreset,
+    ProjectManifest, ReviewMode, SourceManifest, SourcePolicy, Timebase, Timeline, TimelineSegment,
+    Track, Transcript, VadSignal, Word,
 };
 use video_media::{
     compose_decision_evidence, extract_audio_f32, extract_frame, probe, render_boundary_probe,
@@ -18,7 +18,7 @@ use video_media::{
     render_source_segments, render_waveform, render_waveform_range, AudioError, ProbeError,
     ReframeAnchor, RenderError, RenderSegment, SourceRenderSegment,
 };
-use video_providers::{HeardRightProvider, ProviderError, SileroVadProvider, WhisperXProvider};
+use video_providers::{HeardRightProvider, ProviderError, WhisperXProvider};
 
 const PROJECT_DIRS: &[&str] = &[
     "brief",
@@ -103,6 +103,46 @@ pub struct PipelineArtifact {
     pub status: &'static str,
     pub path: PathBuf,
     pub count: usize,
+}
+
+/// The reviewed-base selection that gates final rendering (§6.2). A final
+/// render resolves its inputs from this record unless a variant is passed
+/// explicitly. Persisted at `feedback/variant-selection.json`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SelectionRecord {
+    pub schema_version: u32,
+    pub variant: String,
+    pub rough_cut_path: String,
+    pub rough_cut_blake3: String,
+    pub rough_cut_size: u64,
+    pub selected_at: DateTime<Utc>,
+    pub selected_by: String,
+}
+
+/// One artifact relocated by [`migrate_project`].
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MigratedArtifact {
+    pub from: String,
+    pub to: String,
+    pub backup: String,
+}
+
+/// One legacy artifact left in place by [`migrate_project`], with a reason.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SkippedArtifact {
+    pub path: String,
+    pub reason: String,
+}
+
+/// Result of a legacy-to-variant layout migration (§6.7).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MigrationReport {
+    pub schema_version: u32,
+    pub status: String,
+    pub migrated_at: DateTime<Utc>,
+    pub migrated: Vec<MigratedArtifact>,
+    pub skipped: Vec<SkippedArtifact>,
+    pub backup_dir: Option<PathBuf>,
 }
 
 /// Read-only, Studio-facing summary of a project. Optional artifacts are omitted when their
@@ -321,7 +361,9 @@ pub fn project_snapshot(project_path: &Path) -> Result<ProjectSnapshot, ProjectE
                 .map(str::to_owned),
             report: bench_path,
         }),
-        reframe_plan: read_value_if_file(&project_path.join("analysis/reframe-plan.json")),
+        reframe_plan: read_value_if_file(&project_path.join("analysis/reframe-plan.json")).or_else(
+            || read_value_if_file(&project_path.join("analysis/reframe/natural/reframe-plan.json")),
+        ),
         decisions_path: project_path.join("feedback/decisions.jsonl"),
     })
 }
@@ -1086,30 +1128,206 @@ pub fn build_candidates(
     project_path: &Path,
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
+    build_candidates_with_policy(project_path, FillerPolicy::default(), dry_run)
+}
+
+/// Single-token filler words / disfluencies.
+const FILLER_WORDS: &[&str] = &[
+    "um",
+    "uh",
+    "like",
+    "so",
+    "right",
+    "basically",
+    "actually",
+    "literally",
+];
+
+fn normalize_token(text: &str) -> String {
+    text.trim()
+        .trim_matches(|c: char| !c.is_alphanumeric())
+        .to_lowercase()
+}
+
+/// Whether a single word is a filler disfluency.
+pub fn is_filler_word(text: &str) -> bool {
+    FILLER_WORDS.contains(&normalize_token(text).as_str())
+}
+
+/// Count filler words in a span, including the two-word "you know" phrase. Each
+/// word is counted at most once.
+pub fn count_fillers(words: &[Word]) -> usize {
+    let tokens: Vec<String> = words
+        .iter()
+        .map(|word| normalize_token(&word.text))
+        .collect();
+    let mut flagged = vec![false; tokens.len()];
+    for i in 0..tokens.len().saturating_sub(1) {
+        if tokens[i] == "you" && tokens[i + 1] == "know" {
+            flagged[i] = true;
+            flagged[i + 1] = true;
+        }
+    }
+    for (i, token) in tokens.iter().enumerate() {
+        if FILLER_WORDS.contains(&token.as_str()) {
+            flagged[i] = true;
+        }
+    }
+    flagged.iter().filter(|flagged| **flagged).count()
+}
+
+/// Detect a repeated false start: an immediately repeated token ("go go") or an
+/// immediately repeated bigram ("I want to I want to").
+pub fn has_false_start(words: &[Word]) -> bool {
+    let tokens: Vec<String> = words
+        .iter()
+        .map(|word| normalize_token(&word.text))
+        .filter(|token| !token.is_empty())
+        .collect();
+    for pair in tokens.windows(2) {
+        if pair[0] == pair[1] {
+            return true;
+        }
+    }
+    for i in 0..tokens.len().saturating_sub(3) {
+        if tokens[i] == tokens[i + 2] && tokens[i + 1] == tokens[i + 3] {
+            return true;
+        }
+    }
+    false
+}
+
+/// Deterministic take quality used to pick the best take per beat. Ordered so
+/// that the maximum is the best take: a complete sentence wins, then fewer
+/// fillers, then higher mean confidence, then more words.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct TakeScore {
+    complete: bool,
+    filler_penalty: i64,
+    confidence_millis: i64,
+    word_count: usize,
+}
+
+fn take_score(words: &[Word]) -> TakeScore {
+    let filler_count = count_fillers(words);
+    let confidence_sum: f64 = words.iter().map(|word| word.confidence as f64).sum();
+    let confidence_millis = if words.is_empty() {
+        0
+    } else {
+        (confidence_sum / words.len() as f64 * 1000.0).round() as i64
+    };
+    let complete = words
+        .last()
+        .is_some_and(|word| word.text.trim_end().ends_with(['.', '?', '!']));
+    TakeScore {
+        complete,
+        filler_penalty: -(filler_count as i64),
+        confidence_millis,
+        word_count: words.len(),
+    }
+}
+
+struct RawCandidate {
+    candidate: Candidate,
+    words: Vec<Word>,
+}
+
+pub fn build_candidates_with_policy(
+    project_path: &Path,
+    policy: FillerPolicy,
+    dry_run: bool,
+) -> Result<PipelineArtifact, ProjectError> {
     let transcripts = load_transcripts(project_path)?;
-    let mut candidates = Vec::new();
+    let mut raws: Vec<RawCandidate> = Vec::new();
     for transcript in &transcripts {
         for (index, words) in group_words(&transcript.words, 900).into_iter().enumerate() {
             let first = words
                 .first()
                 .ok_or_else(|| ProjectError::InvalidState("candidate group was empty".into()))?;
             let last = words.last().expect("nonempty candidate group");
-            candidates.push(Candidate {
-                id: format!("candidate-{:03}", candidates.len() + 1),
-                source_id: transcript.source_id.clone(),
-                start_ms: first.start_ms,
-                end_ms: last.end_ms,
-                text: words
-                    .iter()
-                    .map(|word| word.text.as_str())
-                    .collect::<Vec<_>>()
-                    .join(" "),
-                beat_label: if index == 0 { "hook" } else { "beat" }.into(),
-                take_rank: (index + 1) as u32,
-                drop_reason: None,
+            // Ordinal position is the beat identity: the Nth group of each
+            // source covers the same beat, so multiple sources become multiple
+            // takes of that beat.
+            let beat_label = if index == 0 {
+                "hook".to_string()
+            } else {
+                format!("beat-{index:03}")
+            };
+            let filler_count = match policy {
+                FillerPolicy::Preserve => 0,
+                FillerPolicy::SuggestOnly | FillerPolicy::Automatic => count_fillers(&words),
+            };
+            raws.push(RawCandidate {
+                candidate: Candidate {
+                    id: format!("candidate-{:03}", raws.len() + 1),
+                    source_id: transcript.source_id.clone(),
+                    start_ms: first.start_ms,
+                    end_ms: last.end_ms,
+                    text: words
+                        .iter()
+                        .map(|word| word.text.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                    beat_label,
+                    take_rank: (index + 1) as u32,
+                    drop_reason: None,
+                    filler_count,
+                },
+                words,
             });
         }
     }
+
+    // Best-take-per-beat: when several takes cover the same beat, keep the
+    // highest-scoring one and mark the rest as duplicates.
+    let scores: Vec<TakeScore> = raws.iter().map(|raw| take_score(&raw.words)).collect();
+    let mut beats: Vec<(String, Vec<usize>)> = Vec::new();
+    for (index, raw) in raws.iter().enumerate() {
+        let position = beats
+            .iter()
+            .position(|(label, _)| *label == raw.candidate.beat_label);
+        match position {
+            Some(position) => beats[position].1.push(index),
+            None => beats.push((raw.candidate.beat_label.clone(), vec![index])),
+        }
+    }
+    for (_, members) in &beats {
+        if members.len() < 2 {
+            continue;
+        }
+        let mut ranked = members.clone();
+        ranked.sort_by(|&a, &b| {
+            scores[b]
+                .cmp(&scores[a])
+                .then_with(|| {
+                    raws[a]
+                        .candidate
+                        .source_id
+                        .cmp(&raws[b].candidate.source_id)
+                })
+                .then_with(|| raws[a].candidate.start_ms.cmp(&raws[b].candidate.start_ms))
+        });
+        for &loser in &ranked[1..] {
+            raws[loser].candidate.drop_reason = Some(DropReason::Duplicate);
+        }
+    }
+
+    // Filler / false-start policy. SuggestOnly (default) records but drops
+    // nothing; Automatic drops pure-filler and repeated false-start candidates.
+    if policy == FillerPolicy::Automatic {
+        for raw in raws.iter_mut() {
+            if raw.candidate.drop_reason.is_some() {
+                continue;
+            }
+            if has_false_start(&raw.words) {
+                raw.candidate.drop_reason = Some(DropReason::FalseStart);
+            } else if !raw.words.is_empty() && raw.candidate.filler_count >= raw.words.len() {
+                raw.candidate.drop_reason = Some(DropReason::Filler);
+            }
+        }
+    }
+
+    let candidates: Vec<Candidate> = raws.into_iter().map(|raw| raw.candidate).collect();
     let path = project_path.join("edit/candidates.json");
     if !dry_run {
         write_json_atomic(
@@ -1136,7 +1354,9 @@ pub fn analyze_local(project_path: &Path, dry_run: bool) -> Result<PipelineArtif
             count: sources.sources.len(),
         });
     }
-    let provider = SileroVadProvider::discover()?;
+    // HeardRight is the single local-audio boundary: it owns the Silero model
+    // and runtime and returns VAD regions; CutRight supplies media and policy.
+    let provider = HeardRightProvider::discover()?;
     let mut region_count = 0;
     for source in &sources.sources {
         let audio_path = project_path.join(format!("cache/audio/{}-16k.f32", source.source_id));
@@ -1162,22 +1382,28 @@ pub fn analyze_local(project_path: &Path, dry_run: bool) -> Result<PipelineArtif
     })
 }
 
-pub fn reframe_plan(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, ProjectError> {
+pub fn reframe_plan(
+    project_path: &Path,
+    variant: Option<&str>,
+    dry_run: bool,
+) -> Result<PipelineArtifact, ProjectError> {
+    let variant = resolve_variant(project_path, variant)?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
     if sources.sources.is_empty() {
         return Err(ProjectError::NoSources);
     }
-    let timeline: Timeline = read_json(&project_path.join("edit/timeline.json")).map_err(|_| {
-        ProjectError::InvalidState(
-            "reframe planning requires edit/timeline.json; run `videoctl edit render <project> --variant natural` first".into(),
-        )
+    let timeline_path = variant_timeline_path(project_path, &variant);
+    let timeline: Timeline = read_json(&timeline_path).map_err(|_| {
+        ProjectError::InvalidState(format!(
+            "reframe planning requires edit/timeline-{variant}.json; run `videoctl edit render <project> --variant {variant}` first"
+        ))
     })?;
     let timeline_segments = &timeline
         .tracks
         .first()
         .ok_or_else(|| ProjectError::InvalidState("timeline has no main track".into()))?
         .segments;
-    let path = project_path.join("analysis/reframe-plan.json");
+    let path = project_path.join(format!("analysis/reframe/{variant}/reframe-plan.json"));
     if !dry_run {
         let worker = vision_anchor_worker()?;
         let mut anchors = Vec::with_capacity(timeline_segments.len());
@@ -1210,17 +1436,18 @@ pub fn reframe_plan(project_path: &Path, dry_run: bool) -> Result<PipelineArtifa
                 "approved": false
             }));
         }
-        write_json_atomic(
-            &path,
-            &serde_json::json!({
-                "schema_version": SCHEMA_VERSION,
-                "kind": "timeline_reframe_plan",
-                "target_aspect": "9:16",
-                "approved": false,
-                "requires_review": true,
-                "anchors": anchors
-            }),
-        )?;
+        let plan = serde_json::json!({
+            "schema_version": SCHEMA_VERSION,
+            "kind": "timeline_reframe_plan",
+            "variant": variant,
+            "target_aspect": "9:16",
+            "approved": false,
+            "requires_review": true,
+            "anchors": anchors
+        });
+        write_json_atomic(&path, &plan)?;
+        // Compatibility alias for consumers not yet variant-aware.
+        write_json_atomic(&project_path.join("analysis/reframe-plan.json"), &plan)?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
@@ -1308,6 +1535,7 @@ pub fn build_cut_plan(
             Ok((source.source_id.clone(), signal))
         })
         .collect::<Result<std::collections::HashMap<_, _>, ProjectError>>()?;
+    let transcripts = load_transcripts(project_path)?;
     let mut segments = Vec::new();
     for candidate in candidates
         .candidates
@@ -1319,30 +1547,57 @@ pub fn build_cut_plan(
             .iter()
             .find(|source| source.source_id == candidate.source_id)
             .and_then(|source| source.duration_ms);
-        let vad = vad_by_source.get(&candidate.source_id).ok_or_else(|| {
-            ProjectError::InvalidState(format!("missing VAD for {}", candidate.source_id))
-        })?;
-        let (speech_start, speech_end) =
-            vad_adjusted_bounds(candidate.start_ms, candidate.end_ms, vad);
-        let start = speech_start.saturating_sub(head_margin_ms).max(0);
-        let mut end = speech_end.saturating_add(tail_margin_ms);
-        if let Some(duration) = source_duration {
-            end = end.min(duration);
-        }
-        if end - start < 600 {
-            end = start.saturating_add(600);
+        let mut candidate_words: Vec<&Word> = transcripts
+            .iter()
+            .filter(|transcript| transcript.source_id == candidate.source_id)
+            .flat_map(|transcript| transcript.words.iter())
+            .filter(|word| word.end_ms > candidate.start_ms && word.start_ms < candidate.end_ms)
+            .collect();
+        candidate_words.sort_by_key(|word| word.start_ms);
+        let chunks = candidate_chunks(
+            &candidate_words,
+            gap_threshold_ms,
+            head_margin_ms,
+            tail_margin_ms,
+            source_duration,
+        );
+        if chunks.is_empty() {
+            // No word evidence for this candidate: fall back to VAD-expanded bounds.
+            let vad = vad_by_source.get(&candidate.source_id).ok_or_else(|| {
+                ProjectError::InvalidState(format!("missing VAD for {}", candidate.source_id))
+            })?;
+            let (speech_start, speech_end) =
+                vad_adjusted_bounds(candidate.start_ms, candidate.end_ms, vad);
+            let start = speech_start.saturating_sub(head_margin_ms).max(0);
+            let mut end = speech_end.saturating_add(tail_margin_ms);
             if let Some(duration) = source_duration {
                 end = end.min(duration);
             }
-        }
-        if end > start {
-            segments.push(CutSegment {
-                id: format!("segment-{:03}", segments.len() + 1),
-                source_id: candidate.source_id.clone(),
-                source_start_ms: start,
-                source_end_ms: end,
-                reason: format!("{}:{}", variant, candidate.beat_label),
-            });
+            if end - start < 600 {
+                end = start.saturating_add(600);
+                if let Some(duration) = source_duration {
+                    end = end.min(duration);
+                }
+            }
+            if end > start {
+                segments.push(CutSegment {
+                    id: format!("segment-{:03}", segments.len() + 1),
+                    source_id: candidate.source_id.clone(),
+                    source_start_ms: start,
+                    source_end_ms: end,
+                    reason: format!("{}:{}", variant, candidate.beat_label),
+                });
+            }
+        } else {
+            for (start, end) in chunks {
+                segments.push(CutSegment {
+                    id: format!("segment-{:03}", segments.len() + 1),
+                    source_id: candidate.source_id.clone(),
+                    source_start_ms: start,
+                    source_end_ms: end,
+                    reason: format!("{}:{}", variant, candidate.beat_label),
+                });
+            }
         }
     }
     if segments.is_empty() {
@@ -1403,14 +1658,70 @@ fn vad_adjusted_bounds(start_ms: i64, end_ms: i64, vad: &VadSignal) -> (i64, i64
     (start, end)
 }
 
-pub fn validate_edit(project_path: &Path) -> Result<PipelineArtifact, ProjectError> {
+/// Split a candidate's words into render chunks, compacting any inter-word pause
+/// longer than `gap_threshold_ms` down to a retained residual of that size. The
+/// first chunk keeps the head margin and the last chunk keeps the tail margin;
+/// internal chunk boundaries keep only the residual pause. Words are never
+/// clipped or overlapped, and because a tighter variant uses a smaller
+/// threshold, it produces more, shorter chunks — removing more silence. Returns
+/// no chunks when there are no words, so the caller can fall back to VAD bounds.
+fn candidate_chunks(
+    words: &[&Word],
+    gap_threshold_ms: i64,
+    head_margin_ms: i64,
+    tail_margin_ms: i64,
+    source_duration: Option<i64>,
+) -> Vec<(i64, i64)> {
+    if words.is_empty() {
+        return Vec::new();
+    }
+    let clamp = |value: i64| -> i64 {
+        let mut clamped = value.max(0);
+        if let Some(duration) = source_duration {
+            clamped = clamped.min(duration);
+        }
+        clamped
+    };
+    let mut chunks: Vec<(i64, i64)> = Vec::new();
+    let mut chunk_start = words[0].start_ms - head_margin_ms;
+    for pair in words.windows(2) {
+        let current = pair[0];
+        let next = pair[1];
+        let gap = next.start_ms - current.end_ms;
+        if gap > gap_threshold_ms {
+            let tail_pad = gap_threshold_ms / 2;
+            let head_pad = gap_threshold_ms - tail_pad;
+            let out_start = clamp(chunk_start);
+            let out_end = clamp(current.end_ms + tail_pad);
+            if out_end > out_start {
+                chunks.push((out_start, out_end));
+            }
+            chunk_start = next.start_ms - head_pad;
+        }
+    }
+    let last_end = words[words.len() - 1].end_ms;
+    let out_start = clamp(chunk_start);
+    let out_end = clamp(last_end + tail_margin_ms);
+    if out_end > out_start {
+        chunks.push((out_start, out_end));
+    }
+    chunks
+}
+
+pub fn validate_edit(
+    project_path: &Path,
+    variant: Option<&str>,
+) -> Result<PipelineArtifact, ProjectError> {
+    let variant = resolve_variant(project_path, variant)?;
+    let plan_path = variant_plan_path(project_path, &variant);
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
-    let plan: CutPlan = read_json(&project_path.join("edit/cut-plan.json"))?;
+    let plan: CutPlan = read_json(&plan_path)?;
     let mut durations = std::collections::HashMap::new();
     for source in sources.sources {
         durations.insert(source.source_id, source.duration_ms);
     }
-    let mut last_end = std::collections::HashMap::new();
+    // Validate every source range independently. Ranges must be non-negative,
+    // non-empty, and in-range for their source.
     for segment in &plan.segments {
         let duration = durations.get(&segment.source_id).ok_or_else(|| {
             ProjectError::InvalidState(format!("missing source {}", segment.source_id))
@@ -1424,38 +1735,52 @@ pub fn validate_edit(project_path: &Path) -> Result<PipelineArtifact, ProjectErr
                 segment.id, segment.source_start_ms, segment.source_end_ms
             )));
         }
-        if last_end
-            .get(&segment.source_id)
-            .is_some_and(|end| segment.source_start_ms < *end)
-        {
-            return Err(ProjectError::InvalidState(format!(
-                "overlapping segment {}",
-                segment.id
-            )));
+    }
+    // Detect overlaps per source, sorting by source time solely for that check.
+    // Output order is allowed to differ from source order (§6.5): a plan may
+    // reorder non-overlapping source intervals freely.
+    let mut by_source: std::collections::HashMap<String, Vec<(i64, i64, String)>> =
+        std::collections::HashMap::new();
+    for segment in &plan.segments {
+        by_source
+            .entry(segment.source_id.clone())
+            .or_default()
+            .push((
+                segment.source_start_ms,
+                segment.source_end_ms,
+                segment.id.clone(),
+            ));
+    }
+    for (_, mut intervals) in by_source {
+        intervals.sort_by_key(|(start, _, _)| *start);
+        let mut last_end: Option<i64> = None;
+        for (start, end, id) in intervals {
+            if last_end.is_some_and(|prev_end| start < prev_end) {
+                return Err(ProjectError::InvalidState(format!(
+                    "overlapping segment {id}"
+                )));
+            }
+            last_end = Some(end);
         }
-        last_end.insert(segment.source_id.clone(), segment.source_end_ms);
     }
     Ok(PipelineArtifact {
         status: "valid",
-        path: project_path.join("edit/cut-plan.json"),
+        path: plan_path,
         count: plan.segments.len(),
     })
 }
 
 pub fn compile_timeline(
     project_path: &Path,
+    variant: &str,
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
+    validate_variant(variant)?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
-    let plan: CutPlan = read_json(&project_path.join("edit/cut-plan.json"))?;
-    let timebase = sources
-        .sources
-        .first()
-        .and_then(|source| source.timebase.clone())
-        .unwrap_or(Timebase {
-            fps_num: 30_000,
-            fps_den: 1_001,
-        });
+    let plan: CutPlan = read_json(&project_path.join(format!("edit/cut-plan-{variant}.json")))?;
+    // Carry the explicit working/output timebase onto the timeline (§6.6) rather
+    // than silently inheriting the first source's rate.
+    let timebase = working_timebase(project_path, &sources);
     let mut cursor = 0;
     let mut segments = Vec::new();
     for segment in &plan.segments {
@@ -1481,9 +1806,12 @@ pub fn compile_timeline(
             segments,
         }],
     };
-    let path = project_path.join("edit/timeline.json");
+    let path = project_path.join(format!("edit/timeline-{variant}.json"));
     if !dry_run {
         write_json_atomic(&path, &timeline)?;
+        // Compatibility alias for consumers not yet variant-aware. It is written
+        // from this named variant only, never from implicit last-command state.
+        write_json_atomic(&project_path.join("edit/timeline.json"), &timeline)?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
@@ -1648,22 +1976,260 @@ fn validate_variant(variant: &str) -> Result<(), ProjectError> {
     }
 }
 
+/// Resolve the variant a downstream command should operate on. An explicit
+/// variant wins; otherwise the reviewed-base selection is used; otherwise fall
+/// back to `natural` for backward compatibility with legacy projects.
+fn resolve_variant(project_path: &Path, variant: Option<&str>) -> Result<String, ProjectError> {
+    if let Some(variant) = variant {
+        validate_variant(variant)?;
+        return Ok(variant.to_string());
+    }
+    if let Some(selection) = read_variant_selection(project_path)? {
+        validate_variant(&selection.variant)?;
+        return Ok(selection.variant);
+    }
+    Ok("natural".to_string())
+}
+
+/// Prefer the variant-scoped artifact, falling back to the legacy generic alias
+/// when the variant file does not exist yet.
+fn variant_or_generic(project_path: &Path, variant_rel: &str, generic_rel: &str) -> PathBuf {
+    let variant_path = project_path.join(variant_rel);
+    if variant_path.is_file() {
+        variant_path
+    } else {
+        project_path.join(generic_rel)
+    }
+}
+
+fn variant_plan_path(project_path: &Path, variant: &str) -> PathBuf {
+    variant_or_generic(
+        project_path,
+        &format!("edit/cut-plan-{variant}.json"),
+        "edit/cut-plan.json",
+    )
+}
+
+fn variant_timeline_path(project_path: &Path, variant: &str) -> PathBuf {
+    variant_or_generic(
+        project_path,
+        &format!("edit/timeline-{variant}.json"),
+        "edit/timeline.json",
+    )
+}
+
+fn variant_captions_path(project_path: &Path, variant: &str) -> PathBuf {
+    variant_or_generic(
+        project_path,
+        &format!("edit/captions-{variant}.srt"),
+        "edit/captions.srt",
+    )
+}
+
+fn variant_reframe_path(project_path: &Path, variant: &str) -> PathBuf {
+    variant_or_generic(
+        project_path,
+        &format!("analysis/reframe/{variant}/reframe-plan.json"),
+        "analysis/reframe-plan.json",
+    )
+}
+
+fn variant_finish_path(project_path: &Path, variant: &str) -> PathBuf {
+    variant_or_generic(
+        project_path,
+        &format!("finish/{variant}/finish-plan.json"),
+        "finish/finish-plan.json",
+    )
+}
+
+/// The explicit working/output timebase (§6.6). A project-level
+/// `working_timebase` in `project.json` wins; otherwise the first source's
+/// timebase; otherwise a sensible NTSC default. Never silently inherits an
+/// ambiguous project rate.
+fn working_timebase(project_path: &Path, sources: &SourceManifest) -> Timebase {
+    let declared = read_json::<serde_json::Value>(&project_path.join("project.json"))
+        .ok()
+        .and_then(|value| value.get("working_timebase").cloned())
+        .and_then(|timebase| {
+            let num = timebase
+                .get("fps_num")
+                .and_then(serde_json::Value::as_u64)?;
+            let den = timebase
+                .get("fps_den")
+                .and_then(serde_json::Value::as_u64)?;
+            (num > 0 && den > 0).then_some(Timebase {
+                fps_num: num as u32,
+                fps_den: den as u32,
+            })
+        });
+    if let Some(timebase) = declared {
+        return timebase;
+    }
+    sources
+        .sources
+        .first()
+        .and_then(|source| source.timebase.clone())
+        .unwrap_or(Timebase {
+            fps_num: 30_000,
+            fps_den: 1_001,
+        })
+}
+
+/// Convert a millisecond duration to a (possibly fractional) frame count at the
+/// given timebase. Used for interchange frame math so render/export never assume
+/// the source fps.
+fn ms_to_frames_f64(milliseconds: i64, timebase: &Timebase) -> f64 {
+    milliseconds as f64 * timebase.fps_num as f64 / (1000.0 * timebase.fps_den as f64)
+}
+
+/// Record an explicit reviewed-base selection (§6.2). Validates the variant,
+/// confirms the rough cut exists, binds it by BLAKE3, and persists the record.
+pub fn select_variant(
+    project_path: &Path,
+    variant: &str,
+    selected_by: &str,
+) -> Result<SelectionRecord, ProjectError> {
+    validate_variant(variant)?;
+    let rough_cut_rel = format!("render/rough-cuts/{variant}.mp4");
+    let rough_cut = project_path.join(&rough_cut_rel);
+    if !rough_cut.is_file() {
+        return Err(ProjectError::InvalidState(format!(
+            "variant selection requires a rendered rough cut: {rough_cut_rel}"
+        )));
+    }
+    let digest = hash_file(&rough_cut)?;
+    let record = SelectionRecord {
+        schema_version: SCHEMA_VERSION,
+        variant: variant.to_string(),
+        rough_cut_path: rough_cut_rel,
+        rough_cut_blake3: format!("blake3:{digest}"),
+        rough_cut_size: fs::metadata(&rough_cut)?.len(),
+        selected_at: Utc::now(),
+        selected_by: selected_by.to_string(),
+    };
+    write_json_atomic(
+        &project_path.join("feedback/variant-selection.json"),
+        &record,
+    )?;
+    Ok(record)
+}
+
+/// Read the current reviewed-base selection, if any.
+pub fn read_variant_selection(
+    project_path: &Path,
+) -> Result<Option<SelectionRecord>, ProjectError> {
+    let path = project_path.join("feedback/variant-selection.json");
+    if !path.is_file() {
+        return Ok(None);
+    }
+    Ok(Some(read_json(&path)?))
+}
+
+/// Legacy generic artifacts and their `natural` variant destinations. Legacy
+/// renders were natural-based, so generic state is attributed to `natural`.
+const MIGRATION_TARGETS: &[(&str, &str)] = &[
+    ("edit/cut-plan.json", "edit/cut-plan-natural.json"),
+    ("edit/timeline.json", "edit/timeline-natural.json"),
+    (
+        "analysis/reframe-plan.json",
+        "analysis/reframe/natural/reframe-plan.json",
+    ),
+    ("finish/finish-plan.json", "finish/natural/finish-plan.json"),
+];
+
+/// Migrate a legacy project layout into variant-scoped locations (§6.7).
+/// Generic artifacts are copied into their `natural` variant paths and backed up
+/// under `migrations/backup-<timestamp>/`, then removed. Idempotent: once the
+/// generic artifacts are gone there is nothing left to move.
+pub fn migrate_project(project_path: &Path) -> Result<MigrationReport, ProjectError> {
+    let project_path = project_path.canonicalize()?;
+    read_project_manifest(&project_path.join("project.json"))?;
+    let mut migrated = Vec::new();
+    let mut skipped = Vec::new();
+    let mut backup_dir: Option<PathBuf> = None;
+
+    for &(from_rel, to_rel) in MIGRATION_TARGETS {
+        let from = project_path.join(from_rel);
+        let to = project_path.join(to_rel);
+        if !from.is_file() {
+            skipped.push(SkippedArtifact {
+                path: from_rel.to_string(),
+                reason: "missing".to_string(),
+            });
+            continue;
+        }
+        if to.is_file() {
+            skipped.push(SkippedArtifact {
+                path: from_rel.to_string(),
+                reason: "target-exists".to_string(),
+            });
+            continue;
+        }
+        let backup_root = backup_dir.clone().unwrap_or_else(|| {
+            let stamp = Utc::now().format("%Y%m%dT%H%M%SZ");
+            project_path.join(format!("migrations/backup-{stamp}"))
+        });
+        let backup_path = backup_root.join(from_rel);
+        if let Some(parent) = backup_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        if let Some(parent) = to.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::copy(&from, &backup_path)?;
+        fs::copy(&from, &to)?;
+        fs::remove_file(&from)?;
+        backup_dir = Some(backup_root);
+        migrated.push(MigratedArtifact {
+            from: from_rel.to_string(),
+            to: to_rel.to_string(),
+            backup: relative_artifact_path(&project_path, &backup_path),
+        });
+    }
+
+    let status = if migrated.is_empty() {
+        "already-current"
+    } else {
+        "migrated"
+    };
+    let report = MigrationReport {
+        schema_version: SCHEMA_VERSION,
+        status: status.to_string(),
+        migrated_at: Utc::now(),
+        migrated,
+        skipped,
+        backup_dir,
+    };
+    write_json_atomic(
+        &project_path.join("migrations/migration-report.json"),
+        &report,
+    )?;
+    Ok(report)
+}
+
 pub fn render_final(
     project_path: &Path,
     preset: &str,
+    variant: Option<&str>,
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
+    let variant = resolve_variant(project_path, variant)?;
     let manifest = read_project_manifest(&project_path.join("project.json"))?;
     let output_preset = manifest
         .outputs
         .iter()
         .find(|candidate| candidate.id == preset)
         .ok_or_else(|| ProjectError::InvalidState(format!("unknown output preset {preset}")))?;
-    let input = project_path.join("render/rough-cuts/natural.mp4");
-    let captions = project_path.join("edit/captions.srt");
+    let input = project_path.join(format!("render/rough-cuts/{variant}.mp4"));
+    if !input.is_file() {
+        return Err(ProjectError::InvalidState(format!(
+            "final rendering requires the selected rough cut: render/rough-cuts/{variant}.mp4"
+        )));
+    }
+    let captions = variant_captions_path(project_path, &variant);
     let output = project_path.join(format!("render/finals/{preset}.mp4"));
     let reframe_anchors = if output_preset.aspect == "9:16" {
-        Some(load_approved_reframe_anchors(project_path)?)
+        Some(load_approved_reframe_anchors(project_path, &variant)?)
     } else {
         None
     };
@@ -1696,12 +2262,15 @@ pub fn render_final(
     })
 }
 
-fn load_approved_reframe_anchors(project_path: &Path) -> Result<Vec<ReframeAnchor>, ProjectError> {
-    let path = project_path.join("analysis/reframe-plan.json");
+fn load_approved_reframe_anchors(
+    project_path: &Path,
+    variant: &str,
+) -> Result<Vec<ReframeAnchor>, ProjectError> {
+    let path = variant_reframe_path(project_path, variant);
     let plan: ReframePlan = read_json(&path).map_err(|_| {
-        ProjectError::InvalidState(
-            "vertical final rendering requires an approved `analysis/reframe-plan.json`".into(),
-        )
+        ProjectError::InvalidState(format!(
+            "vertical final rendering requires an approved reframe plan for variant {variant}"
+        ))
     })?;
     if !plan.approved
         || plan.anchors.is_empty()
@@ -1712,7 +2281,7 @@ fn load_approved_reframe_anchors(project_path: &Path) -> Result<Vec<ReframeAncho
                 .into(),
         ));
     }
-    let timeline: Timeline = read_json(&project_path.join("edit/timeline.json"))?;
+    let timeline: Timeline = read_json(&variant_timeline_path(project_path, variant))?;
     let segments = &timeline
         .tracks
         .first()
@@ -1742,8 +2311,14 @@ fn load_approved_reframe_anchors(project_path: &Path) -> Result<Vec<ReframeAncho
         .collect())
 }
 
-pub fn qa_run(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, ProjectError> {
-    validate_edit(project_path)?;
+pub fn qa_run(
+    project_path: &Path,
+    variant: Option<&str>,
+    preset: &str,
+    dry_run: bool,
+) -> Result<PipelineArtifact, ProjectError> {
+    let variant = resolve_variant(project_path, variant)?;
+    validate_edit(project_path, Some(&variant))?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
     for source in &sources.sources {
         let actual = format!("blake3:{}", hash_file(Path::new(&source.path))?);
@@ -1751,15 +2326,15 @@ pub fn qa_run(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, Pr
             return Err(ProjectError::SourceChanged(PathBuf::from(&source.path)));
         }
     }
-    let output = project_path.join("render/finals/youtube.mp4");
+    let output = project_path.join(format!("render/finals/{preset}.mp4"));
     let benchmark = project_path.join("analysis/bench/transcribe/report.json");
     let manifest = read_project_manifest(&project_path.join("project.json"))?;
-    let preset = manifest
+    let output_preset = manifest
         .outputs
         .iter()
-        .find(|preset| preset.id == "youtube")
+        .find(|candidate| candidate.id == preset)
         .ok_or_else(|| {
-            ProjectError::InvalidState("project is missing the youtube preset".into())
+            ProjectError::InvalidState(format!("project is missing the {preset} preset"))
         })?;
     if !output.is_file() {
         return Err(ProjectError::InvalidState(format!(
@@ -1781,6 +2356,7 @@ pub fn qa_run(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, Pr
             "QA rejects an unresolved transcription benchmark".into(),
         ));
     }
+    let report_path = project_path.join(format!("qa/{variant}/{preset}/report.json"));
     let media = &output;
     if !dry_run {
         let metadata = probe(media)?;
@@ -1794,58 +2370,62 @@ pub fn qa_run(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, Pr
                 "final output must contain both video and audio streams".into(),
             ));
         }
-        if metadata.width != Some(preset.width) || metadata.height != Some(preset.height) {
+        if metadata.width != Some(output_preset.width)
+            || metadata.height != Some(output_preset.height)
+        {
             return Err(ProjectError::InvalidState(format!(
                 "final output dimensions must be {}x{}",
-                preset.width, preset.height
+                output_preset.width, output_preset.height
             )));
         }
-        let captions = project_path.join("edit/captions.srt");
+        let captions = variant_captions_path(project_path, &variant);
         let evidence = project_path.join("analysis/evidence/manifest.json");
         if !captions.is_file() || !evidence.is_file() {
             return Err(ProjectError::InvalidState(
                 "QA requires generated captions and visual evidence".into(),
             ));
         }
-        write_json_atomic(
-            &project_path.join("qa/report.json"),
-            &serde_json::json!({
-                "schema_version": SCHEMA_VERSION,
+        let report = serde_json::json!({
+            "schema_version": SCHEMA_VERSION,
+            "status": "pass",
+            "variant": variant,
+            "preset": preset,
+            "output": media,
+            "duration_ms": metadata.duration_ms,
+            "source_hashes": "unchanged",
+            "checks": [{
+                "id": "final.explicit",
                 "status": "pass",
-                "output": media,
-                "duration_ms": metadata.duration_ms,
-                "source_hashes": "unchanged",
-                "checks": [{
-                    "id": "final.explicit",
-                    "status": "pass",
-                    "evidence": media
-                }, {
-                    "id": "transcript.benchmark",
-                    "status": "pass",
-                    "evidence": benchmark
-                }, {
-                    "id": "media.duration",
-                    "status": "pass",
-                    "evidence": metadata.duration_ms
-                }, {
-                    "id": "media.streams",
-                    "status": "pass",
-                    "evidence": {"video": metadata.has_video, "audio": metadata.has_audio}
-                }, {
-                    "id": "media.dimensions",
-                    "status": "pass",
-                    "evidence": {"width": metadata.width, "height": metadata.height}
-                }, {
-                    "id": "captions.source_and_evidence",
-                    "status": "pass",
-                    "evidence": {"captions": captions, "evidence": evidence}
-                }]
-            }),
-        )?;
+                "evidence": media
+            }, {
+                "id": "transcript.benchmark",
+                "status": "pass",
+                "evidence": benchmark
+            }, {
+                "id": "media.duration",
+                "status": "pass",
+                "evidence": metadata.duration_ms
+            }, {
+                "id": "media.streams",
+                "status": "pass",
+                "evidence": {"video": metadata.has_video, "audio": metadata.has_audio}
+            }, {
+                "id": "media.dimensions",
+                "status": "pass",
+                "evidence": {"width": metadata.width, "height": metadata.height}
+            }, {
+                "id": "captions.source_and_evidence",
+                "status": "pass",
+                "evidence": {"captions": captions, "evidence": evidence}
+            }]
+        });
+        write_json_atomic(&report_path, &report)?;
+        // Compatibility alias for consumers not yet variant/preset-aware.
+        write_json_atomic(&project_path.join("qa/report.json"), &report)?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "pass" },
-        path: project_path.join("qa/report.json"),
+        path: report_path,
         count: 1,
     })
 }
@@ -1992,9 +2572,12 @@ pub fn propose_shorts(
 
 pub fn finish_validate(
     project_path: &Path,
+    variant: Option<&str>,
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
-    let timeline: Timeline = read_json(&project_path.join("edit/timeline.json"))?;
+    let variant = resolve_variant(project_path, variant)?;
+    let timeline_path = variant_timeline_path(project_path, &variant);
+    let timeline: Timeline = read_json(&timeline_path)?;
     let manifest = read_project_manifest(&project_path.join("project.json"))?;
     if timeline
         .tracks
@@ -2005,27 +2588,28 @@ pub fn finish_validate(
             "timeline has no segments".into(),
         ));
     }
-    let path = project_path.join("finish/finish-plan.json");
+    let path = project_path.join(format!("finish/{variant}/finish-plan.json"));
     if !dry_run {
-        write_json_atomic(
-            &path,
-            &serde_json::json!({
-                "schema_version": SCHEMA_VERSION,
-                "base_timeline": "edit/timeline.json",
-                "slots": manifest.outputs.iter().map(|preset| serde_json::json!({
-                    "id": format!("final-{}", preset.id),
-                    "kind": "final_delivery",
-                    "renderer": "render.final",
-                    "effect_id": "delivery.render_final.v1",
-                    "preset": preset.id,
-                    "width": preset.width,
-                    "height": preset.height,
-                    "requires_reframe_approval": preset.aspect == "9:16",
-                    "output_start_ms": 0,
-                    "output_end_ms": timeline.tracks[0].segments.last().map(|segment| segment.output_end_ms).unwrap_or(0)
-                })).collect::<Vec<_>>()
-            }),
-        )?;
+        let plan = serde_json::json!({
+            "schema_version": SCHEMA_VERSION,
+            "variant": variant,
+            "base_timeline": relative_artifact_path(project_path, &timeline_path),
+            "slots": manifest.outputs.iter().map(|preset| serde_json::json!({
+                "id": format!("final-{}", preset.id),
+                "kind": "final_delivery",
+                "renderer": "render.final",
+                "effect_id": "delivery.render_final.v1",
+                "preset": preset.id,
+                "width": preset.width,
+                "height": preset.height,
+                "requires_reframe_approval": preset.aspect == "9:16",
+                "output_start_ms": 0,
+                "output_end_ms": timeline.tracks[0].segments.last().map(|segment| segment.output_end_ms).unwrap_or(0)
+            })).collect::<Vec<_>>()
+        });
+        write_json_atomic(&path, &plan)?;
+        // Compatibility alias for consumers not yet variant-aware.
+        write_json_atomic(&project_path.join("finish/finish-plan.json"), &plan)?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "valid" },
@@ -2043,7 +2627,14 @@ pub fn render_slot(
     slot_id: &str,
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
-    let finish: serde_json::Value = read_json(&project_path.join("finish/finish-plan.json"))?;
+    let variant = resolve_variant(project_path, None)?;
+    let finish: serde_json::Value = read_json(&variant_finish_path(project_path, &variant))?;
+    // Prefer the variant the finish plan was built from; fall back to resolution.
+    let plan_variant = finish
+        .get("variant")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned)
+        .unwrap_or(variant);
     let slot = finish
         .get("slots")
         .and_then(serde_json::Value::as_array)
@@ -2067,7 +2658,7 @@ pub fn render_slot(
                 .ok_or_else(|| {
                     ProjectError::InvalidState(format!("finish slot {slot_id} has no preset"))
                 })?;
-            render_final(project_path, preset, dry_run)
+            render_final(project_path, preset, Some(&plan_variant), dry_run)
         }
         other => Err(ProjectError::InvalidState(format!(
             "finish slot {slot_id} has unsupported renderer {other}"
@@ -2104,8 +2695,13 @@ pub fn package_social(
     })
 }
 
-pub fn export_otio(project_path: &Path, dry_run: bool) -> Result<PipelineArtifact, ProjectError> {
-    let timeline: Timeline = read_json(&project_path.join("edit/timeline.json"))?;
+pub fn export_otio(
+    project_path: &Path,
+    variant: Option<&str>,
+    dry_run: bool,
+) -> Result<PipelineArtifact, ProjectError> {
+    let variant = resolve_variant(project_path, variant)?;
+    let timeline: Timeline = read_json(&variant_timeline_path(project_path, &variant))?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
     let rate = timeline.timebase.fps_num as f64 / timeline.timebase.fps_den as f64;
     let children = timeline.tracks[0]
@@ -2118,6 +2714,7 @@ pub fn export_otio(project_path: &Path, dry_run: bool) -> Result<PipelineArtifac
                 .find(|source| source.source_id == segment.source_id)
                 .ok_or_else(|| ProjectError::InvalidState(format!("missing source {}", segment.source_id)))?;
             let source_duration = segment.source_end_ms - segment.source_start_ms;
+            // Frame math uses the timeline's explicit working timebase (§6.6).
             Ok(serde_json::json!({
                 "OTIO_SCHEMA": "Clip.2",
                 "name": segment.id,
@@ -2127,24 +2724,28 @@ pub fn export_otio(project_path: &Path, dry_run: bool) -> Result<PipelineArtifac
                 },
                 "source_range": {
                     "OTIO_SCHEMA": "TimeRange.1",
-                    "start_time": {"OTIO_SCHEMA": "RationalTime.1", "value": segment.source_start_ms as f64 * rate / 1000.0, "rate": rate},
-                    "duration": {"OTIO_SCHEMA": "RationalTime.1", "value": source_duration as f64 * rate / 1000.0, "rate": rate}
+                    "start_time": {"OTIO_SCHEMA": "RationalTime.1", "value": ms_to_frames_f64(segment.source_start_ms, &timeline.timebase), "rate": rate},
+                    "duration": {"OTIO_SCHEMA": "RationalTime.1", "value": ms_to_frames_f64(source_duration, &timeline.timebase), "rate": rate}
                 }
             }))
         })
         .collect::<Result<Vec<_>, ProjectError>>()?;
-    let path = project_path.join("exports/interchange/timeline.otio.json");
+    let path = project_path.join(format!("deliverables/otio/{variant}.otio"));
     if !dry_run {
+        let value = serde_json::json!({
+            "OTIO_SCHEMA": "Timeline.1",
+            "name": "CutRight",
+            "variant": variant,
+            "tracks": {
+                "OTIO_SCHEMA": "Stack.1",
+                "children": [{ "OTIO_SCHEMA": "Track.1", "kind": "Video", "children": children }]
+            }
+        });
+        write_json_atomic(&path, &value)?;
+        // Compatibility alias for the legacy generic interchange path.
         write_json_atomic(
-            &path,
-            &serde_json::json!({
-                "OTIO_SCHEMA": "Timeline.1",
-                "name": "CutRight",
-                "tracks": {
-                    "OTIO_SCHEMA": "Stack.1",
-                    "children": [{ "OTIO_SCHEMA": "Track.1", "kind": "Video", "children": children }]
-                }
-            }),
+            &project_path.join("exports/interchange/timeline.otio.json"),
+            &value,
         )?;
     }
     Ok(PipelineArtifact {
@@ -2530,7 +3131,7 @@ mod tests {
         init_project(temp.path(), false).unwrap();
         write_json_atomic(&temp.path().join("edit/timeline.json"), &sample_timeline()).unwrap();
 
-        let result = finish_validate(temp.path(), false).unwrap();
+        let result = finish_validate(temp.path(), None, false).unwrap();
         assert_eq!(result.count, 1);
         let plan: video_core::FinishPlan = read_json(&result.path).unwrap();
         assert_eq!(plan.slots.len(), 3);
@@ -2566,7 +3167,7 @@ mod tests {
         )
         .unwrap();
 
-        let result = export_otio(temp.path(), false).unwrap();
+        let result = export_otio(temp.path(), None, false).unwrap();
         let otio: serde_json::Value = read_json(&result.path).unwrap();
         assert_eq!(otio["OTIO_SCHEMA"], "Timeline.1");
         let clip = &otio["tracks"]["children"][0]["children"][0];
@@ -2667,7 +3268,7 @@ mod tests {
             schema_version: SCHEMA_VERSION,
             source_id: "source-a".into(),
             sample_rate: 16_000,
-            provider: "silero-coreml".into(),
+            provider: "heardright-silero".into(),
             regions: vec![video_core::VadRegion {
                 start_ms: 900,
                 end_ms: 2_100,
@@ -2705,6 +3306,549 @@ mod tests {
         assert_eq!(
             benchmark_decision("heardright", "whisperx", false, false),
             "unresolved"
+        );
+    }
+
+    fn word(start_ms: i64, end_ms: i64) -> Word {
+        Word {
+            id: format!("w_{start_ms}"),
+            source_word_id: None,
+            text: "word".into(),
+            start_ms,
+            end_ms,
+            confidence: 1.0,
+            speaker: None,
+            kind: "word".into(),
+        }
+    }
+
+    #[test]
+    fn tight_variant_compacts_a_pause_that_natural_keeps() {
+        // Two words separated by a 300ms internal pause.
+        let w0 = word(0, 100);
+        let w1 = word(400, 500);
+        let words = vec![&w0, &w1];
+        // tight threshold 220 < 300 gap -> split into two chunks.
+        let tight = candidate_chunks(&words, 220, 90, 130, Some(10_000));
+        assert_eq!(tight.len(), 2);
+        // natural threshold 400 > 300 gap -> one chunk keeps the pause.
+        let natural = candidate_chunks(&words, 400, 140, 220, Some(10_000));
+        assert_eq!(natural.len(), 1);
+        let span = |chunks: &[(i64, i64)]| chunks.iter().map(|(s, e)| e - s).sum::<i64>();
+        assert!(span(&tight) < span(&natural));
+    }
+
+    #[test]
+    fn candidate_chunks_never_clip_words() {
+        let owned = vec![word(0, 100), word(400, 500), word(900, 1000)];
+        let words: Vec<&Word> = owned.iter().collect();
+        for threshold in [100, 220, 400, 1000] {
+            let chunks = candidate_chunks(&words, threshold, 90, 130, Some(10_000));
+            for w in &owned {
+                let contained = chunks
+                    .iter()
+                    .any(|(s, e)| *s <= w.start_ms && w.end_ms <= *e);
+                assert!(
+                    contained,
+                    "word {}..{} not contained at threshold {threshold}",
+                    w.start_ms, w.end_ms
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn build_cut_plan_makes_tight_remove_more_silence_than_natural() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        write_json_atomic(
+            &temp.path().join("sources/manifest.json"),
+            &SourceManifest {
+                schema_version: SCHEMA_VERSION,
+                sources: vec![SourceEntry {
+                    source_id: "source-a".into(),
+                    path: "sources/source-a.mov".into(),
+                    blake3: "fixture".into(),
+                    duration_ms: Some(10_000),
+                    width: Some(1920),
+                    height: Some(1080),
+                    rotation_degrees: Some(0),
+                    is_hdr: Some(false),
+                    timebase: None,
+                }],
+            },
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("analysis/vad-source-a.json"),
+            &VadSignal {
+                schema_version: SCHEMA_VERSION,
+                source_id: "source-a".into(),
+                sample_rate: 16_000,
+                provider: "heardright-silero".into(),
+                regions: vec![video_core::VadRegion {
+                    start_ms: 0,
+                    end_ms: 500,
+                    mean_probability: 0.9,
+                }],
+            },
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("analysis/transcripts/source-a.json"),
+            &Transcript {
+                schema_version: SCHEMA_VERSION,
+                provider: "fixture".into(),
+                source_id: "source-a".into(),
+                language: "en".into(),
+                words: vec![word(0, 100), word(400, 500)],
+                events: Vec::new(),
+            },
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("edit/candidates.json"),
+            &CandidateManifest {
+                schema_version: SCHEMA_VERSION,
+                candidates: vec![Candidate {
+                    id: "candidate-1".into(),
+                    source_id: "source-a".into(),
+                    start_ms: 0,
+                    end_ms: 500,
+                    text: "two words".into(),
+                    beat_label: "hook".into(),
+                    take_rank: 1,
+                    drop_reason: None,
+                    filler_count: 0,
+                }],
+            },
+        )
+        .unwrap();
+
+        build_cut_plan(temp.path(), "tight", false).unwrap();
+        build_cut_plan(temp.path(), "natural", false).unwrap();
+        let tight: CutPlan = read_json(&temp.path().join("edit/cut-plan-tight.json")).unwrap();
+        let natural: CutPlan = read_json(&temp.path().join("edit/cut-plan-natural.json")).unwrap();
+        // The 300ms pause exceeds tight's 220ms threshold (split) but not natural's 400ms.
+        assert_eq!(tight.segments.len(), 2);
+        assert_eq!(natural.segments.len(), 1);
+        assert_eq!(tight.gap_threshold_ms, 220);
+        assert_eq!(natural.gap_threshold_ms, 400);
+    }
+
+    #[test]
+    fn compile_timeline_is_variant_scoped_with_a_compat_alias() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        write_json_atomic(
+            &temp.path().join("sources/manifest.json"),
+            &SourceManifest {
+                schema_version: SCHEMA_VERSION,
+                sources: vec![SourceEntry {
+                    source_id: "source-a".into(),
+                    path: "sources/source-a.mov".into(),
+                    blake3: "fixture".into(),
+                    duration_ms: Some(10_000),
+                    width: Some(1920),
+                    height: Some(1080),
+                    rotation_degrees: Some(0),
+                    is_hdr: Some(false),
+                    timebase: Some(Timebase {
+                        fps_num: 30,
+                        fps_den: 1,
+                    }),
+                }],
+            },
+        )
+        .unwrap();
+        let plan = |variant: &str, count: usize| CutPlan {
+            schema_version: SCHEMA_VERSION,
+            variant: variant.into(),
+            gap_threshold_ms: 0,
+            head_margin_ms: 0,
+            tail_margin_ms: 0,
+            segments: (0..count as i64)
+                .map(|i| CutSegment {
+                    id: format!("segment-{i:03}"),
+                    source_id: "source-a".into(),
+                    source_start_ms: i * 1000,
+                    source_end_ms: i * 1000 + 500,
+                    reason: "fixture".into(),
+                })
+                .collect(),
+        };
+        write_json_atomic(
+            &temp.path().join("edit/cut-plan-tight.json"),
+            &plan("tight", 3),
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("edit/cut-plan-natural.json"),
+            &plan("natural", 2),
+        )
+        .unwrap();
+
+        let tight = compile_timeline(temp.path(), "tight", false).unwrap();
+        assert_eq!(tight.path, temp.path().join("edit/timeline-tight.json"));
+        let tight_timeline: Timeline = read_json(&tight.path).unwrap();
+        assert_eq!(tight_timeline.tracks[0].segments.len(), 3);
+        // The generic alias mirrors the variant just compiled.
+        let alias: Timeline = read_json(&temp.path().join("edit/timeline.json")).unwrap();
+        assert_eq!(alias.tracks[0].segments.len(), 3);
+
+        compile_timeline(temp.path(), "natural", false).unwrap();
+        let natural_timeline: Timeline =
+            read_json(&temp.path().join("edit/timeline-natural.json")).unwrap();
+        assert_eq!(natural_timeline.tracks[0].segments.len(), 2);
+        // The canonical tight timeline is untouched by compiling natural.
+        let tight_again: Timeline =
+            read_json(&temp.path().join("edit/timeline-tight.json")).unwrap();
+        assert_eq!(tight_again.tracks[0].segments.len(), 3);
+    }
+
+    #[test]
+    fn select_variant_binds_rough_cut_hash_and_reads_back() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        fs::write(
+            temp.path().join("render/rough-cuts/natural.mp4"),
+            b"natural-bytes",
+        )
+        .unwrap();
+
+        let record = select_variant(temp.path(), "natural", "cli").unwrap();
+        assert_eq!(record.schema_version, SCHEMA_VERSION);
+        assert_eq!(record.variant, "natural");
+        assert_eq!(record.rough_cut_path, "render/rough-cuts/natural.mp4");
+        assert_eq!(record.rough_cut_size, b"natural-bytes".len() as u64);
+        assert_eq!(
+            record.rough_cut_blake3,
+            format!("blake3:{}", blake3::hash(b"natural-bytes").to_hex())
+        );
+        assert_eq!(record.selected_by, "cli");
+
+        let read = read_variant_selection(temp.path())
+            .unwrap()
+            .expect("selection persists");
+        assert_eq!(read.variant, "natural");
+        assert_eq!(read.rough_cut_blake3, record.rough_cut_blake3);
+
+        assert!(select_variant(temp.path(), "wide", "cli").is_err());
+        assert!(select_variant(temp.path(), "tight", "cli").is_err());
+
+        let fresh = tempfile::tempdir().unwrap();
+        init_project(fresh.path(), false).unwrap();
+        assert!(read_variant_selection(fresh.path()).unwrap().is_none());
+    }
+
+    #[test]
+    fn render_final_resolves_selected_variant_and_falls_back_to_natural() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        fs::write(
+            temp.path().join("render/rough-cuts/natural.mp4"),
+            b"natural",
+        )
+        .unwrap();
+        fs::write(temp.path().join("render/rough-cuts/tight.mp4"), b"tight").unwrap();
+
+        // No selection -> resolves natural -> dry-run ok (youtube is 16:9).
+        let ok = render_final(temp.path(), "youtube", None, true).unwrap();
+        assert_eq!(ok.path, temp.path().join("render/finals/youtube.mp4"));
+
+        // Select tight, then remove tight.mp4: resolution follows the selection
+        // (and fails), proving it did not silently fall back to natural.
+        select_variant(temp.path(), "tight", "cli").unwrap();
+        fs::remove_file(temp.path().join("render/rough-cuts/tight.mp4")).unwrap();
+        assert!(render_final(temp.path(), "youtube", None, true).is_err());
+
+        // An explicit variant overrides the selection.
+        assert!(render_final(temp.path(), "youtube", Some("natural"), true).is_ok());
+
+        // Removing the selection falls back to natural.
+        fs::remove_file(temp.path().join("feedback/variant-selection.json")).unwrap();
+        assert!(render_final(temp.path(), "youtube", None, true).is_ok());
+    }
+
+    #[test]
+    fn migrate_project_moves_legacy_artifacts_and_is_idempotent() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        fs::write(temp.path().join("edit/cut-plan.json"), b"cut-plan").unwrap();
+        fs::write(temp.path().join("edit/timeline.json"), b"timeline").unwrap();
+        fs::write(temp.path().join("analysis/reframe-plan.json"), b"reframe").unwrap();
+        fs::write(temp.path().join("finish/finish-plan.json"), b"finish").unwrap();
+
+        let report = migrate_project(temp.path()).unwrap();
+        assert_eq!(report.status, "migrated");
+        assert_eq!(report.migrated.len(), 4);
+        assert!(report.backup_dir.is_some());
+        assert_eq!(
+            fs::read(temp.path().join("edit/cut-plan-natural.json")).unwrap(),
+            b"cut-plan"
+        );
+        assert_eq!(
+            fs::read(temp.path().join("edit/timeline-natural.json")).unwrap(),
+            b"timeline"
+        );
+        assert_eq!(
+            fs::read(
+                temp.path()
+                    .join("analysis/reframe/natural/reframe-plan.json")
+            )
+            .unwrap(),
+            b"reframe"
+        );
+        assert_eq!(
+            fs::read(temp.path().join("finish/natural/finish-plan.json")).unwrap(),
+            b"finish"
+        );
+        assert!(!temp.path().join("edit/cut-plan.json").exists());
+        assert!(!temp.path().join("edit/timeline.json").exists());
+        assert!(!temp.path().join("analysis/reframe-plan.json").exists());
+        assert!(!temp.path().join("finish/finish-plan.json").exists());
+
+        let again = migrate_project(temp.path()).unwrap();
+        assert_eq!(again.status, "already-current");
+        assert!(again.migrated.is_empty());
+        assert_eq!(
+            fs::read(temp.path().join("edit/cut-plan-natural.json")).unwrap(),
+            b"cut-plan"
+        );
+    }
+
+    #[test]
+    fn validate_edit_accepts_reordered_but_non_overlapping_plan() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        write_json_atomic(
+            &temp.path().join("sources/manifest.json"),
+            &SourceManifest {
+                schema_version: SCHEMA_VERSION,
+                sources: vec![SourceEntry {
+                    source_id: "source-a".into(),
+                    path: "sources/source-a.mov".into(),
+                    blake3: "fixture".into(),
+                    duration_ms: Some(10_000),
+                    width: Some(1920),
+                    height: Some(1080),
+                    rotation_degrees: Some(0),
+                    is_hdr: Some(false),
+                    timebase: None,
+                }],
+            },
+        )
+        .unwrap();
+        // Output order is reversed relative to source order, but the source
+        // intervals do not overlap.
+        let reordered = CutPlan {
+            schema_version: SCHEMA_VERSION,
+            variant: "natural".into(),
+            gap_threshold_ms: 0,
+            head_margin_ms: 0,
+            tail_margin_ms: 0,
+            segments: vec![
+                CutSegment {
+                    id: "segment-001".into(),
+                    source_id: "source-a".into(),
+                    source_start_ms: 5_000,
+                    source_end_ms: 6_000,
+                    reason: "fixture".into(),
+                },
+                CutSegment {
+                    id: "segment-002".into(),
+                    source_id: "source-a".into(),
+                    source_start_ms: 0,
+                    source_end_ms: 1_000,
+                    reason: "fixture".into(),
+                },
+            ],
+        };
+        write_json_atomic(&temp.path().join("edit/cut-plan.json"), &reordered).unwrap();
+        let result = validate_edit(temp.path(), None).unwrap();
+        assert_eq!(result.status, "valid");
+        assert_eq!(result.count, 2);
+
+        let overlapping = CutPlan {
+            schema_version: SCHEMA_VERSION,
+            variant: "natural".into(),
+            gap_threshold_ms: 0,
+            head_margin_ms: 0,
+            tail_margin_ms: 0,
+            segments: vec![
+                CutSegment {
+                    id: "segment-001".into(),
+                    source_id: "source-a".into(),
+                    source_start_ms: 0,
+                    source_end_ms: 2_000,
+                    reason: "fixture".into(),
+                },
+                CutSegment {
+                    id: "segment-002".into(),
+                    source_id: "source-a".into(),
+                    source_start_ms: 1_000,
+                    source_end_ms: 3_000,
+                    reason: "fixture".into(),
+                },
+            ],
+        };
+        write_json_atomic(&temp.path().join("edit/cut-plan.json"), &overlapping).unwrap();
+        assert!(validate_edit(temp.path(), None).is_err());
+    }
+
+    #[test]
+    fn filler_detection_flags_disfluencies_and_false_starts() {
+        assert!(is_filler_word("um"));
+        assert!(is_filler_word("Uh,"));
+        assert!(is_filler_word("literally"));
+        assert!(!is_filler_word("hello"));
+        assert!(!is_filler_word("you"));
+
+        let w = |text: &str, start: i64| Word {
+            id: format!("w_{start}"),
+            source_word_id: None,
+            text: text.into(),
+            start_ms: start,
+            end_ms: start + 100,
+            confidence: 1.0,
+            speaker: None,
+            kind: "word".into(),
+        };
+        let fillers = vec![w("um", 0), w("you", 100), w("know", 200), w("hello", 300)];
+        assert_eq!(count_fillers(&fillers), 3);
+        assert_eq!(count_fillers(&[w("hello", 0), w("world", 100)]), 0);
+
+        assert!(has_false_start(&[w("go", 0), w("go", 100), w("home", 200)]));
+        assert!(has_false_start(&[
+            w("I", 0),
+            w("want", 100),
+            w("I", 200),
+            w("want", 300),
+            w("it", 400)
+        ]));
+        assert!(!has_false_start(&[w("hello", 0), w("world", 100)]));
+    }
+
+    #[test]
+    fn build_candidates_selects_one_take_per_beat_deterministically() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        let transcript = |source_id: &str, confidence: f32| Transcript {
+            schema_version: SCHEMA_VERSION,
+            provider: "fixture".into(),
+            source_id: source_id.into(),
+            language: "en".into(),
+            words: vec![Word {
+                id: "w_000000".into(),
+                source_word_id: None,
+                text: "hello.".into(),
+                start_ms: 0,
+                end_ms: 500,
+                confidence,
+                speaker: None,
+                kind: "word".into(),
+            }],
+            events: Vec::new(),
+        };
+        // source-a is the stronger take (higher confidence) than source-b.
+        write_json_atomic(
+            &temp.path().join("analysis/transcripts/source-a.json"),
+            &transcript("source-a", 0.9),
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("analysis/transcripts/source-b.json"),
+            &transcript("source-b", 0.5),
+        )
+        .unwrap();
+
+        build_candidates(temp.path(), false).unwrap();
+        let first: CandidateManifest =
+            read_json(&temp.path().join("edit/candidates.json")).unwrap();
+        assert_eq!(first.candidates.len(), 2);
+        let winners = first
+            .candidates
+            .iter()
+            .filter(|candidate| candidate.drop_reason.is_none())
+            .collect::<Vec<_>>();
+        assert_eq!(winners.len(), 1);
+        assert_eq!(winners[0].source_id, "source-a");
+        let loser = first
+            .candidates
+            .iter()
+            .find(|candidate| candidate.source_id == "source-b")
+            .unwrap();
+        assert_eq!(loser.drop_reason, Some(DropReason::Duplicate));
+
+        // Deterministic: a second pass produces the identical manifest.
+        build_candidates(temp.path(), false).unwrap();
+        let second: CandidateManifest =
+            read_json(&temp.path().join("edit/candidates.json")).unwrap();
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn compile_timeline_uses_the_explicit_working_timebase() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        write_json_atomic(
+            &temp.path().join("sources/manifest.json"),
+            &SourceManifest {
+                schema_version: SCHEMA_VERSION,
+                sources: vec![SourceEntry {
+                    source_id: "source-a".into(),
+                    path: "sources/source-a.mov".into(),
+                    blake3: "fixture".into(),
+                    duration_ms: Some(10_000),
+                    width: Some(1920),
+                    height: Some(1080),
+                    rotation_degrees: Some(0),
+                    is_hdr: Some(false),
+                    timebase: Some(Timebase {
+                        fps_num: 30,
+                        fps_den: 1,
+                    }),
+                }],
+            },
+        )
+        .unwrap();
+        // The project declares an explicit 24/1 working timebase that must win
+        // over the 30/1 source rate.
+        let mut manifest: serde_json::Value = read_json(&temp.path().join("project.json")).unwrap();
+        manifest["working_timebase"] = serde_json::json!({ "fps_num": 24, "fps_den": 1 });
+        fs::write(
+            temp.path().join("project.json"),
+            serde_json::to_vec_pretty(&manifest).unwrap(),
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("edit/cut-plan-natural.json"),
+            &CutPlan {
+                schema_version: SCHEMA_VERSION,
+                variant: "natural".into(),
+                gap_threshold_ms: 0,
+                head_margin_ms: 0,
+                tail_margin_ms: 0,
+                segments: vec![CutSegment {
+                    id: "segment-001".into(),
+                    source_id: "source-a".into(),
+                    source_start_ms: 0,
+                    source_end_ms: 1_000,
+                    reason: "fixture".into(),
+                }],
+            },
+        )
+        .unwrap();
+
+        compile_timeline(temp.path(), "natural", false).unwrap();
+        let timeline: Timeline =
+            read_json(&temp.path().join("edit/timeline-natural.json")).unwrap();
+        assert_eq!(
+            timeline.timebase,
+            Timebase {
+                fps_num: 24,
+                fps_den: 1,
+            }
         );
     }
 }

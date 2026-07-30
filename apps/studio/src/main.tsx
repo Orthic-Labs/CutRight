@@ -8,6 +8,23 @@ import React, {
 import { createRoot } from "react-dom/client";
 import { convertFileSrc, invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { findWord, swapTarget, type Word } from "./word-lock";
+import { cutMarkers, type CutMarker } from "./cut-markers";
+import {
+  buildMockRecord,
+  buildSegmentFlagIntent,
+  REASONS,
+  SCHEMA_VERSION,
+  SOURCE_WORD_ID,
+  WORD_ID,
+  type DecisionIntent,
+  type DecisionReason,
+  type DecisionRecord,
+  type DecisionReplay,
+  type RelinkResult,
+  type ReviewTarget,
+  type SourceCheck,
+  type VariantSelection,
+} from "./contracts/review";
 import "./styles.css";
 
 type Mode = "sources" | "compare" | "finals" | "qa";
@@ -63,17 +80,6 @@ type Snapshot = {
   bench?: { decision?: string };
   decisions_path?: string;
 };
-type Decision = {
-  kind: string;
-  verdict?: string | null;
-  reason: string;
-  subject: string;
-  variant?: string | null;
-  segment_id?: string | null;
-  ts: string;
-  snapshot_generated_at?: string;
-};
-
 const qa =
   new URLSearchParams(location.search).has("qa") ||
   import.meta.env.VITE_CUTRIGHT_QA === "1";
@@ -90,19 +96,19 @@ const fixtureWords: Record<string, Word[]> = {
     "to",
     "breathe",
   ].map((text, i) => ({
-    id: `ow_${i}`,
+    id: `ow_${String(i).padStart(6, "0")}`,
     text,
     start_ms: i * 620,
     end_ms: i * 620 + 510,
-    source_word_id: `source-a:w_${i}`,
+    source_word_id: `source-a:w_${String(i).padStart(6, "0")}`,
   })),
   tight: ["This", "is", "the", "same", "spoken", "sentence", "breathe"].map(
     (text, i) => ({
-      id: `tw_${i}`,
+      id: `ow_${String(i).padStart(6, "0")}`,
       text,
       start_ms: i * 490,
       end_ms: i * 490 + 410,
-      source_word_id: `source-a:w_${i < 6 ? i : 9}`,
+      source_word_id: `source-a:w_${String(i < 6 ? i : 9).padStart(6, "0")}`,
     }),
   ),
 };
@@ -220,7 +226,37 @@ const fixture: Snapshot = {
   decisions_path: "/QA/Studio.video-project/feedback/decisions.jsonl",
 };
 
-const memoryDecisions: Decision[] = [];
+// Seeded history so browser QA exercises the replay states without the native
+// backend: one stale artifact record plus one malformed ledger line.
+const seedStale: DecisionRecord = {
+  ...buildMockRecord(
+    {
+      schema_version: SCHEMA_VERSION,
+      client_request_id: "qa-seed-stale",
+      target: { target_kind: "variant", variant: "tight" },
+      verdict: "rejected",
+      reason: "pacing",
+      note: null,
+      playhead_ms: 2400,
+      word_id: "ow_000004",
+      source_word_id: "source-a:w_000004",
+    },
+    fixture.manifest.project_id ?? "qa-demo",
+    0,
+  ),
+  decision_id: "d_mock_seed",
+  ts: "2026-07-25T18:03:11Z",
+  status: "stale_artifact",
+};
+const memoryDecisions: DecisionRecord[] = [seedStale];
+const memoryMalformed: DecisionReplay["malformed_lines"] = [
+  {
+    line_number: 4,
+    content: '{"decision_id":"d_trunc',
+    error: "EOF while parsing a value",
+  },
+];
+let memorySelection: VariantSelection | null = null;
 async function call<T>(
   command: string,
   args: Record<string, unknown> = {},
@@ -232,16 +268,61 @@ async function call<T>(
       words: fixtureWords[String(args.variant)] ?? fixtureWords.natural,
     } as T;
   if (command === "read_decisions")
-    return { decisions: memoryDecisions, skipped: 0 } as T;
+    return {
+      records: memoryDecisions,
+      malformed_lines: memoryMalformed,
+    } as T;
   if (command === "append_decision") {
-    memoryDecisions.push(args.decision as Decision);
-    return undefined as T;
+    const intent = args.intent as DecisionIntent;
+    const existing = memoryDecisions.find(
+      (record) => record.client_request_id === intent.client_request_id,
+    );
+    if (existing) return existing as T;
+    const record = buildMockRecord(
+      intent,
+      fixture.manifest.project_id ?? "qa-demo",
+      memoryDecisions.length + 1,
+    );
+    memoryDecisions.push(record);
+    return record as T;
   }
   if (command === "verify_sources")
-    return fixture.sources.map((source) => ({
+    // source-a verifies clean; source-b drifted so QA can exercise the
+    // mismatch banner and the relink flow.
+    return fixture.sources.map((source, index) => ({
       source_id: source.source_id,
-      matches: true,
+      path: `/QA/media/${source.source_id}.mp4`,
+      expected_blake3: `blake3:expected-${source.source_id}`,
+      actual_blake3:
+        index === 1
+          ? "blake3:drifted-bytes"
+          : `blake3:expected-${source.source_id}`,
+      matches: index === 0,
+      error: null,
     })) as T;
+  if (command === "relink_source") {
+    const sourceId = String(args.source_id);
+    return {
+      source_id: sourceId,
+      path: String(args.new_path),
+      blake3: `blake3:expected-${sourceId}`,
+      matches: true,
+    } as T;
+  }
+  if (command === "select_variant") {
+    const variant = String(args.variant);
+    memorySelection = {
+      schema_version: 1,
+      variant,
+      rough_cut_path: `render/rough-cuts/${variant}.mp4`,
+      rough_cut_blake3: `blake3:mock-${variant}-roughcut`,
+      rough_cut_size: 12345678,
+      selected_at: new Date().toISOString(),
+      selected_by: "qa-mock",
+    };
+    return memorySelection as T;
+  }
+  if (command === "read_variant_selection") return memorySelection as T;
   throw new Error(`QA mock has no ${command}`);
 }
 const tc = (value = 0) => {
@@ -273,7 +354,30 @@ function App() {
     null,
   );
   const [note, setNote] = useState("");
-  const [decisions, setDecisions] = useState<Decision[]>([]);
+  // QA mode boots straight onto the fixture project, so its ledger starts
+  // with the same replay the native load() path fetches.
+  const [decisions, setDecisions] = useState<DecisionRecord[]>(
+    qa ? [...memoryDecisions] : [],
+  );
+  const [malformedLines, setMalformedLines] = useState<
+    DecisionReplay["malformed_lines"]
+  >(qa ? [...memoryMalformed] : []);
+  const [sessionCount, setSessionCount] = useState(0);
+  const [ledgerOpen, setLedgerOpen] = useState(false);
+  const [checks, setChecks] = useState<SourceCheck[] | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyProgress, setVerifyProgress] = useState("");
+  const [relinks, setRelinks] = useState<Record<string, RelinkResult>>({});
+  const [selection, setSelection] = useState<VariantSelection | null>(null);
+  const [selecting, setSelecting] = useState<string | null>(null);
+  const [flagging, setFlagging] = useState(false);
+  const [lastFlag, setLastFlag] = useState<{
+    segmentId: string;
+    reason: DecisionReason;
+  } | null>(null);
+  const [finalPreset, setFinalPreset] = useState(
+    qa ? fixture.finals[0]?.preset ?? "" : "",
+  );
   const [theme, setTheme] = useState(
     () =>
       localStorage.getItem("cutright-theme") ??
@@ -303,6 +407,7 @@ function App() {
       if (!picked) return;
       const next = await call<Snapshot>("read_snapshot", { path: picked });
       setSnapshot(next);
+      setFinalPreset((current) => current || next.finals[0]?.preset || "");
       localStorage.setItem("cutright-project", picked);
       const initial: Mode = next.finals.length
         ? "finals"
@@ -310,10 +415,17 @@ function App() {
           ? "compare"
           : "sources";
       setMode((localStorage.getItem("cutright-mode") as Mode) ?? initial);
-      const history = await call<{ decisions: Decision[] }>("read_decisions", {
+      const history = await call<DecisionReplay>("read_decisions", {
         path: picked,
       });
-      setDecisions(history.decisions);
+      setDecisions(history.records);
+      setMalformedLines(history.malformed_lines);
+      const selected = await call<VariantSelection | null>(
+        "read_variant_selection",
+        { path: picked },
+      );
+      setSelection(selected);
+      if (selected?.variant) setFinalPreset(selected.variant);
     } catch (reason) {
       setError(String(reason));
     }
@@ -341,7 +453,10 @@ function App() {
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement
       ) {
-        if (event.key === "Escape") setReasonKind(null);
+        if (event.key === "Escape") {
+          setReasonKind(null);
+          setFlagging(false);
+        }
         return;
       }
       if (
@@ -370,6 +485,8 @@ function App() {
         setHelp(false);
         setPalette(false);
         setReasonKind(null);
+        setFlagging(false);
+        setLedgerOpen(false);
       }
       if (event.key === " " && mode !== "qa") {
         event.preventDefault();
@@ -379,8 +496,16 @@ function App() {
       if (event.key.toLowerCase() === "k") pause();
       if (event.key.toLowerCase() === "l") playOrIncreaseRate();
       if (event.key.toLowerCase() === "a" && mode === "compare") swap();
-      if (event.key.toLowerCase() === "y") setReasonKind("approved");
-      if (event.key.toLowerCase() === "x") setReasonKind("rejected");
+      if (
+        event.key.toLowerCase() === "y" &&
+        (mode === "compare" || mode === "finals")
+      )
+        setReasonKind("approved");
+      if (
+        event.key.toLowerCase() === "x" &&
+        (mode === "compare" || mode === "finals")
+      )
+        setReasonKind("rejected");
       if (/^[1-9]$/.test(event.key) && !event.metaKey)
         setSourceIndex(
           Math.min(Number(event.key) - 1, snapshot.sources.length - 1),
@@ -485,34 +610,232 @@ function App() {
     }
     if (target.paused) setPlaying(false);
   }
-  async function commit(reason: string) {
+  async function commit(reason: DecisionReason) {
     if (!snapshot || !reasonKind) return;
-    const subject =
+    // Sources and QA modes never produce a variant/final verdict.
+    if (mode !== "compare" && mode !== "finals") return;
+    const target: ReviewTarget =
       mode === "finals"
-        ? (snapshot.finals[0]?.mp4 ?? "render/final.mp4")
-        : (activeVariant?.mp4 ?? `render/rough-cuts/${variant}.mp4`);
-    const decision: Decision = {
-      kind: mode === "finals" ? "final_verdict" : "variant_verdict",
+        ? { target_kind: "final", preset: finalPreset }
+        : { target_kind: "variant", variant };
+    const word = cursor.word;
+    const intent: DecisionIntent = {
+      schema_version: SCHEMA_VERSION,
+      client_request_id: crypto.randomUUID(),
+      target,
       verdict: reasonKind,
       reason,
-      subject,
-      variant: mode === "finals" ? null : variant,
-      ts: new Date().toISOString(),
-      snapshot_generated_at: snapshot.generated_at,
+      note: reason === "other" ? note.trim() : null,
+      playhead_ms: Math.round(playhead),
+      word_id: word?.id && WORD_ID.test(word.id) ? word.id : null,
+      source_word_id:
+        word?.source_word_id && SOURCE_WORD_ID.test(word.source_word_id)
+          ? word.source_word_id
+          : null,
     };
-    await call("append_decision", { path: snapshot.project_path, decision });
-    setDecisions((old) => [...old, decision]);
-    setReasonKind(null);
-    setNote("");
+    try {
+      const record = await call<DecisionRecord>("append_decision", {
+        path: snapshot.project_path,
+        intent,
+      });
+      setDecisions((old) => [...old, record]);
+      setSessionCount((count) => count + 1);
+      setReasonKind(null);
+      setNote("");
+      setError("");
+    } catch (cause) {
+      setError(String(cause));
+    }
+  }
+  async function acknowledgeQa() {
+    if (!snapshot) return;
+    const intent: DecisionIntent = {
+      schema_version: SCHEMA_VERSION,
+      client_request_id: crypto.randomUUID(),
+      target: { target_kind: "qa_report", preset: null },
+      verdict: "acknowledged",
+      reason: "reviewed",
+      note: null,
+      playhead_ms: 0,
+      word_id: null,
+      source_word_id: null,
+    };
+    try {
+      const record = await call<DecisionRecord>("append_decision", {
+        path: snapshot.project_path,
+        intent,
+      });
+      setDecisions((old) => [...old, record]);
+      setSessionCount((count) => count + 1);
+      setError("");
+    } catch (cause) {
+      setError(String(cause));
+    }
+  }
+  async function verifySources() {
+    if (!snapshot) return;
+    setVerifying(true);
+    setChecks(null);
+    setVerifyProgress("");
+    let unlisten: (() => void) | undefined;
+    try {
+      if (!qa) {
+        const { listen } = await import("@tauri-apps/api/event");
+        unlisten = await listen<{ completed: number; total: number }>(
+          "source-verify-progress",
+          (event) =>
+            setVerifyProgress(`${event.payload.completed}/${event.payload.total}`),
+        );
+      }
+      const results = await call<SourceCheck[]>("verify_sources", {
+        path: snapshot.project_path,
+      });
+      setChecks(results);
+      setError("");
+    } catch (cause) {
+      setError(String(cause));
+    } finally {
+      unlisten?.();
+      setVerifying(false);
+      setVerifyProgress("");
+    }
+  }
+  async function relink(sourceId: string) {
+    if (!snapshot) return;
+    const current =
+      checks?.find((check) => check.source_id === sourceId)?.path ?? "";
+    // QA mode simulates the file pick; the native build asks for the path.
+    const picked = qa
+      ? `/QA/media/${sourceId}-relinked.mp4`
+      : window.prompt(`New path for ${sourceId}`, current);
+    if (!picked) return;
+    try {
+      const result = await call<RelinkResult>("relink_source", {
+        path: snapshot.project_path,
+        source_id: sourceId,
+        new_path: picked,
+      });
+      setRelinks((old) => ({ ...old, [sourceId]: result }));
+      setChecks((old) =>
+        old?.map((check) =>
+          check.source_id === sourceId
+            ? {
+                ...check,
+                path: result.path,
+                actual_blake3: result.blake3,
+                matches: result.matches,
+                error: null,
+              }
+            : check,
+        ) ?? old,
+      );
+      setError("");
+    } catch (cause) {
+      setError(String(cause));
+    }
+  }
+  async function useFinal(preset: string) {
+    if (!snapshot) return;
+    setSelecting(preset);
+    try {
+      const next = await call<VariantSelection>("select_variant", {
+        path: snapshot.project_path,
+        variant: preset,
+      });
+      setSelection(next);
+      setFinalPreset(preset);
+      setError("");
+    } catch (cause) {
+      setError(String(cause));
+    } finally {
+      setSelecting(null);
+    }
+  }
+  function segmentAtPlayhead(): string | null {
+    const segments = activeVariant?.cut_plan?.segments ?? [];
+    if (!segments.length) return null;
+    const idAt = (index: number) =>
+      segments[index].id ?? `segment-${String(index + 1).padStart(3, "0")}`;
+    const containing = segments.findIndex(
+      (segment) =>
+        playhead >= (segment.output_start_ms ?? 0) &&
+        playhead < (segment.output_end_ms ?? Infinity),
+    );
+    if (containing >= 0) return idAt(containing);
+    let nearest = 0;
+    let distance = Infinity;
+    segments.forEach((segment, index) => {
+      const d = Math.min(
+        Math.abs(playhead - (segment.output_start_ms ?? 0)),
+        Math.abs(playhead - (segment.output_end_ms ?? 0)),
+      );
+      if (d < distance) {
+        distance = d;
+        nearest = index;
+      }
+    });
+    return idAt(nearest);
+  }
+  async function commitSegment(reason: DecisionReason) {
+    if (!snapshot) return;
+    const segmentId = segmentAtPlayhead();
+    if (!segmentId) {
+      setError("No segments in the active cut plan to flag");
+      return;
+    }
+    const word = cursor.word;
+    try {
+      const intent = buildSegmentFlagIntent({
+        variant,
+        segment_id: segmentId,
+        reason,
+        note: reason === "other" ? note.trim() : null,
+        playhead_ms: Math.round(playhead),
+        word_id: word?.id && WORD_ID.test(word.id) ? word.id : null,
+        source_word_id:
+          word?.source_word_id && SOURCE_WORD_ID.test(word.source_word_id)
+            ? word.source_word_id
+            : null,
+      });
+      const record = await call<DecisionRecord>("append_decision", {
+        path: snapshot.project_path,
+        intent,
+      });
+      setDecisions((old) => [...old, record]);
+      setSessionCount((count) => count + 1);
+      setLastFlag({ segmentId, reason });
+      setFlagging(false);
+      setNote("");
+      setError("");
+    } catch (cause) {
+      setError(String(cause));
+    }
   }
   if (!snapshot) return <Empty onOpen={() => load()} error={error} />;
   const latest = [...decisions]
     .reverse()
     .find(
       (decision) =>
-        decision.variant === variant ||
-        (mode === "finals" && decision.kind === "final_verdict"),
+        (mode === "compare" &&
+          decision.kind === "variant_verdict" &&
+          decision.variant === variant) ||
+        (mode === "finals" &&
+          decision.kind === "final_verdict" &&
+          decision.preset === finalPreset),
     );
+  const qaAcknowledged = decisions.some(
+    (decision) => decision.kind === "qa_ack",
+  );
+  const benchProvisional =
+    !snapshot.bench?.decision || snapshot.bench.decision === "unresolved";
+  const flaggedRecords = decisions.filter(
+    (decision) => decision.status && decision.status !== "current",
+  );
+  const staleCount = decisions.filter(
+    (decision) =>
+      decision.status === "stale_artifact" ||
+      decision.status === "missing_artifact",
+  ).length;
   return (
     <main className="studio" aria-label="CutRight Studio">
       <header className="titlebar" data-tauri-drag-region>
@@ -607,6 +930,15 @@ function App() {
               </button>
             ))}
           </nav>
+          {benchProvisional && (
+            <div className="bench-banner" role="status">
+              <b>PROVISIONAL REVIEW</b>
+              <span>
+                timestamp benchmark {snapshot.bench?.decision ?? "missing"} —
+                word-edge cuts are unverified
+              </span>
+            </div>
+          )}
           {mode === "sources" && (
             <Sources
               source={selected}
@@ -617,6 +949,7 @@ function App() {
               onPlaying={setPlaying}
               playhead={playhead}
               onSeek={seek}
+              markers={cutMarkers(undefined, sourceWords)}
             />
           )}
           {mode === "compare" && (
@@ -631,14 +964,49 @@ function App() {
               onSwap={swap}
               onSeek={seek}
               bench={snapshot.bench?.decision === "unresolved"}
+              markers={cutMarkers(
+                activeVariant?.cut_plan?.segments,
+                words[variant] ?? [],
+              )}
+              flagging={flagging}
+              lastFlag={lastFlag}
+              onFlag={() => {
+                setReasonKind(null);
+                setFlagging(true);
+              }}
             />
           )}
-          {mode === "finals" && <Finals finals={snapshot.finals} />}
-          {mode === "qa" && <Qa report={snapshot.qa} />}
-          {mode !== "qa" && (
+          {mode === "finals" && (
+            <Finals
+              finals={snapshot.finals}
+              selected={finalPreset}
+              onSelect={setFinalPreset}
+              selection={selection}
+              selecting={selecting}
+              onUseFinal={useFinal}
+            />
+          )}
+          {mode === "qa" && (
+            <Qa
+              report={snapshot.qa}
+              acknowledged={qaAcknowledged}
+              onAcknowledge={acknowledgeQa}
+            />
+          )}
+          {(mode === "compare" || mode === "finals") && (
             <div className="verdict">
               <div>
-                {latest ? (
+                {flagging && mode === "compare" ? (
+                  <Reason
+                    kind="rejected"
+                    title="Flag segment because"
+                    reasons={REASONS.segment}
+                    note={note}
+                    setNote={setNote}
+                    commit={commitSegment}
+                    onCancel={() => setFlagging(false)}
+                  />
+                ) : latest ? (
                   <span className={`badge ${latest.verdict}`}>
                     {latest.verdict === "approved" ? "✓" : "✕"} {latest.verdict}{" "}
                     · {latest.reason}
@@ -646,9 +1014,11 @@ function App() {
                 ) : reasonKind ? (
                   <Reason
                     kind={reasonKind}
+                    reasons={REASONS[mode]}
                     note={note}
                     setNote={setNote}
                     commit={commit}
+                    onCancel={() => setReasonKind(null)}
                   />
                 ) : (
                   <>
@@ -679,7 +1049,17 @@ function App() {
               variant={variant}
             />
           ) : mode === "sources" ? (
-            <SourceFacts source={selected} words={sourceWords} onSeek={seek} />
+            <>
+              <SourceFacts source={selected} words={sourceWords} onSeek={seek} />
+              <SourceIntegrity
+                checks={checks}
+                verifying={verifying}
+                progress={verifyProgress}
+                relinks={relinks}
+                onVerify={verifySources}
+                onRelink={relink}
+              />
+            </>
           ) : (
             <div className="empty-rail">
               <b>{mode.toUpperCase()}</b>
@@ -693,21 +1073,31 @@ function App() {
           pipeline {Object.values(snapshot.stages).filter(Boolean).length}/
           {Object.keys(snapshot.stages).length}
         </span>
-        <span
-          className={
-            snapshot.bench?.decision === "unresolved" ? "warn" : "good"
-          }
-        >
+        <span className={benchProvisional ? "warn" : "good"}>
           ● bench: {snapshot.bench?.decision ?? "unavailable"}
         </span>
         <span className={snapshot.qa?.status === "pass" ? "good" : "warn"}>
           ● QA: {snapshot.qa?.status ?? "pending"}
         </span>
-        <span>
-          decisions: this session {decisions.length} · total {decisions.length}
-        </span>
+        <button
+          className="strip-toggle"
+          aria-expanded={ledgerOpen}
+          onClick={() => setLedgerOpen((open) => !open)}
+        >
+          decisions: session {sessionCount} · total {decisions.length}
+          {staleCount > 0 && ` · ${staleCount} stale`}
+          {malformedLines.length > 0 &&
+            ` · ${malformedLines.length} malformed`}
+        </button>
         <button onClick={() => load(snapshot.project_path)}>Refresh</button>
       </footer>
+      {ledgerOpen && (
+        <DecisionsLedger
+          flagged={flaggedRecords}
+          malformed={malformedLines}
+          close={() => setLedgerOpen(false)}
+        />
+      )}
       {help && <Help close={() => setHelp(false)} />}
       {palette && (
         <CommandPalette
@@ -747,6 +1137,7 @@ function Sources({
   onPlaying,
   playhead,
   onSeek,
+  markers,
 }: {
   source?: Source;
   videoRef: (node: HTMLVideoElement | null) => void;
@@ -754,6 +1145,7 @@ function Sources({
   onPlaying: (value: boolean) => void;
   playhead: number;
   onSeek: (value: number) => void;
+  markers: CutMarker[];
 }) {
   if (!source) return <div className="empty-state">No source selected.</div>;
   return (
@@ -778,6 +1170,7 @@ function Sources({
         duration={source.duration_ms ?? 0}
         onSeek={onSeek}
         videoKey="source"
+        markers={markers}
       />
       <div
         className="waveform"
@@ -810,6 +1203,10 @@ function Compare({
   onSwap,
   onSeek,
   bench,
+  markers,
+  flagging,
+  lastFlag,
+  onFlag,
 }: {
   variants: Variant[];
   variant: string;
@@ -821,6 +1218,10 @@ function Compare({
   onSwap: () => void;
   onSeek: (n: number) => void;
   bench: boolean;
+  markers: CutMarker[];
+  flagging: boolean;
+  lastFlag: { segmentId: string; reason: DecisionReason } | null;
+  onFlag: () => void;
 }) {
   const active = variants.find((item) => item.id === variant)!;
   return (
@@ -837,8 +1238,23 @@ function Compare({
           </button>
         ))}
         <span>word-locked</span>
-        <button aria-label="Swap variants" onClick={onSwap}>
+        {lastFlag && (
+          <span className="flag-badge" title="latest segment flag">
+            ⚑ {lastFlag.segmentId} · {lastFlag.reason}
+          </span>
+        )}
+        <button
+          aria-label="Swap variants"
+          onClick={onSwap}
+        >
           A ⇄
+        </button>
+        <button
+          className={`flag-segment ${flagging ? "arming" : ""}`}
+          title="Flag the segment at the playhead"
+          onClick={onFlag}
+        >
+          ⚑ Flag segment
         </button>
       </div>
       <div className="video-frame compare-videos">
@@ -871,6 +1287,7 @@ function Compare({
         playhead={cursor?.start_ms ?? 0}
         duration={active.duration_ms ?? 0}
         onSeek={onSeek}
+        markers={markers}
       />
     </>
   );
@@ -908,6 +1325,7 @@ function Transport({
   duration,
   onSeek,
   videoKey,
+  markers = [],
 }: {
   playing: boolean;
   onPlaying: (x: boolean) => void;
@@ -915,6 +1333,7 @@ function Transport({
   duration: number;
   onSeek: (x: number) => void;
   videoKey?: string;
+  markers?: CutMarker[];
 }) {
   return (
     <div className="transport">
@@ -936,42 +1355,108 @@ function Transport({
       <code>
         {tc(playhead)} / {tc(duration)}
       </code>
-      <input
-        aria-label="Scrub"
-        type="range"
-        min="0"
-        max={duration}
-        value={Math.min(playhead, duration)}
-        onChange={(event) => onSeek(Number(event.target.value))}
-      />
+      <div className="scrub">
+        <input
+          aria-label="Scrub"
+          type="range"
+          min="0"
+          max={duration}
+          value={Math.min(playhead, duration)}
+          onChange={(event) => onSeek(Number(event.target.value))}
+        />
+        {markers.map((marker) => (
+          <i
+            key={`${marker.ms}-${marker.label}`}
+            className="cut-marker"
+            title={`${marker.label} · ${tc(marker.ms)}`}
+            style={{
+              left: `${Math.min(100, (marker.ms / Math.max(1, duration)) * 100)}%`,
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
-function Finals({ finals }: { finals: Snapshot["finals"] }) {
+function Finals({
+  finals,
+  selected,
+  onSelect,
+  selection,
+  selecting,
+  onUseFinal,
+}: {
+  finals: Snapshot["finals"];
+  selected: string;
+  onSelect: (preset: string) => void;
+  selection: VariantSelection | null;
+  selecting: string | null;
+  onUseFinal: (preset: string) => void;
+}) {
   return (
     <div className="finals">
-      {finals.map((final) => (
-        <article
-          className={`final-card ${final.aspect === "9:16" ? "vertical" : ""}`}
-          key={final.preset}
-        >
-          <div className="final-frame">
-            {final.mp4 ? (
-              <video src={asset(final.mp4)} controls />
-            ) : (
-              <span>{final.aspect}</span>
+      {finals.map((final) => {
+        const chosen = selection?.variant === final.preset;
+        return (
+          <article
+            className={`final-card ${final.aspect === "9:16" ? "vertical" : ""} ${final.preset === selected ? "selected" : ""} ${chosen ? "chosen" : ""}`}
+            key={final.preset}
+          >
+            <div className="final-frame">
+              {final.mp4 ? (
+                <video src={asset(final.mp4)} controls />
+              ) : (
+                <span>{final.aspect}</span>
+              )}
+            </div>
+            <div className="final-head">
+              <b>{final.preset}</b>
+              <button
+                aria-pressed={final.preset === selected}
+                onClick={() => onSelect(final.preset)}
+              >
+                {final.preset === selected ? "Reviewing" : "Review"}
+              </button>
+            </div>
+            <code>
+              {final.width}×{final.height} · {tc(final.duration_ms)}
+            </code>
+            <button
+              className="use-final"
+              disabled={selecting === final.preset}
+              aria-pressed={chosen}
+              onClick={() => onUseFinal(final.preset)}
+            >
+              {selecting === final.preset
+                ? "Binding…"
+                : chosen
+                  ? "✓ Base for final"
+                  : "Use for final"}
+            </button>
+            {chosen && selection && (
+              <code
+                className="selection-hash"
+                title={`${selection.rough_cut_path} · ${selection.rough_cut_blake3} · ${selection.rough_cut_size} B · ${selection.selected_by}`}
+              >
+                {selection.rough_cut_blake3.slice(0, 22)}… ·{" "}
+                {selection.selected_at.slice(0, 19).replace("T", " ")}
+              </code>
             )}
-          </div>
-          <b>{final.preset}</b>
-          <code>
-            {final.width}×{final.height} · {tc(final.duration_ms)}
-          </code>
-        </article>
-      ))}
+          </article>
+        );
+      })}
     </div>
   );
 }
-function Qa({ report }: { report?: Snapshot["qa"] }) {
+function Qa({
+  report,
+  acknowledged,
+  onAcknowledge,
+}: {
+  report?: Snapshot["qa"];
+  acknowledged: boolean;
+  onAcknowledge: () => void;
+}) {
   return (
     <div className="qa-report">
       <h2>{report?.status === "pass" ? "✓ QA passed" : "QA pending"}</h2>
@@ -984,6 +1469,13 @@ function Qa({ report }: { report?: Snapshot["qa"] }) {
           <small>{check.evidence}</small>
         </div>
       ))}
+      <button
+        className="approve"
+        disabled={acknowledged}
+        onClick={onAcknowledge}
+      >
+        {acknowledged ? "✓ QA acknowledged" : "Acknowledge QA report"}
+      </button>
     </div>
   );
 }
@@ -1060,29 +1552,26 @@ function SourceFacts({
 }
 function Reason({
   kind,
+  title,
+  reasons,
   note,
   setNote,
   commit,
+  onCancel,
 }: {
   kind: "approved" | "rejected";
+  title?: string;
+  reasons: DecisionReason[];
   note: string;
   setNote: (x: string) => void;
-  commit: (x: string) => void;
+  commit: (x: DecisionReason) => void;
+  onCancel?: () => void;
 }) {
-  const reasons =
-    kind === "approved"
-      ? ["pacing", "word_edges", "energy", "length", "other"]
-      : [
-          "clipped_word",
-          "too_tight",
-          "too_loose",
-          "bad_boundary",
-          "wrong_take",
-          "other",
-        ];
   return (
     <div className="reason-row">
-      <span>{kind === "approved" ? "Approve because" : "Reject because"}</span>
+      <span>
+        {title ?? (kind === "approved" ? "Approve because" : "Reject because")}
+      </span>
       {reasons.map((reason) => (
         <button
           key={reason}
@@ -1101,6 +1590,129 @@ function Reason({
       <button disabled={!note.trim()} onClick={() => commit("other")}>
         Save
       </button>
+      {onCancel && (
+        <button className="reason-cancel" onClick={onCancel}>
+          cancel
+        </button>
+      )}
+    </div>
+  );
+}
+const shortHash = (value: string) =>
+  value.length > 20 ? `${value.slice(0, 20)}…` : value;
+function SourceIntegrity({
+  checks,
+  verifying,
+  progress,
+  relinks,
+  onVerify,
+  onRelink,
+}: {
+  checks: SourceCheck[] | null;
+  verifying: boolean;
+  progress: string;
+  relinks: Record<string, RelinkResult>;
+  onVerify: () => void;
+  onRelink: (sourceId: string) => void;
+}) {
+  const failed = checks?.filter((check) => !check.matches).length ?? 0;
+  return (
+    <div className="source-integrity">
+      <div className="rail-head">
+        <b>SOURCE INTEGRITY</b>
+        {verifying && <span className="warn">{progress || "hashing…"}</span>}
+      </div>
+      <button className="verify-btn" onClick={onVerify} disabled={verifying}>
+        {verifying ? `Verifying ${progress}` : "Verify sources"}
+      </button>
+      {checks && (
+        <p className={`verify-summary ${failed ? "bad" : "good"}`}>
+          {failed
+            ? `${failed} of ${checks.length} sources failed verification`
+            : `all ${checks.length} sources match the manifest`}
+        </p>
+      )}
+      <ul className="verify-list">
+        {(checks ?? []).map((check, index) => (
+          <li
+            key={check.source_id}
+            className={`verify-row ${check.matches ? "pass" : "fail"}`}
+            style={{ animationDelay: `${index * 45}ms` }}
+          >
+            <span className="verify-state" aria-hidden="true">
+              {check.matches ? "✓" : "✕"}
+            </span>
+            <code className="verify-id">{check.source_id}</code>
+            <code
+              className="verify-hash"
+              title={`expected ${check.expected_blake3}\nactual ${check.actual_blake3 ?? check.error ?? "unreadable"}`}
+            >
+              exp {shortHash(check.expected_blake3)}
+              <br />
+              act {shortHash(check.actual_blake3 ?? check.error ?? "missing")}
+            </code>
+            {!check.matches && (
+              <button className="relink-btn" onClick={() => onRelink(check.source_id)}>
+                Relink…
+              </button>
+            )}
+            {relinks[check.source_id] && (
+              <small className="relink-note">
+                relinked · {shortHash(relinks[check.source_id].blake3)} ·{" "}
+                {relinks[check.source_id].matches ? "match" : "still mismatched"}
+              </small>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+function DecisionsLedger({
+  flagged,
+  malformed,
+  close,
+}: {
+  flagged: DecisionRecord[];
+  malformed: DecisionReplay["malformed_lines"];
+  close: () => void;
+}) {
+  return (
+    <div className="decisions-panel" role="dialog" aria-label="Decision ledger">
+      <div className="panel-head">
+        <b>DECISION LEDGER</b>
+        <button aria-label="Close ledger" onClick={close}>
+          ×
+        </button>
+      </div>
+      {flagged.length === 0 && malformed.length === 0 ? (
+        <p className="panel-empty">All records current.</p>
+      ) : (
+        <ul>
+          {flagged.map((record) => (
+            <li key={record.decision_id}>
+              <span className={`status-chip ${record.status}`}>
+                {record.status}
+              </span>
+              <code>
+                {record.kind} · {record.subject}
+              </code>
+              <small>
+                {record.verdict} · {record.reason} · {record.ts}
+              </small>
+            </li>
+          ))}
+        </ul>
+      )}
+      {malformed.length > 0 && (
+        <p className="malformed">
+          {malformed.length} malformed line
+          {malformed.length === 1 ? "" : "s"}:{" "}
+          {malformed
+            .map((line) => `#${line.line_number} (${line.error})`)
+            .join(", ")}
+        </p>
+      )}
     </div>
   );
 }
