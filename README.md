@@ -1,85 +1,77 @@
 <img src=".github/banner.svg" alt="CutRight — Agentic video editing on a verified media path." width="100%">
 
-**CutRight is a local headless video-editing pipeline built on a verified media path: Rust owns project state, FFmpeg calls are typed, and every source clip is content-hashed before it can be cut.**
+**Letting an agent cut video is easy. Trusting the cut is the hard part. CutRight is a local, headless editing pipeline where the media path is verified end to end: Rust owns project state, every FFmpeg call crosses a typed boundary, every source clip is BLAKE3-hashed before it can be cut, and the destructive steps are gated behind evidence and human approval.**
 
-![core: Rust](https://img.shields.io/badge/core-rust-5362d8?style=flat-square&labelColor=111318&color=5362d8) ![cli: videoctl (json-only)](https://img.shields.io/badge/cli-videoctl%20(json--only)-5362d8?style=flat-square&labelColor=111318&color=5362d8)
+![core](https://img.shields.io/badge/core-Rust%20workspace%2C%205%20crates-df6428?style=flat-square&labelColor=111318)
+![cli](https://img.shields.io/badge/control%20plane-videoctl%2C%20JSON--only-df6428?style=flat-square&labelColor=111318)
+![hashing](https://img.shields.io/badge/sources-BLAKE3%2C%20immutable-df6428?style=flat-square&labelColor=111318)
 
-## What it is
+## The verified media path
 
-Rust owns canonical project JSON, timestamp arithmetic, typed FFprobe/FFmpeg boundaries, BLAKE3 source registration, and immutable inputs, exposed through the JSON-only `videoctl` CLI. HeardRight's Parakeet TDT CoreML path supplies native timed words, Silero supplies speech probabilities, and WhisperX is available as an independent word-edge verifier. The pipeline produces candidate-driven rough cuts, burned-caption 16:9 and 9:16 MP4s, visual boundary/waveform evidence, explicit-final QA, and YouTube/vertical social packages. Cloud analysis, effect/preset libraries, proxy generation, preference learning, and the Studio's authoring surface are not part of this local pipeline.
+- **Immutable, hashed inputs.** Ingest registers each source with a `blake3:` digest; a source outside an immutable registration is a hard error, and hashes are re-verified before use. Tests never copy or modify source files.
+- **Typed FFprobe/FFmpeg boundaries.** Probes and renders go through typed structs (`ProbeResponse`, `RenderSegment`, `CaptionCue`, …), not assembled shell strings; encoder and filter capabilities are probed explicitly.
+- **Two ASRs, not blind trust in one.** HeardRight's Parakeet TDT CoreML engine supplies native timed words; WhisperX stands by as an independent word-edge verifier; Silero supplies real speech probabilities.
+- **Rust owns the arithmetic.** Canonical project JSON, timestamp math, and cut plans live in one place, exposed only through the JSON-only `videoctl` CLI (with a global `--dry-run`).
 
-## How it works
+## The pipeline
 
-- **Project state** — `videoctl project init` creates a canonical package layout. It's idempotent and never overwrites an existing manifest or source file.
-- **Transcription** — `transcribe --provider heardright` (Parakeet TDT CoreML) and `--provider whisperx` produce timed words independently, so the two can be compared rather than trusted blind.
-- **Transcription gate** — `bench transcribe` requires at least three distinct immutable source clips and won't authorize either provider for destructive word-edge cuts without that evidence. Without a resolved HeardRight-versus-WhisperX decision, CutRight refuses to call a final render technically approved.
-- **Reframe gate** — vertical delivery is blocked until `reframe plan` produces a human-reviewed plan with the top-level `approved` flag and every anchor's `approved` flag set to `true`. CutRight will not silently center-crop a 16:9 rough cut into a vertical final.
-- **Evidence and QA** — `evidence build` and `qa` generate the waveform/boundary-frame evidence and explicit-final QA pass before a render counts as approved.
-- The local E2E smoke fixture verifies Parakeet and WhisperX timed words, Silero VAD regions, candidate-driven rough cuts, captioned YouTube/reels MP4s, waveform plus boundary-frame evidence, explicit-final QA, and both social packages under one project directory.
+```mermaid
+flowchart LR
+    I[ingest<br/>ffprobe + BLAKE3<br/>immutable manifest] --> TR[transcribe<br/>HeardRight Parakeet TDT<br/>timed words]
+    TR --> B[bench transcribe<br/>HeardRight vs WhisperX<br/>on sampled boundaries]
+    I --> V[analyze local<br/>Silero VAD · waveforms ·<br/>boundary frames]
+    TR --> C[edit candidates<br/>beat labels · take ranks ·<br/>drop reasons]
+    V --> C
+    C --> R[edit render<br/>variant: tight / natural<br/>cut plan + timeline]
+    R --> RF[reframe plan<br/>human-approved anchors<br/>for vertical]
+    R --> F[render final<br/>presets: youtube · reels<br/>captions burned]
+    RF --> F
+    F --> Q[evidence build + qa<br/>waveform/boundary proof ·<br/>container/captions/duration]
+```
 
-## Quick start
+## Gates that refuse
 
-```bash
+- `bench transcribe` requires **at least three distinct immutable source clips** before either provider is authorized for destructive word-edge cuts — and without a resolved HeardRight-vs-WhisperX decision, CutRight refuses to call a final render technically approved.
+- Vertical delivery is blocked until `reframe plan` produces a human-reviewed plan with the top-level `approved` flag **and every anchor's** `approved` flag set. It will not silently center-crop a 16:9 cut into a vertical final.
+- `evidence build` and `qa` produce the waveform/boundary-frame evidence and an explicit QA pass (container, captions, duration) before a render counts as approved.
+
+## Provider stack
+
+HeardRight owns the models and runtime; CutRight supplies media and policy over a supervised JSON-line stdin/stdout process. VAD policy defaults: threshold 0.5, 16 kHz, min speech 160 ms, min silence 180 ms. WhisperX runs from a local Python 3.11 venv as the one deliberately-external verifier. Wire it up with `CUTRIGHT_HEARDRIGHT_ENGINE`, `CUTRIGHT_HEARDRIGHT_MODELS_DIR`, and `CUTRIGHT_FFMPEG`; rough cuts use macOS `h264_videotoolbox`, and HDR input needs an FFmpeg build with `zscale`.
+
+## Driving it
+
+```sh
 cargo test --workspace
 cargo run -p videoctl -- doctor
-cargo run -p videoctl -- project init /path/to/MyVideo.video-project
-cargo run -p videoctl -- ingest /path/to/MyVideo.video-project /path/to/clip.mp4
-cargo run -p videoctl -- transcribe /path/to/MyVideo.video-project --provider heardright
-cargo run -p videoctl -- transcribe /path/to/MyVideo.video-project --provider whisperx
-cargo run -p videoctl -- analyze local /path/to/MyVideo.video-project
-cargo run -p videoctl -- edit candidates /path/to/MyVideo.video-project
-cargo run -p videoctl -- edit render /path/to/MyVideo.video-project --variant natural
-cargo run -p videoctl -- transcript remap /path/to/MyVideo.video-project
-cargo run -p videoctl -- bench transcribe /path/to/MyVideo.video-project
-cargo run -p videoctl -- render final /path/to/MyVideo.video-project --preset youtube
-cargo run -p videoctl -- reframe plan /path/to/MyVideo.video-project
-# Review and explicitly approve every anchor in analysis/reframe-plan.json.
-cargo run -p videoctl -- render final /path/to/MyVideo.video-project --preset reels
-cargo run -p videoctl -- evidence build /path/to/MyVideo.video-project
-cargo run -p videoctl -- qa /path/to/MyVideo.video-project
-cargo run -p videoctl -- package social /path/to/MyVideo.video-project
+cargo run -p videoctl -- project init  ~/MyVideo.video-project
+cargo run -p videoctl -- ingest        ~/MyVideo.video-project clip.mp4
+cargo run -p videoctl -- transcribe    ~/MyVideo.video-project --provider heardright
+cargo run -p videoctl -- analyze local ~/MyVideo.video-project
+cargo run -p videoctl -- edit candidates ~/MyVideo.video-project
+cargo run -p videoctl -- edit render   ~/MyVideo.video-project --variant natural
+cargo run -p videoctl -- bench transcribe ~/MyVideo.video-project
+cargo run -p videoctl -- render final  ~/MyVideo.video-project --preset youtube
+cargo run -p videoctl -- reframe plan  ~/MyVideo.video-project
+# review analysis/reframe-plan.json, approve every anchor, then:
+cargo run -p videoctl -- render final  ~/MyVideo.video-project --preset reels
+cargo run -p videoctl -- evidence build ~/MyVideo.video-project
+cargo run -p videoctl -- qa            ~/MyVideo.video-project
+cargo run -p videoctl -- package social ~/MyVideo.video-project
 ```
 
-Set `CUTRIGHT_HEARDRIGHT_ENGINE` and `CUTRIGHT_HEARDRIGHT_MODELS_DIR` when HeardRight is not installed at its standard local paths. Rough cuts require macOS `h264_videotoolbox`; HDR input additionally requires an FFmpeg build with `zscale`. Development uses the ignored `.cutright-tools/ffmpeg-zimg` build when present; deploys can set `CUTRIGHT_FFMPEG` to an equivalent executable. See [schemas/](schemas/) and [docs/PHASE-1-TRANSCRIPTION-BENCHMARK.md](docs/PHASE-1-TRANSCRIPTION-BENCHMARK.md).
+The full surface spans 23 subcommands — project, ingest, transcribe, bench, analyze, edit, reframe, review, transcript remap, shorts propose, finish/slot, render, qa, package, and OTIO export — every one JSON-in/JSON-out.
 
-## Bridge-period short-form skills
+## Around the pipeline
 
-`cutaway/` and `finish/` are two Claude Code skills that turn a raw 9:16 talking-head clip into a finished short, ahead of the CutRight control plane covering that ground natively:
+- **Studio** — a Tauri 2 + React 19 review shell (9 IPC commands) that reads project snapshots, re-verifies sources by BLAKE3, and appends hash-bound decisions to a JSONL ledger. Review surface only; the authoring surface is out of this repo's scope.
+- **cutaway / finish** — bridge-period Claude Code skills for short-form work (WhisperX rough cut, then a styling pass), shipping ahead of the control plane covering that ground natively.
 
-1. **`cutaway/`** — the rough cut. WhisperX forced alignment gives the exact start/end of every word, so the cut can land on real word edges, remove only the no-word gaps, and arrange the best takes into one story (hook → … → CTA). Output is a cut list plus a matching MP4.
-2. **`finish/`** — the styling pass: reframe to 9:16, animated zooms/punch-ins, lens effects, an exponential text fade-in, the "authority stack" text look, captions, and SFX timed to motion.
-
-They run in order: cutaway locks the cut, finish styles it.
-
-### Install
-
-```bash
-cp -R cutaway ~/.claude/skills/shortform-cutaway
-cp -R finish  ~/.claude/skills/shortform-finish
-```
-
-In Claude Code, hand it a clip and say what you want — e.g. "make the rough cut, remove the silences" (cutaway) or, once the cut is locked, "finish this short, add the hook zoom" (finish). The skill descriptions trigger automatically.
-
-Cutaway needs WhisperX in a Python 3.11 venv; its `## SETUP` section walks through it (`python3.11 -m venv ~/wx-env && ~/wx-env/bin/pip install whisperx`). The cut scripts take all paths as arguments, so there's nothing else to configure.
-
-### First run — which editor do you use?
-
-On the first run, each skill asks which editor you edit in and follows the matching branch:
-
-- **DaVinci Resolve** — the cut lands as a timeline; zooms are built as Fusion comps.
-- **Premiere Pro** — the cut lands as an EDL/XML; zooms/text via keyframes and Essential Graphics.
-- **Remotion** — everything is code; the cut is a playlist of segments, effects are `interpolate` curves.
-- **Claude-Code-only (no NLE)** — the cut renders straight to an MP4 with FFmpeg; no other software needed.
-
-No editor installed: pick Claude-Code-only. It produces a finished, postable MP4 on its own.
-
-### A note on the visual style
-
-These skills teach the method, not a pile of finished assets. Cutaway is fully turnkey — it produces the cut. Finish gives you the techniques (zoom curves, exponential fade, authority-stack text look, sound-matches-motion rules) so you recreate the look with your own footage, SFX, and style graphics. Build that small library once; it's yours to keep.
+Not part of the local pipeline, by design: cloud analysis, effect/preset libraries, proxy generation, and preference learning.
 
 ## Status
 
-Bridge period: `cutaway/` and `finish/` are creator skills covering visual styling until the CutRight control plane takes over that path natively. The control plane already owns the reproducible media and timeline path — canonical project state, transcription, candidate cuts, gated reframing, evidence, and QA.
+The five-crate workspace (~7,200 lines of Rust) implements the full command surface above; the generated architecture doc tracks eight product flows whose pass/fail status the verifier has not yet resolved — treat them as implemented-but-unverified rather than proven, which is exactly the distinction this pipeline exists to enforce.
 
 <!-- blueprint:docs:start -->
 ## Repository truth docs
