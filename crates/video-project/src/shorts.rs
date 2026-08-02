@@ -9,14 +9,27 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use serde::Deserialize;
+
 use crate::io::*;
 use crate::receipts;
 use crate::shorts_scoring::{
-    build_shorts, load_or_init_shorts_profile, shorts_profile_path, SHORTS_SCHEMA_VERSION,
+    build_shorts, load_or_init_shorts_profile, shorts_profile_path, VisualTrackPoint,
+    SHORTS_SCHEMA_VERSION,
 };
 use crate::PipelineArtifact;
 use crate::ProjectError;
-use video_core::{CandidateManifest, SourceManifest, VadSignal};
+use video_core::{CandidateManifest, SourceManifest, Timeline, VadSignal};
+
+/// Just enough of `analysis/reframe/<variant>/reframe-track.json` (owned by
+/// `reframe.rs`/`reframe_track.rs`) for this stage to read: the full sampled
+/// track this stage maps candidate windows against. Kept minimal and local
+/// rather than depending on the writer's exact document shape beyond the one
+/// field this stage actually needs.
+#[derive(Debug, Deserialize)]
+struct ReframeTrackDocument {
+    points: Vec<VisualTrackPoint>,
+}
 
 /// Proposes up to `count` short-form candidates from this project's
 /// editorial candidates, transcripts, and VAD data (REV2 plan §15.4).
@@ -45,6 +58,22 @@ pub fn propose_shorts(
     let profile_path = shorts_profile_path(project_path);
     let profile = load_or_init_shorts_profile(project_path)?;
 
+    // Stage 5 (visual support) reads the Phase 7 reframe track for this
+    // project's resolved edit variant when one exists. Neither file is
+    // required — a project that has not run `reframe plan` yet simply gets
+    // the conservative neutral score `score_visual_support` always returned
+    // before this artifact existed (see `shorts_scoring::score_visual_support`).
+    let variant = resolve_variant(project_path, None)?;
+    let timeline_path = variant_timeline_path(project_path, &variant);
+    let timeline: Option<Timeline> = read_json_if_file(&timeline_path);
+    let timeline_segments: Option<Vec<video_core::TimelineSegment>> = timeline
+        .as_ref()
+        .and_then(|timeline| timeline.tracks.first())
+        .map(|track| track.segments.clone());
+    let track_path = project_path.join(format!("analysis/reframe/{variant}/reframe-track.json"));
+    let track_points: Option<Vec<VisualTrackPoint>> =
+        read_json_if_file::<ReframeTrackDocument>(&track_path).map(|document| document.points);
+
     let result = build_shorts(
         &candidates.candidates,
         &transcripts,
@@ -52,6 +81,8 @@ pub fn propose_shorts(
         &manifest.outputs,
         &profile,
         count as usize,
+        timeline_segments.as_deref(),
+        track_points.as_deref(),
     );
 
     let path = project_path.join("edit/shorts.json");
@@ -86,6 +117,12 @@ pub fn propose_shorts(
         ];
         inputs.extend(transcript_paths.iter().map(PathBuf::as_path));
         inputs.extend(vad_input_paths.iter().map(PathBuf::as_path));
+        if timeline.is_some() {
+            inputs.push(timeline_path.as_path());
+        }
+        if track_points.is_some() {
+            inputs.push(track_path.as_path());
+        }
 
         receipts::write_stage_receipt(
             &receipts::receipt_path_for(&path),
@@ -96,6 +133,8 @@ pub fn propose_shorts(
                 "profile_version": profile.profile_version,
                 "diversity_similarity_threshold": profile.diversity_similarity_threshold,
                 "max_group_gap_ms": profile.max_group_gap_ms,
+                "visual_support_variant": variant,
+                "visual_support_track_used": track_points.is_some(),
             }),
             BTreeMap::new(),
             &[path.as_path()],
@@ -218,6 +257,94 @@ mod tests {
         // The versioned scoring profile was initialized and persisted
         // beside the project, not silently hard-coded.
         assert!(shorts_profile_path(dir.path()).is_file());
+    }
+
+    #[test]
+    fn propose_shorts_uses_reframe_track_when_present() {
+        let dir = setup(true);
+
+        // A compiled `natural` timeline (resolve_variant's default with no
+        // selection on disk) that passes the single candidate's source range
+        // straight through 1:1, plus a reframe track with real, confident,
+        // moving evidence across that window.
+        let timeline = serde_json::json!({
+            "schema_version": SCHEMA_VERSION,
+            "timebase": { "fps_num": 30, "fps_den": 1 },
+            "tracks": [{
+                "id": "main",
+                "type": "video",
+                "segments": [{
+                    "id": "seg-001",
+                    "source_id": "cam-a",
+                    "source_start_ms": 0,
+                    "source_end_ms": 20_000,
+                    "output_start_ms": 0,
+                    "output_end_ms": 20_000,
+                    "speed": 1.0,
+                    "reason": "kept",
+                }],
+            }],
+        });
+        write_json_atomic(&dir.path().join("edit/timeline-natural.json"), &timeline).unwrap();
+
+        let points: Vec<serde_json::Value> = (0..10)
+            .map(|i| {
+                serde_json::json!({
+                    "output_ms": i * 500,
+                    "center_x": 0.4 + i as f64 * 0.02,
+                    "center_y": 0.5,
+                    "confidence": 0.9,
+                    "gap": false,
+                    "shot_boundary": i == 0,
+                    "source": "face",
+                })
+            })
+            .collect();
+        let track = serde_json::json!({
+            "schema_version": SCHEMA_VERSION,
+            "variant": "natural",
+            "sample_interval_ms": 500,
+            "points": points,
+        });
+        write_json_atomic(
+            &dir.path()
+                .join("analysis/reframe/natural/reframe-track.json"),
+            &track,
+        )
+        .unwrap();
+
+        let result = propose_shorts(dir.path(), 4, false).unwrap();
+        let document: serde_json::Value = read_json(&result.path).unwrap();
+        let variants = document["variants"].as_array().unwrap();
+        assert_eq!(variants.len(), 1);
+        let visual_support = &variants[0]["scores"]["visual_support"];
+        // A real, well-tracked, high-confidence window must score above the
+        // old permanent-neutral 0.5 and be recorded at more than `Low`
+        // confidence — the whole point of wiring this stage up.
+        assert!(
+            visual_support["value"].as_f64().unwrap() > 0.5,
+            "expected a real score above the old neutral 0.5, got {visual_support}"
+        );
+        assert_ne!(visual_support["confidence"], serde_json::json!("low"));
+
+        // The receipt records the timeline and reframe-track files this
+        // score was actually computed from, so provenance verification can
+        // catch a stale/mismatched-variant track the same way it already
+        // catches a stale transcript or candidate manifest.
+        let receipt: serde_json::Value =
+            read_json(&receipts::receipt_path_for(&result.path)).unwrap();
+        let input_paths: Vec<String> = receipt["inputs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|input| input["path"].as_str().unwrap_or_default().to_string())
+            .collect();
+        assert!(input_paths
+            .iter()
+            .any(|path| path.contains("timeline-natural.json")));
+        assert!(input_paths
+            .iter()
+            .any(|path| path.contains("reframe-track.json")));
     }
 
     #[test]

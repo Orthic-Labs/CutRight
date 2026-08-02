@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/retention-sample.schema.json",
+  "title": "CutRight post-publish retention sample",
+  "description": "One line of an optional `<project>/feedback/retention.jsonl` ledger (REV2 plan §15.7 Phase 9). This input does not exist yet anywhere in the pipeline — no stage currently writes it. It is defined so that when a publish/analytics integration lands, retention can be joined back to the exact final-render artifact it was measured on (by output_blake3, matched against a decision record's subject_blake3) instead of being estimated or invented. Until a producer exists, `videoctl preferences recommend` simply reports zero retention samples.",
+  "type": "object",
+  "required": ["schema_version", "output_path", "output_blake3", "metric", "value"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "output_path": {
+      "type": "string",
+      "description": "Project-relative path to the exact rendered final artifact this sample measures, e.g. render/finals/youtube.mp4."
+    },
+    "output_blake3": {
+      "type": "string",
+      "pattern": "^blake3:[0-9a-f]{64}$",
+      "description": "Hash of the exact bytes published, in the same blake3:<hex> form the decision ledger's subject_blake3 uses, so a sample can only be joined to the decision that reviewed those exact bytes."
+    },
+    "preset": {
+      "type": ["string", "null"],
+      "description": "Output preset id the sample was published under (youtube|reels|tiktok|...), when known."
+    },
+    "metric": {
+      "type": "string",
+      "description": "Name of the retention metric, e.g. avg_view_duration_ms, retention_ratio_30s. Not enumerated here: the analytics source defines its own metric vocabulary."
+    },
+    "value": { "type": "number" },
+    "published_at": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

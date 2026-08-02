@@ -17,6 +17,7 @@ mod finish;
 mod ingest;
 mod io;
 mod package;
+mod preferences;
 mod project_init;
 mod qa;
 mod qa_probes;
@@ -54,6 +55,11 @@ pub use final_render::{render_final, render_master};
 pub use finish::{audio_finish, finish_validate, render_slot};
 pub use ingest::{ingest_sources, IngestResult, IngestedSource};
 pub use package::package_social;
+pub use preferences::{
+    recommend_preferences, AxisResult, DistributionEntry, FormatRecommendations,
+    PreferenceAutonomyPolicy, PreferenceRecommendationResult, PreferenceRecommendations, Readiness,
+    SourceSummary, PREFERENCE_SCHEMA_VERSION,
+};
 pub use project_init::{
     init_project, migrate_project, InitResult, MigratedArtifact, MigrationReport, SkippedArtifact,
 };

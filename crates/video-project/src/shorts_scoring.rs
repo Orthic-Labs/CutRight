@@ -18,8 +18,11 @@
 //!    scored independently and recorded separately, never collapsed into
 //!    one number before the caller sees the breakdown.
 //! 4. [`score_duration_fit`] — fit against the platform's target window.
-//! 5. [`score_visual_support`] — always `Low` confidence today; there is no
-//!    Phase 7 visual-perception artifact for this stage to read yet.
+//! 5. [`score_visual_support`] — reads real per-sample evidence from the
+//!    Phase 7 reframe track when one exists and covers the candidate's
+//!    mapped output window (detector confidence, tracking-gap coverage,
+//!    shot-boundary variety, tracked-centre motion); stays a neutral value
+//!    at `Low` confidence, exactly as before, when no track is available.
 //! 6. [`score_platform_fit`] / [`score_brand_fit`] — platform and brand
 //!    fit.
 //! 7. [`cluster_and_select`] — diversity clustering so near-paraphrases of
@@ -42,7 +45,25 @@ use serde::{Deserialize, Serialize};
 use crate::io::{read_json_if_file, write_json_atomic};
 use crate::ProjectError;
 use video_core::models::{Candidate, OutputPreset};
-use video_core::{Transcript, VadSignal};
+use video_core::{TimelineSegment, Transcript, VadSignal};
+
+/// The stage-5 scoring view of one Phase 7 reframe-track sample point
+/// (`analysis/reframe/<variant>/reframe-track.json`'s `points[]`). This is a
+/// deliberately narrower, independently `Deserialize`-able type than
+/// `crate::reframe_track::TrackPoint` — that type's `source: &'static str`
+/// field cannot be deserialized (`'de` cannot outlive `'static`), and this
+/// stage only ever reads the fields it actually scores from, never the
+/// provenance label. `shorts.rs` reads the on-disk artifact straight into
+/// this shape.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct VisualTrackPoint {
+    pub output_ms: i64,
+    pub center_x: f64,
+    pub center_y: f64,
+    pub confidence: f64,
+    pub gap: bool,
+    pub shot_boundary: bool,
+}
 
 pub const SHORTS_PROFILE_SCHEMA_VERSION: u32 = 1;
 pub const SHORTS_SCHEMA_VERSION: u32 = 1;
@@ -59,6 +80,61 @@ pub struct PlatformWindow {
     pub ideal_min_ms: i64,
     pub ideal_max_ms: i64,
     pub max_duration_ms: i64,
+}
+
+/// Sub-signal weights and thresholds for stage 5 (visual support), nested so
+/// they are versioned along with the rest of the profile rather than left as
+/// inline constants (REV2 plan §15.4 item 4). `#[serde(default)]` on the
+/// field that holds this keeps older, already-persisted `shorts-profile.json`
+/// files (written before this struct existed) loadable without a forced
+/// rewrite: a project that has not touched its profile since Phase 6 picks
+/// up these defaults automatically, everything else about the file it
+/// already has stays untouched.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct VisualSupportProfile {
+    /// Weight of the mean detector confidence of track points inside the
+    /// candidate's mapped output window.
+    pub confidence_weight: f64,
+    /// Weight of `(1 - gap_fraction)`: rewards a window where the detector
+    /// found something to track, penalizes a window that is mostly `gap:
+    /// true` (nothing detected — a talking head against a blank wall, or
+    /// worse, nothing trackable at all).
+    pub coverage_weight: f64,
+    /// Weight of shot-boundary density: rewards visual variety (multiple
+    /// shots) over one static shot held for the whole window.
+    pub variety_weight: f64,
+    /// Weight of normalized tracked-centre motion: rewards a subject that
+    /// actually moves over a locked-off, motionless frame.
+    pub motion_weight: f64,
+    /// Fewer than this many mapped track points is too sparse for the
+    /// computed score to be called anything better than `Medium` confidence
+    /// — it is still computed from real data, never invented, but a
+    /// handful of samples is a weaker basis than a well-covered window.
+    pub min_points_for_high_confidence: usize,
+    /// A window earns full shot-boundary/variety credit at one shot change
+    /// per this many ms of window duration; fewer boundaries scale down
+    /// linearly from there.
+    pub variety_target_shot_interval_ms: i64,
+    /// Average per-sample tracked-centre displacement (normalized `[0, 1]`
+    /// frame units) that earns full motion credit; less scales down
+    /// linearly toward zero, more is simply capped at full credit — this
+    /// signal only rewards the presence of motion, it never penalizes
+    /// "too much" of it.
+    pub motion_target_avg_step: f64,
+}
+
+impl Default for VisualSupportProfile {
+    fn default() -> Self {
+        Self {
+            confidence_weight: 0.4,
+            coverage_weight: 0.3,
+            variety_weight: 0.15,
+            motion_weight: 0.15,
+            min_points_for_high_confidence: 6,
+            variety_target_shot_interval_ms: 20_000,
+            motion_target_avg_step: 0.01,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
@@ -100,13 +176,23 @@ pub struct ShortsScoringProfile {
     /// here. An empty list means brand fit cannot be verified from local
     /// data and is scored neutrally with `Low` confidence.
     pub brand_banned_terms: Vec<String>,
+    /// Stage 5 (visual support) sub-signal weights/thresholds. Defaulted via
+    /// serde so a `shorts-profile.json` persisted before this field existed
+    /// still loads without a forced rewrite.
+    #[serde(default)]
+    pub visual_support: VisualSupportProfile,
 }
 
 impl Default for ShortsScoringProfile {
     fn default() -> Self {
         Self {
             schema_version: SHORTS_PROFILE_SCHEMA_VERSION,
-            profile_version: 1,
+            // Bumped from 1: adding the `visual_support` sub-profile is a
+            // defaults change for brand-new projects. Already-persisted
+            // profiles keep whatever `profile_version` they were written
+            // with — this default only affects a project initializing its
+            // profile for the first time.
+            profile_version: 2,
             platform: PlatformWindow {
                 id: "vertical-short".into(),
                 min_duration_ms: 5_000,
@@ -203,6 +289,7 @@ impl Default for ShortsScoringProfile {
             .map(String::from)
             .collect(),
             brand_banned_terms: Vec::new(),
+            visual_support: VisualSupportProfile::default(),
         }
     }
 }
@@ -728,17 +815,174 @@ pub(crate) fn score_duration_fit(duration_ms: i64, platform: &PlatformWindow) ->
     }
 }
 
-/// Stage 5: visual support. There is no Phase 7 temporal-visual-perception
-/// artifact in this project yet (that phase is built separately), so this
-/// stage never invents a judgment about whether the clip has anything worth
-/// watching. It always returns a neutral score at `Low` confidence.
-pub(crate) fn score_visual_support() -> Score {
+/// Maps a candidate unit's SOURCE-space window `[start_ms, end_ms)` on
+/// `source_id` through a variant's compiled timeline segments into zero or
+/// more OUTPUT-space `(start_ms, end_ms)` ranges — the exact inverse of the
+/// mapping `reframe.rs` uses to place each sampled point (`output_ms =
+/// segment.output_start_ms + (source_ms - segment.source_start_ms) /
+/// segment.speed`). A unit can straddle more than one timeline segment, or
+/// none at all if the cut plan dropped that stretch of source entirely —
+/// every overlapping segment contributes its own output-space slice, and a
+/// unit with no overlapping segment yields an empty result (the caller
+/// treats that the same as "track exists but nothing maps here").
+pub(crate) fn map_source_window_to_output_ranges(
+    segments: &[TimelineSegment],
+    source_id: &str,
+    start_ms: i64,
+    end_ms: i64,
+) -> Vec<(i64, i64)> {
+    let mut ranges = Vec::new();
+    for segment in segments {
+        if segment.source_id != source_id {
+            continue;
+        }
+        let overlap_start = start_ms.max(segment.source_start_ms);
+        let overlap_end = end_ms.min(segment.source_end_ms);
+        if overlap_start >= overlap_end {
+            continue;
+        }
+        let speed = segment.speed.max(1e-6);
+        let output_start = segment.output_start_ms
+            + ((overlap_start - segment.source_start_ms) as f64 / speed).round() as i64;
+        let output_end = segment.output_start_ms
+            + ((overlap_end - segment.source_start_ms) as f64 / speed).round() as i64;
+        ranges.push((output_start, output_end));
+    }
+    ranges
+}
+
+/// Selects the track points whose `output_ms` falls within any of `ranges`.
+pub(crate) fn track_points_in_ranges<'a>(
+    points: &'a [VisualTrackPoint],
+    ranges: &[(i64, i64)],
+) -> Vec<&'a VisualTrackPoint> {
+    points
+        .iter()
+        .filter(|point| {
+            ranges
+                .iter()
+                .any(|(start, end)| point.output_ms >= *start && point.output_ms < *end)
+        })
+        .collect()
+}
+
+/// Stage 5: visual support. `points_in_window` is `None` when this project's
+/// resolved variant has no Phase 7 reframe track at all (never invents a
+/// judgment: neutral value, `Low` confidence, reason recorded — exactly the
+/// prior behavior). `Some(&[])` is a track that exists but has no sampled
+/// point inside this candidate's mapped output window (also neutral/`Low`,
+/// with a reason naming which of the two absent-data cases this is). A
+/// non-empty slice is real per-sample detector evidence, combined into one
+/// score from four signals, each weighted by [`VisualSupportProfile`]:
+/// mean detector confidence, tracking-gap coverage (a window that is mostly
+/// `gap: true` — nothing detected, e.g. a talking head against a blank wall,
+/// or worse, nothing trackable at all — scores low), shot-boundary density
+/// (visual variety versus one static shot held for 45 seconds), and
+/// normalized tracked-centre motion (an actually-moving subject versus a
+/// locked-off frame). Confidence is `High` once enough points cover the
+/// window to trust the computation, `Medium` when the window is real but
+/// sparse — either way the value is always a real computation from real
+/// data, never fabricated.
+pub(crate) fn score_visual_support(
+    points_in_window: Option<&[&VisualTrackPoint]>,
+    profile: &VisualSupportProfile,
+) -> Score {
+    let points = match points_in_window {
+        None => {
+            return Score {
+                value: 0.5,
+                confidence: Confidence::Low,
+                rationale: "no reframe track available for this project's resolved variant \
+                            (REV2 plan §15.5 Phase 7 artifact not found); scored neutrally \
+                            pending that data"
+                    .into(),
+            };
+        }
+        Some([]) => {
+            return Score {
+                value: 0.5,
+                confidence: Confidence::Low,
+                rationale: "a reframe track exists for this variant but no sampled point falls \
+                            within this candidate's mapped output window; scored neutrally"
+                    .into(),
+            };
+        }
+        Some(points) => points,
+    };
+
+    let count = points.len() as f64;
+    let avg_confidence = points.iter().map(|point| point.confidence).sum::<f64>() / count;
+    let gap_count = points.iter().filter(|point| point.gap).count();
+    let gap_fraction = gap_count as f64 / count;
+    let coverage = (1.0 - gap_fraction).clamp(0.0, 1.0);
+
+    let shot_boundaries = points.iter().filter(|point| point.shot_boundary).count();
+    let window_ms = points
+        .last()
+        .zip(points.first())
+        .map(|(last, first)| (last.output_ms - first.output_ms).max(0))
+        .unwrap_or(0)
+        .max(1);
+    let expected_boundaries =
+        (window_ms as f64 / profile.variety_target_shot_interval_ms.max(1) as f64).max(1.0);
+    let variety = (shot_boundaries as f64 / expected_boundaries).clamp(0.0, 1.0);
+
+    let mut total_step = 0.0;
+    let mut steps = 0usize;
+    for pair in points.windows(2) {
+        // A shot boundary is a deliberate hard cut, not organic subject
+        // motion; including its jump in the motion signal would reward a
+        // static shot that merely got cut into pieces, so it is excluded
+        // here (it is still counted by the variety signal above).
+        if pair[1].shot_boundary {
+            continue;
+        }
+        let dx = pair[1].center_x - pair[0].center_x;
+        let dy = pair[1].center_y - pair[0].center_y;
+        total_step += (dx * dx + dy * dy).sqrt();
+        steps += 1;
+    }
+    let avg_step = if steps > 0 {
+        total_step / steps as f64
+    } else {
+        0.0
+    };
+    let motion = (avg_step / profile.motion_target_avg_step.max(1e-9)).clamp(0.0, 1.0);
+
+    let total_weight = profile.confidence_weight
+        + profile.coverage_weight
+        + profile.variety_weight
+        + profile.motion_weight;
+    let value = if total_weight <= 0.0 {
+        0.5
+    } else {
+        ((avg_confidence * profile.confidence_weight
+            + coverage * profile.coverage_weight
+            + variety * profile.variety_weight
+            + motion * profile.motion_weight)
+            / total_weight)
+            .clamp(0.0, 1.0)
+    };
+
+    let confidence = if points.len() >= profile.min_points_for_high_confidence {
+        Confidence::High
+    } else {
+        Confidence::Medium
+    };
+
+    let rationale = format!(
+        "{value:.2}: subject tracked across {} sampled point(s), avg detector confidence \
+         {avg_confidence:.2}, {:.0}% of the window is a tracking gap, {shot_boundaries} shot \
+         boundary(ies) ({variety:.2} variety score), avg per-sample centre motion \
+         {avg_step:.4} ({motion:.2} motion score)",
+        points.len(),
+        gap_fraction * 100.0,
+    );
+
     Score {
-        value: 0.5,
-        confidence: Confidence::Low,
-        rationale: "no visual-perception artifact available to this stage yet (REV2 plan §15.5 \
-                    Phase 7 is separate work); scored neutrally pending that data"
-            .into(),
+        value,
+        confidence,
+        rationale,
     }
 }
 
@@ -1006,6 +1250,8 @@ pub(crate) fn build_shorts(
     output_presets: &[OutputPreset],
     profile: &ShortsScoringProfile,
     count: usize,
+    timeline_segments: Option<&[TimelineSegment]>,
+    reframe_track_points: Option<&[VisualTrackPoint]>,
 ) -> ShortsBuildResult {
     let transcripts_by_source: BTreeMap<&str, &Transcript> = transcripts
         .iter()
@@ -1063,13 +1309,27 @@ pub(crate) fn build_shorts(
             .map(|c| c.beat_label.as_str())
             .unwrap_or("");
 
+        let visual_support = match (timeline_segments, reframe_track_points) {
+            (Some(segments), Some(track_points)) => {
+                let ranges = map_source_window_to_output_ranges(
+                    segments,
+                    &unit.source_id,
+                    unit.start_ms(),
+                    unit.end_ms(),
+                );
+                let in_window = track_points_in_ranges(track_points, &ranges);
+                score_visual_support(Some(&in_window), &profile.visual_support)
+            }
+            _ => score_visual_support(None, &profile.visual_support),
+        };
+
         let breakdown_partial = ScoreBreakdown {
             hook: score_hook(&text, beat_label, profile),
             payoff: score_payoff(&text, profile),
             proof: score_proof(&text, profile),
             value: score_value(&words, filler_total, unit.duration_ms()),
             duration_fit,
-            visual_support: score_visual_support(),
+            visual_support,
             platform_fit: score_platform_fit(output_presets),
             brand_fit: score_brand_fit(&text, profile),
             composite: 0.0,
@@ -1187,6 +1447,24 @@ mod tests {
         }
     }
 
+    fn track_point(
+        output_ms: i64,
+        center_x: f64,
+        center_y: f64,
+        confidence: f64,
+        gap: bool,
+        shot_boundary: bool,
+    ) -> VisualTrackPoint {
+        VisualTrackPoint {
+            output_ms,
+            center_x,
+            center_y,
+            confidence,
+            gap,
+            shot_boundary,
+        }
+    }
+
     #[test]
     fn standalone_rejects_dangling_reference_opener() {
         let profile = ShortsScoringProfile::default();
@@ -1211,6 +1489,137 @@ mod tests {
         assert_eq!(too_short.value, 0.0);
         let too_long = score_duration_fit(120_000, &platform);
         assert_eq!(too_long.value, 0.0);
+    }
+
+    #[test]
+    fn visual_support_with_no_track_stays_conservative_neutral() {
+        let profile = VisualSupportProfile::default();
+        let score = score_visual_support(None, &profile);
+        assert_eq!(score.value, 0.5);
+        assert_eq!(score.confidence, Confidence::Low);
+        assert!(score.rationale.contains("no reframe track available"));
+    }
+
+    #[test]
+    fn visual_support_with_track_but_empty_window_stays_conservative_neutral() {
+        let profile = VisualSupportProfile::default();
+        let empty: Vec<&VisualTrackPoint> = Vec::new();
+        let score = score_visual_support(Some(&empty), &profile);
+        assert_eq!(score.value, 0.5);
+        assert_eq!(score.confidence, Confidence::Low);
+        assert!(score.rationale.contains("no sampled point falls"));
+    }
+
+    #[test]
+    fn visual_support_scores_high_confidence_tracking_above_mostly_gap() {
+        let profile = VisualSupportProfile::default();
+        let tracked: Vec<VisualTrackPoint> = (0..10)
+            .map(|i| track_point(i * 500, 0.4 + i as f64 * 0.02, 0.5, 0.9, false, i == 0))
+            .collect();
+        let tracked_refs: Vec<&VisualTrackPoint> = tracked.iter().collect();
+        let gappy: Vec<VisualTrackPoint> = (0..10)
+            .map(|i| track_point(i * 500, 0.5, 0.5, 0.0, true, i == 0))
+            .collect();
+        let gappy_refs: Vec<&VisualTrackPoint> = gappy.iter().collect();
+
+        let tracked_score = score_visual_support(Some(&tracked_refs), &profile);
+        let gappy_score = score_visual_support(Some(&gappy_refs), &profile);
+        assert!(
+            tracked_score.value > gappy_score.value,
+            "well-tracked window ({}) must score above a mostly-gap window ({})",
+            tracked_score.value,
+            gappy_score.value
+        );
+        assert_eq!(tracked_score.confidence, Confidence::High);
+    }
+
+    #[test]
+    fn visual_support_scores_visual_variety_above_one_static_shot() {
+        let profile = VisualSupportProfile::default();
+        // A single static shot: one shot boundary at the very start, the
+        // tracked centre never moves again, held for the rest of the window.
+        let static_shot: Vec<VisualTrackPoint> = (0..20)
+            .map(|i| track_point(i * 2_000, 0.5, 0.5, 0.9, false, i == 0))
+            .collect();
+        let static_refs: Vec<&VisualTrackPoint> = static_shot.iter().collect();
+
+        // The same window duration and confidence, but with real visual
+        // variety: several shot changes and a tracked centre that actually
+        // moves between them.
+        let varied_shot: Vec<VisualTrackPoint> = (0..20)
+            .map(|i| {
+                let is_boundary = i % 4 == 0;
+                let x = 0.3 + (i % 4) as f64 * 0.1;
+                track_point(i * 2_000, x, 0.5, 0.9, false, is_boundary)
+            })
+            .collect();
+        let varied_refs: Vec<&VisualTrackPoint> = varied_shot.iter().collect();
+
+        let static_score = score_visual_support(Some(&static_refs), &profile);
+        let varied_score = score_visual_support(Some(&varied_refs), &profile);
+        assert!(
+            varied_score.value > static_score.value,
+            "a window with shot variety ({}) must score above one static shot ({})",
+            varied_score.value,
+            static_score.value
+        );
+    }
+
+    #[test]
+    fn map_source_window_to_output_ranges_scales_by_segment_speed() {
+        let segments = vec![
+            TimelineSegment {
+                id: "seg-a".into(),
+                source_id: "cam-a".into(),
+                source_start_ms: 0,
+                source_end_ms: 10_000,
+                output_start_ms: 0,
+                output_end_ms: 10_000,
+                speed: 1.0,
+                reason: "kept".into(),
+            },
+            TimelineSegment {
+                id: "seg-b".into(),
+                source_id: "cam-a".into(),
+                source_start_ms: 10_000,
+                source_end_ms: 20_000,
+                output_start_ms: 10_000,
+                output_end_ms: 15_000,
+                speed: 2.0,
+                reason: "sped up".into(),
+            },
+            TimelineSegment {
+                id: "seg-c".into(),
+                source_id: "cam-b".into(),
+                source_start_ms: 0,
+                source_end_ms: 5_000,
+                output_start_ms: 15_000,
+                output_end_ms: 20_000,
+                speed: 1.0,
+                reason: "kept".into(),
+            },
+        ];
+        // Straddles seg-a (1:1) and seg-b (2x speed): [5_000, 15_000) on
+        // cam-a source time maps to [5_000, 10_000) + [10_000, 12_500).
+        let ranges = map_source_window_to_output_ranges(&segments, "cam-a", 5_000, 15_000);
+        assert_eq!(ranges, vec![(5_000, 10_000), (10_000, 12_500)]);
+
+        // A different source_id never contributes a range.
+        let none = map_source_window_to_output_ranges(&segments, "cam-c", 0, 10_000);
+        assert!(none.is_empty());
+    }
+
+    #[test]
+    fn track_points_in_ranges_selects_only_points_inside_the_ranges() {
+        let points = vec![
+            track_point(0, 0.5, 0.5, 0.9, false, true),
+            track_point(6_000, 0.5, 0.5, 0.9, false, false),
+            track_point(11_000, 0.5, 0.5, 0.9, false, false),
+            track_point(13_000, 0.5, 0.5, 0.9, false, false),
+        ];
+        let selected = track_points_in_ranges(&points, &[(5_000, 10_000), (10_000, 12_500)]);
+        let selected_ms: Vec<i64> = selected.iter().map(|point| point.output_ms).collect();
+        assert_eq!(selected_ms, vec![6_000, 11_000]);
     }
 
     #[test]
@@ -1275,9 +1684,94 @@ mod tests {
         }];
         let profile = ShortsScoringProfile::default();
         let vad = BTreeMap::new();
-        let first = build_shorts(&candidates, &transcripts, &vad, &[], &profile, 4);
-        let second = build_shorts(&candidates, &transcripts, &vad, &[], &profile, 4);
+        let first = build_shorts(
+            &candidates,
+            &transcripts,
+            &vad,
+            &[],
+            &profile,
+            4,
+            None,
+            None,
+        );
+        let second = build_shorts(
+            &candidates,
+            &transcripts,
+            &vad,
+            &[],
+            &profile,
+            4,
+            None,
+            None,
+        );
         assert_eq!(first, second);
+    }
+
+    /// Same determinism guarantee, but with real timeline + reframe-track
+    /// data present so stage 5 actually computes from evidence on both
+    /// runs — the REV2 plan's "same source plus same sample rate ⇒ same
+    /// output" guarantee must hold with visual data wired in, not just when
+    /// it is absent.
+    #[test]
+    fn scoring_pipeline_is_deterministic_with_visual_support_data() {
+        let candidates = vec![candidate(
+            "candidate-001",
+            "cam-a",
+            0,
+            20_000,
+            "Here is the one mistake everyone makes with their savings account.",
+        )];
+        let transcripts = vec![Transcript {
+            schema_version: 1,
+            provider: "fixture".into(),
+            source_id: "cam-a".into(),
+            language: "en".into(),
+            words: vec![word("w1", 0, 400, "Here", 0.95)],
+            events: Vec::new(),
+        }];
+        let profile = ShortsScoringProfile::default();
+        let vad = BTreeMap::new();
+        let segments = vec![TimelineSegment {
+            id: "seg-001".into(),
+            source_id: "cam-a".into(),
+            source_start_ms: 0,
+            source_end_ms: 20_000,
+            output_start_ms: 0,
+            output_end_ms: 20_000,
+            speed: 1.0,
+            reason: "kept".into(),
+        }];
+        let track_points = vec![
+            track_point(0, 0.5, 0.5, 0.9, false, true),
+            track_point(500, 0.55, 0.5, 0.9, false, false),
+            track_point(1_000, 0.6, 0.5, 0.9, false, false),
+        ];
+        let first = build_shorts(
+            &candidates,
+            &transcripts,
+            &vad,
+            &[],
+            &profile,
+            4,
+            Some(&segments),
+            Some(&track_points),
+        );
+        let second = build_shorts(
+            &candidates,
+            &transcripts,
+            &vad,
+            &[],
+            &profile,
+            4,
+            Some(&segments),
+            Some(&track_points),
+        );
+        assert_eq!(first, second);
+        assert_eq!(first.variants.len(), 1);
+        assert!(matches!(
+            first.variants[0].scores.visual_support.confidence,
+            Confidence::Medium | Confidence::High
+        ));
     }
 
     #[test]

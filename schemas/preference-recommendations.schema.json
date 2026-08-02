@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/preference-recommendations.schema.json",
+  "title": "CutRight preference-learning recommendations",
+  "description": "Output of the REV2 plan §15.7 Phase 9 preference-learning stage. Learns only from current (non-stale, non-superseded, artifact-present) decision records in one or more projects' feedback/decisions.jsonl ledgers, grouped per format. Every axis entry either cites the exact decision_ids that produced it, or explicitly reports that it has no signal — it never emits an uncited recommendation, and nothing here is ever auto-applied to a render.",
+  "type": "object",
+  "required": ["schema_version", "policy_version", "generated_at", "sources", "formats"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "policy_version": { "type": "integer", "minimum": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "project", "decisions_path", "ledger_blake3", "current_records",
+          "excluded_stale", "excluded_missing", "excluded_superseded", "malformed_lines"
+        ],
+        "properties": {
+          "project": { "type": "string" },
+          "decisions_path": { "type": ["string", "null"] },
+          "ledger_blake3": { "type": ["string", "null"] },
+          "current_records": { "type": "integer", "minimum": 0 },
+          "excluded_stale": { "type": "integer", "minimum": 0 },
+          "excluded_missing": { "type": "integer", "minimum": 0 },
+          "excluded_superseded": { "type": "integer", "minimum": 0 },
+          "malformed_lines": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "formats": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["format", "reviewed_projects", "total_current_decisions", "readiness", "axes"],
+        "properties": {
+          "format": { "type": "string" },
+          "reviewed_projects": { "type": "integer", "minimum": 0 },
+          "total_current_decisions": { "type": "integer", "minimum": 0 },
+          "readiness": {
+            "type": "object",
+            "required": ["level", "reviewed_projects", "auto_apply_allowed"],
+            "properties": {
+              "level": { "type": "string" },
+              "reviewed_projects": { "type": "integer", "minimum": 0 },
+              "auto_apply_allowed": { "const": false }
+            }
+          },
+          "axes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["axis", "status", "sample_count", "distribution", "cited_decisions"],
+              "properties": {
+                "axis": { "type": "string" },
+                "status": {
+                  "enum": [
+                    "recommendation", "conflict", "insufficient_data",
+                    "no_data", "unsupported_by_ledger_schema"
+                  ]
+                },
+                "sample_count": { "type": "integer", "minimum": 0 },
+                "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+                "recommendation": { "type": ["string", "null"] },
+                "distribution": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["option", "count", "ratio"],
+                    "properties": {
+                      "option": { "type": "string" },
+                      "count": { "type": "integer", "minimum": 0 },
+                      "ratio": { "type": "number", "minimum": 0, "maximum": 1 }
+                    }
+                  }
+                },
+                "cited_decisions": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

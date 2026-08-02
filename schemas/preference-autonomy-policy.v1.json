@@ -1,0 +1,11 @@
+{
+  "policy_version": 1,
+  "description": "Preference-learning thresholds (REV2 plan §15.7 Phase 9). Learning only ever proposes recommendations from current, hash-bound decision records; readiness level is advisory metadata for a human, never a switch that lets the pipeline auto-apply a learned preference to a render.",
+  "min_decisions_per_axis": 4,
+  "min_agreement_ratio": 0.66,
+  "readiness_tiers": [
+    { "level": "review_required", "min_reviewed_projects": 0 },
+    { "level": "reduced_review_suggested", "min_reviewed_projects": 5 },
+    { "level": "autonomous_suggested", "min_reviewed_projects": 15 }
+  ]
+}

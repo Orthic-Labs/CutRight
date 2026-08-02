@@ -53,6 +53,19 @@
     "hook_cues": { "type": "array", "items": { "type": "string" } },
     "payoff_cues": { "type": "array", "items": { "type": "string" } },
     "proof_cues": { "type": "array", "items": { "type": "string" } },
-    "brand_banned_terms": { "type": "array", "items": { "type": "string" } }
+    "brand_banned_terms": { "type": "array", "items": { "type": "string" } },
+    "visual_support": {
+      "type": "object",
+      "description": "Stage 5 (visual support) sub-signal weights/thresholds, read from the Phase 7 reframe track. Optional/defaulted: a profile persisted before this field existed loads with these defaults filled in rather than being rejected.",
+      "properties": {
+        "confidence_weight": { "type": "number", "minimum": 0 },
+        "coverage_weight": { "type": "number", "minimum": 0 },
+        "variety_weight": { "type": "number", "minimum": 0 },
+        "motion_weight": { "type": "number", "minimum": 0 },
+        "min_points_for_high_confidence": { "type": "integer", "minimum": 0 },
+        "variety_target_shot_interval_ms": { "type": "integer", "minimum": 1 },
+        "motion_target_avg_step": { "type": "number", "minimum": 0 }
+      }
+    }
   }
 }

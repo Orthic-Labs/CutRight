@@ -4,8 +4,8 @@ mod doctor;
 use clap::Parser;
 use cli::{
     AnalyzeCommand, BenchCommand, Cli, Command, EditCommand, EvidenceCommand, ExportCommand,
-    FinishCommand, PackageCommand, ProjectCommand, ReceiptsCommand, ReframeCommand, RenderCommand,
-    ReviewCommand, ShortsCommand, SlotCommand, TranscriptCommand,
+    FinishCommand, PackageCommand, PreferencesCommand, ProjectCommand, ReceiptsCommand,
+    ReframeCommand, RenderCommand, ReviewCommand, ShortsCommand, SlotCommand, TranscriptCommand,
 };
 use doctor::DoctorOutcome;
 use serde_json::{json, Value};
@@ -303,6 +303,26 @@ fn run(cli: Cli) -> Result<Outcome, String> {
         } => video_project::select_variant(&project, &variant, "cli")
             .map(|result| Outcome::Value(json!({ "event": "review.select", "result": result })))
             .map_err(|error| error.to_string()),
+        Command::Preferences {
+            command: PreferencesCommand::Recommend { projects, out },
+        } => {
+            let output_path = match (out, projects.len()) {
+                (Some(path), _) => Ok(path),
+                (None, 1) => Ok(projects[0].join("feedback/preferences/recommendations.json")),
+                (None, _) => {
+                    Err("--out is required when more than one project is given".to_string())
+                }
+            };
+            output_path.and_then(|output_path| {
+                video_project::recommend_preferences(&projects, &output_path, cli.dry_run)
+                    .map(|result| {
+                        Outcome::Value(
+                            json!({ "event": "preferences.recommend", "result": result }),
+                        )
+                    })
+                    .map_err(|error| error.to_string())
+            })
+        }
         command => Ok(Outcome::NotImplemented(not_implemented(
             command_name(&command),
             cli.dry_run,
@@ -329,6 +349,7 @@ fn command_name(command: &Command) -> String {
         Command::Package { .. } => "package social",
         Command::Export { .. } => "export otio",
         Command::Receipts { .. } => "receipts verify",
+        Command::Preferences { .. } => "preferences recommend",
         Command::Doctor(_) | Command::Project { .. } => "unknown",
     }
     .to_string()

@@ -89,6 +89,10 @@ pub enum Command {
         #[command(subcommand)]
         command: ReceiptsCommand,
     },
+    Preferences {
+        #[command(subcommand)]
+        command: PreferencesCommand,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -265,4 +269,21 @@ pub enum ReceiptsCommand {
     /// currently on disk and report any binding that no longer holds
     /// (hardening plan §10.4).
     Verify(PathCommand),
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PreferencesCommand {
+    /// Learn only from current, hash-bound decision records across one or
+    /// more reviewed projects and propose per-format recommendations. Never
+    /// applies anything to a render — this command only ever writes a
+    /// recommendations report (REV2 plan §15.7).
+    Recommend {
+        #[arg(required = true, num_args = 1.., trailing_var_arg = true)]
+        projects: Vec<PathBuf>,
+        #[arg(
+            long,
+            help = "Where to write recommendations.json; required when more than one project is given, else defaults to <project>/feedback/preferences/recommendations.json"
+        )]
+        out: Option<PathBuf>,
+    },
 }
