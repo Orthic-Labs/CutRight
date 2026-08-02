@@ -4,8 +4,9 @@ Generated from the gate and release process. Update it in the same change that
 alters what it describes; do not edit it from memory.
 
 ```yaml
-as_of_commit: 747f9c9                     # + the audit-fix working tree this file ships with
-current_stage: p1_hardening_complete      # REV2 §5-§14 closed; §15 product phases not started
+as_of_commit: b8d1c3d
+current_stage: product_phases_landed     # §5-§14 closed; §15 phases 4,5,6,7,9 landed;
+                                           # phase 8 (cloud) awaiting approval
 primary_audio_engine: HeardRight
 primary_asr: Parakeet TDT v3
 word_edge_verifier: WhisperX
@@ -21,12 +22,24 @@ known_blockers:
                                            # this machine — duplication, dead-export, container,
                                            # license-graph, unused-dep and unsafe-density gates
                                            # are UNPROVEN, not clean
-  - candidate_generation_not_editorial    # groups words by gap with best-take scoring rather
-                                           # than red-thread editorial selection
-  - reframe_single_anchor_per_segment     # one face box per segment, not tracked temporally
-  - product_phases_4_9_not_started        # caption/audio/color finish, effect registry,
-                                           # semantic shorts, temporal reframing, optional
-                                           # cloud, preference learning (§15)
+  - candidate_generation_not_editorial    # rough-cut candidates still group words by gap with
+                                           # best-take scoring rather than red-thread editorial
+                                           # selection. NOTE: §15.4 shorts extraction IS now
+                                           # semantic — this is the separate rough-cut path.
+  - phase_8_cloud_awaiting_approval       # §15.6 optional cloud analysis is deliberately not
+                                           # built: it needs a provider decision, accepted
+                                           # terms, a hard budget, and current API/model/license
+                                           # re-verification. New spend and external accounts
+                                           # are Adrian's call, not the agent's.
+  - remotion_license_unverified           # §15.3 pins Remotion as a LATER renderer. The typed
+                                           # registry reserves the variant and fails loudly if
+                                           # selected; no dependency was added and no license
+                                           # clearance is claimed. Verify terms before promoting.
+  - four_preference_axes_unlearnable      # §15.7 pause policy, effect density, SFX choices and
+                                           # hook/CTA structure report unsupported_by_ledger_
+                                           # schema: the DecisionRecord reason vocabulary cannot
+                                           # distinguish them. Extending that vocabulary is the
+                                           # prerequisite, not more inference.
 ```
 
 ## Audit posture (read before trusting anything above the fold)
@@ -39,7 +52,7 @@ as a single invocation on 2026-08-02 and exited zero:
 |---|---|---|
 | root fmt | `cargo fmt --all -- --check` | PASS |
 | root clippy | `cargo clippy --workspace --all-targets --locked -- -D warnings` | PASS — 0 warnings |
-| root test | `cargo test --workspace --locked` | PASS — 108 tests |
+| root test | `cargo test --workspace --locked` | PASS — 215 tests |
 | Studio fmt | `cargo fmt --manifest-path apps/studio/src-tauri/Cargo.toml -- --check` | PASS |
 | Studio clippy | `cargo clippy --manifest-path apps/studio/src-tauri/Cargo.toml --all-targets --locked -- -D warnings` | PASS — 0 warnings |
 | Studio test | `cargo test --manifest-path apps/studio/src-tauri/Cargo.toml --locked` | PASS — 32 tests |
@@ -48,7 +61,7 @@ as a single invocation on 2026-08-02 and exited zero:
 | Studio frontend build | `pnpm build` | PASS |
 | License/asset resolution | `bash scripts/resolve-license.sh` | PASS — 8 assets, all noted |
 
-Total across all three suites: **185 tests** (108 root + 32 Studio backend +
+Total across all three suites: **292 tests** (215 root + 32 Studio backend +
 45 Studio frontend), all passing.
 
 **Why `audit_status` is nevertheless `incomplete`.** Seven scanner tools named
@@ -205,18 +218,39 @@ directories.
 
 ## What is open
 
-**The gate does not currently pass.** See "Audit posture" above — two
-clippy-only regressions from the §14 decomposition (a dead `pub fn` in
-`candidates.rs`, four unused imports in `decision_contract.rs`) leave both
-`cargo clippy --workspace --all-targets --locked -- -D warnings` and its
-Studio equivalent failing, and seven scanner tools the hardening plan calls
-for are not installed on this machine, so several of its gates (duplication,
-dead-export, container, license-graph, unused-dependency, unsafe-density)
-are unproven rather than clean.
+**Unproven scanner gates.** Seven tools the hardening plan calls for are not
+installed here, so duplication, dead-export, container, license-graph,
+unused-dependency and unsafe-density are unproven rather than clean. Pinned
+installs are an authorisation question, not an agent decision.
 
-**Product phases 4–9 (§15)** — caption/audio/color finish, effect registry,
-semantic shorts, temporal reframing, optional cloud, preference learning —
-have not been started.
+**Phase 8, optional cloud analysis (§15.6), is deliberately not built.** It
+needs a provider choice, accepted terms, a hard budget limit, an upload
+policy, retention and deletion, and — the plan's own words — current official
+API/model/license re-verification immediately before implementation. New spend
+and external accounts are Adrian's call.
+
+**Three honest limits inside what did land**, each stated in code rather than
+papered over:
+- Four preference axes (pause policy, effect density, SFX choices, hook/CTA
+  structure) report `unsupported_by_ledger_schema`. The `DecisionRecord`
+  reason vocabulary cannot distinguish them, so extending that vocabulary is
+  the prerequisite — more inference over the same data would be invention.
+- Active-speaker attribution in reframing uses transcript timing plus a
+  nearest-face continuity heuristic. There is no lip-sync or voice-print
+  model in this repo.
+- Effect previews render geometry and motion via `drawbox`, not real type: the
+  local FFmpeg has no `drawtext`/libfreetype, which is why the app already
+  routes caption text through the CoreText sidecar. Effect text is
+  provenance-bound through the receipt's parameters, not rasterised in the
+  preview.
+
+**Rough-cut candidate generation is still gap-based** with best-take scoring,
+not red-thread editorial selection. §15.4 made SHORTS extraction semantic;
+this is the separate rough-cut path and the distinction matters.
+
+**Remotion is reserved, not adopted.** The effect registry's renderer enum has
+the variant and fails loudly if selected; no dependency was added and no
+license clearance is claimed.
 
 Candidate generation still groups words by gap with best-take scoring rather
 than performing red-thread editorial selection, and reframe still anchors one
