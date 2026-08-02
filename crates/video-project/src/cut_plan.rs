@@ -231,22 +231,10 @@ fn candidate_chunks(
 mod tests {
     use super::*;
     use crate::init_project;
+    use crate::test_support::word;
     use std::fs;
     use video_core::models::SourceEntry;
     use video_core::{Candidate, Transcript};
-
-    fn word(start_ms: i64, end_ms: i64) -> Word {
-        Word {
-            id: format!("w_{start_ms}"),
-            source_word_id: None,
-            text: "word".into(),
-            start_ms,
-            end_ms,
-            confidence: 1.0,
-            speaker: None,
-            kind: "word".into(),
-        }
-    }
 
     #[test]
     fn vad_expands_candidate_bounds_to_enclosing_speech() {

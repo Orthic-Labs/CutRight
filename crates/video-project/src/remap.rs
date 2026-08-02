@@ -23,13 +23,6 @@ pub struct SelectionRecord {
     pub selected_by: String,
 }
 
-pub fn remap_transcript(
-    project_path: &Path,
-    dry_run: bool,
-) -> Result<PipelineArtifact, ProjectError> {
-    remap_transcript_with_variant(project_path, None, dry_run)
-}
-
 pub fn remap_transcript_for_variant(
     project_path: &Path,
     variant: &str,

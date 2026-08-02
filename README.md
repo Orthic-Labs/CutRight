@@ -56,11 +56,12 @@ cargo run -p videoctl -- reframe plan  ~/MyVideo.video-project
 # review analysis/reframe-plan.json, approve every anchor, then:
 cargo run -p videoctl -- render final  ~/MyVideo.video-project --preset reels
 cargo run -p videoctl -- evidence build ~/MyVideo.video-project
-cargo run -p videoctl -- qa            ~/MyVideo.video-project
+cargo run -p videoctl -- qa            ~/MyVideo.video-project --preset youtube
+cargo run -p videoctl -- receipts verify ~/MyVideo.video-project
 cargo run -p videoctl -- package social ~/MyVideo.video-project
 ```
 
-The full surface spans 23 subcommands — project, ingest, transcribe, bench, analyze, edit, reframe, review, transcript remap, shorts propose, finish/slot, render, qa, package, and OTIO export — every one JSON-in/JSON-out.
+The full surface spans 25 subcommands — project, ingest, transcribe, bench, analyze, edit, reframe, review, transcript remap, shorts propose, finish/slot, render, qa, package, OTIO export, and receipts verify — every one JSON-in/JSON-out.
 
 ## Around the pipeline
 

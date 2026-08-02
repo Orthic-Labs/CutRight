@@ -2,10 +2,9 @@ mod atomic_io;
 mod srt;
 mod variant;
 
-pub use atomic_io::read_json;
 pub(crate) use atomic_io::{
-    fresh_instance_id, hash_file, read_json_if_file, read_project_manifest, read_value_if_file,
-    write_bytes_atomic, write_json_atomic,
+    fresh_instance_id, hash_file, read_json, read_json_if_file, read_project_manifest,
+    read_value_if_file, write_bytes_atomic, write_json_atomic,
 };
 pub(crate) use srt::*;
 pub(crate) use variant::*;

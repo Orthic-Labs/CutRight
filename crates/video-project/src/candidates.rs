@@ -52,8 +52,8 @@ pub fn count_fillers(words: &[Word]) -> usize {
             flagged[i + 1] = true;
         }
     }
-    for (i, token) in tokens.iter().enumerate() {
-        if FILLER_WORDS.contains(&token.as_str()) {
+    for (i, word) in words.iter().enumerate() {
+        if is_filler_word(&word.text) {
             flagged[i] = true;
         }
     }

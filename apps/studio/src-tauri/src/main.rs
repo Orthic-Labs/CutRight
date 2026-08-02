@@ -1,6 +1,7 @@
 mod artifact_state;
 mod commands;
 mod decision_contract;
+mod decision_ledger;
 mod decision_store;
 mod project_identity;
 mod project_scope;

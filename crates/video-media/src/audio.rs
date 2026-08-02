@@ -10,7 +10,7 @@ use crate::process::{
     duration_scaled_timeout, run_media_command, string_args, AUDIO_EXTRACT_FLOOR,
     AUDIO_EXTRACT_PER_SOURCE_SECOND,
 };
-use crate::toolchain::{self, ToolchainError};
+use crate::toolchain::ToolchainError;
 
 #[derive(Debug, Error)]
 pub enum AudioError {
@@ -70,16 +70,11 @@ pub fn extract_audio_f32_with_receipt(
     sample_rate: u32,
 ) -> Result<video_core::StageReceipt, AudioError> {
     extract_audio_f32(input, output, sample_rate)?;
-    let toolchain = toolchain::resolve()?;
-    let mut toolchains = std::collections::BTreeMap::new();
-    toolchains.insert("ffmpeg".to_string(), toolchain.identity());
-    video_core::StageReceipt::build(
+    crate::build_receipt(
         "audio.extract_f32",
-        env!("CARGO_PKG_VERSION"),
-        &[input],
+        input,
         &serde_json::json!({ "sample_rate": sample_rate }),
-        toolchains,
-        &[output],
+        output,
     )
     .map_err(|error| AudioError::Failed(error.to_string()))
 }

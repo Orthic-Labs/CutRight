@@ -26,16 +26,13 @@ mod transcription;
 
 pub use analysis::analyze_local;
 pub use benchmark::bench_transcribe;
-pub use candidates::{
-    build_candidates, build_candidates_with_policy, count_fillers, has_false_start, is_filler_word,
-};
+pub use candidates::{build_candidates, build_candidates_with_policy, count_fillers};
 pub use cut_plan::build_cut_plan;
 pub use evidence::evidence_build;
 pub use export::export_otio;
 pub use final_render::render_final;
 pub use finish::{finish_validate, render_slot};
 pub use ingest::{ingest_sources, IngestResult, IngestedSource};
-pub use io::read_json;
 pub use package::package_social;
 pub use project_init::{
     init_project, migrate_project, InitResult, MigratedArtifact, MigrationReport, SkippedArtifact,
@@ -43,8 +40,8 @@ pub use project_init::{
 pub use qa::qa_run;
 pub use reframe::reframe_plan;
 pub use remap::{
-    read_variant_selection, remap_transcript, remap_transcript_for_variant,
-    remap_transcript_with_variant, select_variant, SelectionRecord,
+    read_variant_selection, remap_transcript_for_variant, remap_transcript_with_variant,
+    select_variant, SelectionRecord,
 };
 pub use rough_render::render_edit;
 pub use shorts::propose_shorts;
@@ -104,20 +101,13 @@ pub struct PipelineArtifact {
     pub count: usize,
 }
 
+/// Shared test fixtures used by more than one stage module's test suite.
+/// Kept in the crate root rather than duplicated per-module.
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::io::write_json_atomic;
-    use crate::{
-        build_candidates_with_policy, build_cut_plan, compile_timeline, finish_validate,
-        init_project, remap_transcript_for_variant,
-    };
-    use std::fs;
-    use video_core::models::SourceEntry;
-    use video_core::models::SCHEMA_VERSION;
-    use video_core::{FillerPolicy, SourceManifest, Transcript, VadSignal, Word};
+pub(crate) mod test_support {
+    use video_core::Word;
 
-    fn word(start_ms: i64, end_ms: i64) -> Word {
+    pub(crate) fn word(start_ms: i64, end_ms: i64) -> Word {
         Word {
             id: format!("w_{start_ms}"),
             source_word_id: None,
@@ -129,6 +119,21 @@ mod tests {
             kind: "word".into(),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::io::write_json_atomic;
+    use crate::test_support::word;
+    use crate::{
+        build_candidates_with_policy, build_cut_plan, compile_timeline, finish_validate,
+        init_project, remap_transcript_for_variant,
+    };
+    use std::fs;
+    use video_core::models::SourceEntry;
+    use video_core::models::SCHEMA_VERSION;
+    use video_core::{FillerPolicy, SourceManifest, Transcript, VadSignal};
 
     /// End-to-end (media-tool-free) run through candidates → cut plan →
     /// timeline → transcript remap → finish validate, asserting that each

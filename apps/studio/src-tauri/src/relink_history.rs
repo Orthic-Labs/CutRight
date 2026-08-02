@@ -4,7 +4,7 @@
 //! rejected (hash mismatch) attempt is still auditable — it is not silently
 //! dropped just because the manifest was not mutated.
 
-use crate::decision_contract::feedback_ledger_path;
+use crate::decision_ledger::feedback_ledger_path;
 use serde::Serialize;
 use std::fs::OpenOptions;
 use std::io::Write;

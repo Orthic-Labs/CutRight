@@ -27,7 +27,7 @@ pub(crate) fn hash_file(path: &Path) -> Result<String, ProjectError> {
     Ok(hasher.finalize().to_hex().to_string())
 }
 
-pub fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, ProjectError> {
+pub(crate) fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, ProjectError> {
     Ok(serde_json::from_slice(&fs::read(path)?)?)
 }
 

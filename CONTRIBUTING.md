@@ -41,10 +41,14 @@ structured exit status, temp cleanup. No command may wait indefinitely.
 **A JSON `status: "error"` never accompanies exit zero.** See the exit-code
 table in `crates/video-cli/src/main.rs`.
 
-**Artifacts are variant-scoped.** Cut plan, timeline, transcript, captions,
-reframe plan, finish plan, final, QA and export all reference the same variant
-and the same artifact hashes. Never let "last command run" decide the contents
-of a shared file.
+**Artifacts are variant-scoped — and it's enforced, not just documented.** Cut
+plan, timeline, transcript, captions, reframe plan, finish plan, final, QA and
+export all reference the same variant and the same artifact hashes. Never let
+"last command run" decide the contents of a shared file. Variant-scoped reads
+go through `require_variant_artifact`
+(`crates/video-project/src/io/variant.rs`) and error rather than silently
+substituting another variant's artifact; the old `variant_or_generic` fallback
+and every generic-alias write it enabled are gone from the codebase.
 
 **Review decisions are constructed by Rust, not the frontend.** Studio sends a
 minimal `DecisionIntent`; the backend derives the canonical subject, hashes,
@@ -68,12 +72,19 @@ sample. CutRight does not reach into HeardRight's model internals.
 
 ## How to add a project artifact receipt
 
-Every stage emits a receipt binding `stage`, `implementation_version`, input
-paths with hashes, a `parameters_blake3`, toolchain identity, and output paths
-with hashes and sizes. Write it in the same atomic operation as the artifact.
+Every one of the 14 canonical pipeline stages emits a
+`<artifact>.receipt.json` (`crates/video-project/src/receipts.rs`) binding
+`stage`, `implementation_version`, input paths with hashes, a
+`parameters_blake3`, toolchain identity, and output paths with hashes and
+sizes; variants additionally get a per-variant `artifact-receipt.json`. Write
+it in the same atomic operation as the artifact. `videoctl receipts verify`
+re-hashes every recorded binding against the bytes currently on disk and
+exits 6 on the first mismatch — run it after touching receipt-writing code.
 Cache keys are content-addressed — source hash, decode policy, toolchain
 identity, provider/model/protocol identity, stage implementation version —
-never machine-local absolute paths.
+never machine-local absolute paths; sidecar workers materialize under
+`video_core::content_store::materialize_worker` at a path keyed by the
+content hash of their embedded bytes, not by version.
 
 ## How to update Studio contracts
 
