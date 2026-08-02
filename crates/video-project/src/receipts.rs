@@ -19,7 +19,8 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use video_core::StageReceipt;
 
-use crate::{hash_file, read_json, relative_artifact_path, write_json_atomic, ProjectError};
+use crate::io::{hash_file, read_json, relative_artifact_path, write_json_atomic};
+use crate::ProjectError;
 
 /// The receipt path for one artifact: `<artifact>.receipt.json` beside it, so
 /// a receipt can never collide with, or be mistaken for, the artifact it
