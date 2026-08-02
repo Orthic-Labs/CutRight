@@ -1,5 +1,8 @@
-import { asset } from "../lib/api";
+import { useCallback, useRef } from "react";
+import type React from "react";
+import { asset, tc } from "../lib/api";
 import { Transport } from "../components/Transport";
+import { useLiveIndicator } from "../hooks/useLiveIndicator";
 import type { CutMarker } from "../cut-markers";
 import type { Source } from "../types";
 
@@ -11,6 +14,7 @@ export function SourcesMode({
   playing,
   onPlaying,
   playhead,
+  playheadRef,
   onSeek,
   markers,
 }: {
@@ -19,9 +23,38 @@ export function SourcesMode({
   playing: boolean;
   onPlaying: (value: boolean) => void;
   playhead: number;
+  playheadRef: { current: number };
   onSeek: (value: number) => void;
   markers: CutMarker[];
 }) {
+  const duration = source?.duration_ms ?? 0;
+  const markerRef = useRef<HTMLElement>(null);
+  const applyMarker = useCallback(
+    (node: HTMLElement, value: number) => {
+      node.style.left = `${Math.min(100, (value / (duration || 1)) * 100)}%`;
+    },
+    [duration],
+  );
+  useLiveIndicator(markerRef, playheadRef, playing, applyMarker);
+
+  function onWaveformKey(event: React.KeyboardEvent<HTMLDivElement>) {
+    const step = Math.max(1, duration / 100);
+    const big = Math.max(step, 1000);
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      onSeek(Math.min(duration, playhead + (event.shiftKey ? big : step)));
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      onSeek(Math.max(0, playhead - (event.shiftKey ? big : step)));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      onSeek(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      onSeek(duration);
+    }
+  }
+
   if (!source) return <div className="empty-state">No source selected.</div>;
   return (
     <>
@@ -42,7 +75,8 @@ export function SourcesMode({
         playing={playing}
         onPlaying={onPlaying}
         playhead={playhead}
-        duration={source.duration_ms ?? 0}
+        playheadRef={playheadRef}
+        duration={duration}
         onSeek={onSeek}
         videoKey="source"
         markers={markers}
@@ -50,17 +84,24 @@ export function SourcesMode({
       <div
         className="waveform"
         role="slider"
+        tabIndex={0}
         aria-label="Source waveform"
+        aria-valuemin={0}
+        aria-valuemax={duration}
+        aria-valuenow={Math.round(playhead)}
+        aria-valuetext={tc(playhead)}
+        onKeyDown={onWaveformKey}
         onClick={(event) =>
           onSeek(
             (event.nativeEvent.offsetX / event.currentTarget.clientWidth) *
-              (source.duration_ms ?? 0),
+              duration,
           )
         }
       >
         <i
+          ref={markerRef}
           style={{
-            left: `${Math.min(100, (playhead / (source.duration_ms || 1)) * 100)}%`,
+            left: `${Math.min(100, (playhead / (duration || 1)) * 100)}%`,
           }}
         />
       </div>

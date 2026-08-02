@@ -1,10 +1,17 @@
+import { useRef } from "react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
+
 export function Help({ close }: { close: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useFocusTrap(true, ref);
   return (
     <div
+      ref={ref}
       className="dialog"
       role="dialog"
       aria-modal="true"
       aria-label="Keyboard shortcuts"
+      tabIndex={-1}
     >
       <div>
         <button aria-label="Close shortcuts" onClick={close}>

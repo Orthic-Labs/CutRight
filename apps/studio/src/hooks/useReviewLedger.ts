@@ -27,7 +27,7 @@ export function useReviewLedger({
   mode,
   variant,
   cursor,
-  playhead,
+  playheadRef,
   activeVariant,
   setError,
 }: {
@@ -35,7 +35,12 @@ export function useReviewLedger({
   mode: Mode;
   variant: string;
   cursor: { word?: Word };
-  playhead: number;
+  // A ref, not the committed `playhead` state: usePlayback only commits
+  // that state on a cursor-word change or a whole-second tick, so it can
+  // lag several hundred ms behind the real position during continuous
+  // playback. The ref is always current, which is what decision-provenance
+  // timestamps (`playhead_ms` below) need.
+  playheadRef: { current: number };
   activeVariant: Variant | undefined;
   setError: (message: string) => void;
 }) {
@@ -84,7 +89,7 @@ export function useReviewLedger({
       verdict: reasonKind,
       reason,
       note: reason === "other" ? note.trim() : null,
-      playhead_ms: Math.round(playhead),
+      playhead_ms: Math.round(playheadRef.current),
       word_id: word?.id && WORD_ID.test(word.id) ? word.id : null,
       source_word_id:
         word?.source_word_id && SOURCE_WORD_ID.test(word.source_word_id)
@@ -212,20 +217,21 @@ export function useReviewLedger({
   function segmentAtPlayhead(): string | null {
     const segments = activeVariant?.cut_plan?.segments ?? [];
     if (!segments.length) return null;
+    const at = playheadRef.current;
     const idAt = (index: number) =>
       segments[index].id ?? `segment-${String(index + 1).padStart(3, "0")}`;
     const containing = segments.findIndex(
       (segment) =>
-        playhead >= (segment.output_start_ms ?? 0) &&
-        playhead < (segment.output_end_ms ?? Infinity),
+        at >= (segment.output_start_ms ?? 0) &&
+        at < (segment.output_end_ms ?? Infinity),
     );
     if (containing >= 0) return idAt(containing);
     let nearest = 0;
     let distance = Infinity;
     segments.forEach((segment, index) => {
       const d = Math.min(
-        Math.abs(playhead - (segment.output_start_ms ?? 0)),
-        Math.abs(playhead - (segment.output_end_ms ?? 0)),
+        Math.abs(at - (segment.output_start_ms ?? 0)),
+        Math.abs(at - (segment.output_end_ms ?? 0)),
       );
       if (d < distance) {
         distance = d;
@@ -248,7 +254,7 @@ export function useReviewLedger({
         segment_id: segmentId,
         reason,
         note: reason === "other" ? note.trim() : null,
-        playhead_ms: Math.round(playhead),
+        playhead_ms: Math.round(playheadRef.current),
         word_id: word?.id && WORD_ID.test(word.id) ? word.id : null,
         source_word_id:
           word?.source_word_id && SOURCE_WORD_ID.test(word.source_word_id)

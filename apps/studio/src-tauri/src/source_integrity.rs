@@ -1,9 +1,9 @@
 //! Registered-source verification and relinking commands. Moved out of
 //! `main.rs` per REV2 §14.5 — pure move, no behavior change.
 
-use crate::decision_contract::{self, RelinkHistoryRecord};
 use crate::decision_store::{read_sources, write_json_atomic};
 use crate::project_scope::{blake3_of, canonical_project_root, named_error};
+use crate::relink_history::{self, RelinkHistoryRecord};
 use chrono::Utc;
 use serde::Serialize;
 use std::fs;
@@ -133,7 +133,7 @@ pub(crate) fn relink_source(
         write_json_atomic(&root, manifest_rel, &manifest)?;
     }
 
-    decision_contract::append_relink_record(
+    relink_history::append_relink_record(
         &root,
         &RelinkHistoryRecord {
             ts: Utc::now().to_rfc3339(),

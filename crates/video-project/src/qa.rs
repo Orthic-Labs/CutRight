@@ -97,7 +97,9 @@ pub fn qa_run(
     }
 
     let captions = variant_captions_path(project_path, &variant);
+    require_variant_artifact(project_path, &captions, &variant, "qa.run")?;
     let timeline_path = variant_timeline_path(project_path, &variant);
+    require_variant_artifact(project_path, &timeline_path, &variant, "qa.run")?;
     let timeline: Timeline = read_json(&timeline_path)?;
     let evidence = project_path.join("analysis/evidence/manifest.json");
     let output_hash = format!("blake3:{}", hash_file(&output)?);

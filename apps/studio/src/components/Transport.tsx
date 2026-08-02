@@ -1,10 +1,13 @@
+import { useCallback, useRef } from "react";
 import { tc } from "../lib/api";
+import { useLiveIndicator } from "../hooks/useLiveIndicator";
 import type { CutMarker } from "../cut-markers";
 
 export function Transport({
   playing,
   onPlaying,
   playhead,
+  playheadRef,
   duration,
   onSeek,
   videoKey,
@@ -13,11 +16,30 @@ export function Transport({
   playing: boolean;
   onPlaying: (x: boolean) => void;
   playhead: number;
+  // Optional: when provided, the scrub input is driven directly from this
+  // ref every animation frame (bypassing React state) so it stays visually
+  // smooth during continuous playback without re-rendering the tree. Callers
+  // that already pass a coarse, word-snapped `playhead` (compare mode) don't
+  // need this — their value only changes on real cursor-word transitions.
+  playheadRef?: { current: number };
   duration: number;
   onSeek: (x: number) => void;
   videoKey?: string;
   markers?: CutMarker[];
 }) {
+  const scrubRef = useRef<HTMLInputElement>(null);
+  const applyScrub = useCallback(
+    (node: HTMLInputElement, value: number) => {
+      node.value = String(Math.min(value, duration));
+    },
+    [duration],
+  );
+  useLiveIndicator(
+    scrubRef,
+    playheadRef ?? { current: playhead },
+    Boolean(playheadRef) && playing,
+    applyScrub,
+  );
   return (
     <div className="transport">
       <button
@@ -40,6 +62,7 @@ export function Transport({
       </code>
       <div className="scrub">
         <input
+          ref={scrubRef}
           aria-label="Scrub"
           type="range"
           min="0"

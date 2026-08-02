@@ -25,6 +25,7 @@ pub fn evidence_build(
 ) -> Result<PipelineArtifact, ProjectError> {
     let variant = resolve_variant(project_path, None)?;
     let timeline_path = variant_timeline_path(project_path, &variant);
+    require_variant_artifact(project_path, &timeline_path, &variant, "evidence.build")?;
     let timeline: Timeline = read_json(&timeline_path)?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
     let segments = &timeline

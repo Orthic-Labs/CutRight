@@ -1,8 +1,10 @@
 # Studio font licenses
 
-This is the source of truth; `apps/studio/public/LICENSES.md` is the shipped
-copy Vite bundles into the built app so the notice travels with the fonts
-(linked from `index.html` as `/LICENSES.md`). Keep both files in sync.
+This file is the shipped copy of `src/assets/fonts/LICENSES.md`, placed in
+`public/` so Vite copies it verbatim into `dist/` and Tauri bundles it into
+the built app (reachable inside the running app at `/LICENSES.md`), per the
+SIL OFL requirement that the license notice travel with the font. Keep this
+file in sync with `src/assets/fonts/LICENSES.md` — the source of truth.
 
 ## Tanker Regular
 

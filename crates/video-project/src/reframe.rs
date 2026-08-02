@@ -29,11 +29,14 @@ pub fn reframe_plan(
         return Err(ProjectError::NoSources);
     }
     let timeline_path = variant_timeline_path(project_path, &variant);
-    let timeline: Timeline = read_json(&timeline_path).map_err(|_| {
-        ProjectError::InvalidState(format!(
-            "reframe planning requires edit/timeline-{variant}.json; run `videoctl edit render <project> --variant {variant}` first"
-        ))
-    })?;
+    require_variant_artifact(project_path, &timeline_path, &variant, "reframe.plan").map_err(
+        |_| {
+            ProjectError::InvalidState(format!(
+                "reframe planning requires edit/timeline-{variant}.json; run `videoctl edit render <project> --variant {variant}` first"
+            ))
+        },
+    )?;
+    let timeline: Timeline = read_json(&timeline_path)?;
     let timeline_segments = &timeline
         .tracks
         .first()
@@ -81,9 +84,13 @@ pub fn reframe_plan(
             "requires_review": true,
             "anchors": anchors
         });
+        // §6.1: `path` (the variant-scoped location) is the ONLY authority.
+        // A generic `analysis/reframe-plan.json` alias used to be written
+        // here on every call regardless of variant — the exact defect this
+        // fix removes, since it meant the same generic file the read side
+        // could silently fall back to held whichever variant last ran
+        // reframe planning, not necessarily the one being read.
         write_json_atomic(&path, &plan)?;
-        // Compatibility alias for consumers not yet variant-aware.
-        write_json_atomic(&project_path.join("analysis/reframe-plan.json"), &plan)?;
         let mut toolchains = BTreeMap::new();
         if let Ok(worker_hash) = hash_file(&worker) {
             toolchains.insert("vision_anchor_worker".to_string(), worker_hash);
@@ -144,4 +151,51 @@ fn detect_vision_anchor(worker: &Path, frame: &Path) -> Result<VisionAnchorRespo
         ));
     }
     Ok(anchor)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::init_project;
+
+    /// REV2 plan §6.1 regression: `reframe_plan` must write to the exact
+    /// same variant-scoped path a later read for that variant resolves to
+    /// — `analysis/reframe/<variant>/reframe-plan.json`, never a generic
+    /// alias the write side produced from whichever variant ran last. This
+    /// exercises the shared path helper both sides of the pipeline use
+    /// (`variant_reframe_path`) the same way `reframe_plan`'s write and
+    /// `render_final`/`qa_run`'s reads do, without shelling out to the
+    /// embedded Vision worker binary.
+    #[test]
+    fn reframe_plan_path_round_trips_through_the_same_variant_only() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+
+        let tight_path = variant_reframe_path(temp.path(), "tight");
+        let natural_path = variant_reframe_path(temp.path(), "natural");
+        assert_ne!(tight_path, natural_path);
+        assert_eq!(
+            tight_path,
+            temp.path().join("analysis/reframe/tight/reframe-plan.json")
+        );
+
+        let tight_plan = serde_json::json!({ "variant": "tight", "anchors": [] });
+        write_json_atomic(&tight_path, &tight_plan).unwrap();
+
+        // Reading back through the SAME helper for the SAME variant returns
+        // exactly what was written for it.
+        let read_back: serde_json::Value =
+            read_json(&variant_reframe_path(temp.path(), "tight")).unwrap();
+        assert_eq!(read_back, tight_plan);
+
+        // No generic alias is produced by the write, and the other
+        // variant's path is untouched — it does not silently resolve to
+        // tight's plan.
+        assert!(!temp.path().join("analysis/reframe-plan.json").is_file());
+        assert!(!natural_path.is_file());
+        assert!(
+            require_variant_artifact(temp.path(), &natural_path, "natural", "reframe.plan")
+                .is_err()
+        );
+    }
 }

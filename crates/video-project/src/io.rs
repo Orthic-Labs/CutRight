@@ -76,59 +76,54 @@ pub(crate) fn resolve_variant(
     Ok("natural".to_string())
 }
 
-/// Prefer the variant-scoped artifact, falling back to the legacy generic alias
-/// when the variant file does not exist yet.
-pub(crate) fn variant_or_generic(
-    project_path: &Path,
-    variant_rel: &str,
-    generic_rel: &str,
-) -> PathBuf {
-    let variant_path = project_path.join(variant_rel);
-    if variant_path.is_file() {
-        variant_path
-    } else {
-        project_path.join(generic_rel)
-    }
-}
-
+/// The variant-scoped path for an edit/render/reframe/finish artifact.
+/// Deliberately NEVER falls back to a legacy generic alias (REV2 plan §6.1):
+/// a project that mixed a `tight` build with a `natural` build used to leave
+/// stale/wrong-variant content sitting at the generic path, and any stage
+/// that consumed it via a silent fallback would ship a mixed-variant
+/// artifact graph without any error. Callers that need the file to exist
+/// call [`require_variant_artifact`] first for a clear, variant-named error
+/// instead of letting a missing file surface as an opaque read failure or,
+/// worse, resolve to a different variant's data.
 pub(crate) fn variant_plan_path(project_path: &Path, variant: &str) -> PathBuf {
-    variant_or_generic(
-        project_path,
-        &format!("edit/cut-plan-{variant}.json"),
-        "edit/cut-plan.json",
-    )
+    project_path.join(format!("edit/cut-plan-{variant}.json"))
 }
 
 pub(crate) fn variant_timeline_path(project_path: &Path, variant: &str) -> PathBuf {
-    variant_or_generic(
-        project_path,
-        &format!("edit/timeline-{variant}.json"),
-        "edit/timeline.json",
-    )
+    project_path.join(format!("edit/timeline-{variant}.json"))
 }
 
 pub(crate) fn variant_captions_path(project_path: &Path, variant: &str) -> PathBuf {
-    variant_or_generic(
-        project_path,
-        &format!("edit/captions-{variant}.srt"),
-        "edit/captions.srt",
-    )
+    project_path.join(format!("edit/captions-{variant}.srt"))
 }
 
 pub(crate) fn variant_reframe_path(project_path: &Path, variant: &str) -> PathBuf {
-    variant_or_generic(
-        project_path,
-        &format!("analysis/reframe/{variant}/reframe-plan.json"),
-        "analysis/reframe-plan.json",
-    )
+    project_path.join(format!("analysis/reframe/{variant}/reframe-plan.json"))
 }
 
 pub(crate) fn variant_finish_path(project_path: &Path, variant: &str) -> PathBuf {
-    variant_or_generic(
-        project_path,
-        &format!("finish/{variant}/finish-plan.json"),
-        "finish/finish-plan.json",
-    )
+    project_path.join(format!("finish/{variant}/finish-plan.json"))
+}
+
+/// Require a variant-scoped artifact to exist on disk before a variant-strict
+/// stage reads it. Fails with an error that names the variant, the stage,
+/// and the exact expected path — never a silent fallback to a different
+/// variant's file (REV2 plan §6.1/§13.2).
+pub(crate) fn require_variant_artifact(
+    project_path: &Path,
+    path: &Path,
+    variant: &str,
+    stage: &str,
+) -> Result<(), ProjectError> {
+    if path.is_file() {
+        Ok(())
+    } else {
+        Err(ProjectError::InvalidState(format!(
+            "{stage} requires the variant {variant} artifact {}; it does not exist \
+             (a different variant's artifact is never substituted for it)",
+            relative_artifact_path(project_path, path)
+        )))
+    }
 }
 
 /// The explicit working/output timebase (§6.6). A project-level

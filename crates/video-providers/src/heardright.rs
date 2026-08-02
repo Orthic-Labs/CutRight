@@ -94,8 +94,8 @@ pub enum ProviderError {
     Correlation { expected: String, actual: String },
     #[error("HeardRight engine exited unexpectedly (stderr: {stderr})")]
     UnexpectedExit { stderr: String },
-    #[error("WhisperX Python was not found; set CUTRIGHT_WHISPERX_PYTHON")]
-    WhisperXPythonMissing,
+    #[error("WhisperX Python interpreter was not found: {0}")]
+    WhisperXPythonMissing(String),
     #[error("WhisperX alignment script was not found; set CUTRIGHT_WHISPERX_SCRIPT")]
     WhisperXScriptMissing,
     #[error("WhisperX invocation failed: {0}")]

@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Minimum permissions CutRight Studio needs: its own review-shell commands (project pick/read/decisions/source-integrity), the folder-pick dialog behind `pick_project`, and window-geometry persistence. No filesystem/shell/network plugin access beyond what these grant.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "window-state:allow-restore-state",
+    "window-state:allow-save-window-state"
+  ]
+}

@@ -74,6 +74,17 @@ button {
   border: 0;
   cursor: pointer;
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 button:focus-visible,
 input:focus-visible {
   outline: 2px solid var(--focus);
@@ -533,17 +544,26 @@ mark {
 .transcript {
   padding: 0 16px;
 }
-.transcript p {
+/* Windowed word list (REV2 perf fix): a bounded, independently-scrollable
+   region so hooks/useWindowedChunks.ts has a real scrollTop/clientHeight to
+   window against, instead of the whole `.inspector` aside. */
+.transcript .word-list,
+.source-facts .word-list {
+  max-height: 55vh;
+  overflow-y: auto;
+}
+.transcript .word-list,
+.source-facts .word-list {
   font-size: 14px;
   line-height: 1.55;
 }
-.transcript p button {
+.word-chunk button {
   display: inline;
   padding: 0;
   color: var(--text);
   font-size: inherit;
 }
-.transcript p button.current {
+.word-chunk button.current {
   border-bottom: 2px solid var(--accent);
 }
 .transcript code,
@@ -702,8 +722,7 @@ mark {
     animation-duration: 0ms !important;
   }
 }
-.transcript p button,
-.source-transcript p button {
+.word-chunk button {
   margin-right: 4px;
 }
 

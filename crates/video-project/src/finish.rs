@@ -14,6 +14,7 @@ pub fn finish_validate(
 ) -> Result<PipelineArtifact, ProjectError> {
     let variant = resolve_variant(project_path, variant)?;
     let timeline_path = variant_timeline_path(project_path, &variant);
+    require_variant_artifact(project_path, &timeline_path, &variant, "finish.validate")?;
     let timeline: Timeline = read_json(&timeline_path)?;
     let manifest = read_project_manifest(&project_path.join("project.json"))?;
     if timeline
@@ -44,9 +45,9 @@ pub fn finish_validate(
                 "output_end_ms": timeline.tracks[0].segments.last().map(|segment| segment.output_end_ms).unwrap_or(0)
             })).collect::<Vec<_>>()
         });
+        // §6.1: variant-scoped path only — no generic `finish/finish-plan.json`
+        // alias that a stale cross-variant write could contaminate.
         write_json_atomic(&path, &plan)?;
-        // Compatibility alias for consumers not yet variant-aware.
-        write_json_atomic(&project_path.join("finish/finish-plan.json"), &plan)?;
         receipts::write_stage_receipt(
             &receipts::receipt_path_for(&path),
             "finish.validate",
@@ -73,7 +74,9 @@ pub fn render_slot(
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
     let variant = resolve_variant(project_path, None)?;
-    let finish: serde_json::Value = read_json(&variant_finish_path(project_path, &variant))?;
+    let finish_path = variant_finish_path(project_path, &variant);
+    require_variant_artifact(project_path, &finish_path, &variant, "finish.render_slot")?;
+    let finish: serde_json::Value = read_json(&finish_path)?;
     // Prefer the variant the finish plan was built from; fall back to resolution.
     let plan_variant = finish
         .get("variant")
@@ -145,7 +148,11 @@ mod tests {
     fn finish_validation_creates_one_delivery_slot_per_preset() {
         let temp = tempfile::tempdir().unwrap();
         init_project(temp.path(), false).unwrap();
-        write_json_atomic(&temp.path().join("edit/timeline.json"), &sample_timeline()).unwrap();
+        write_json_atomic(
+            &temp.path().join("edit/timeline-natural.json"),
+            &sample_timeline(),
+        )
+        .unwrap();
 
         let result = finish_validate(temp.path(), None, false).unwrap();
         assert_eq!(result.count, 1);

@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import type { Mode, Source } from "../types";
 
 export function CommandPalette({
@@ -17,8 +19,17 @@ export function CommandPalette({
   approve: () => void;
   reject: () => void;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useFocusTrap(true, ref);
   return (
-    <div className="dialog command-palette" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div
+      ref={ref}
+      className="dialog command-palette"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
+      tabIndex={-1}
+    >
       <div>
         <button aria-label="Close commands" onClick={close}>×</button>
         <h2>Commands</h2>

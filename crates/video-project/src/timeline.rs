@@ -14,6 +14,7 @@ pub fn validate_edit(
 ) -> Result<PipelineArtifact, ProjectError> {
     let variant = resolve_variant(project_path, variant)?;
     let plan_path = variant_plan_path(project_path, &variant);
+    require_variant_artifact(project_path, &plan_path, &variant, "edit.validate")?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
     let plan: CutPlan = read_json(&plan_path)?;
     let mut durations = std::collections::HashMap::new();
@@ -78,6 +79,7 @@ pub fn compile_timeline(
     validate_variant(variant)?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
     let cut_plan_path = project_path.join(format!("edit/cut-plan-{variant}.json"));
+    require_variant_artifact(project_path, &cut_plan_path, variant, "edit.timeline")?;
     let plan: CutPlan = read_json(&cut_plan_path)?;
     // Carry the explicit working/output timebase onto the timeline (§6.6) rather
     // than silently inheriting the first source's rate.
@@ -109,10 +111,12 @@ pub fn compile_timeline(
     };
     let path = project_path.join(format!("edit/timeline-{variant}.json"));
     if !dry_run {
+        // §6.1: variant-scoped path only — no generic `edit/timeline.json`
+        // alias. That alias used to be overwritten on every call regardless
+        // of variant, so building `tight` then `natural` left the generic
+        // file holding `natural`'s timeline even for a downstream stage
+        // still working against `tight`.
         write_json_atomic(&path, &timeline)?;
-        // Compatibility alias for consumers not yet variant-aware. It is written
-        // from this named variant only, never from implicit last-command state.
-        write_json_atomic(&project_path.join("edit/timeline.json"), &timeline)?;
         receipts::write_stage_receipt(
             &receipts::receipt_path_for(&path),
             "edit.timeline",
@@ -138,7 +142,7 @@ mod tests {
     use video_core::{CutSegment, Timebase};
 
     #[test]
-    fn compile_timeline_is_variant_scoped_with_a_compat_alias() {
+    fn compile_timeline_is_variant_scoped_and_writes_no_generic_alias() {
         let temp = tempfile::tempdir().unwrap();
         init_project(temp.path(), false).unwrap();
         write_json_atomic(
@@ -191,20 +195,21 @@ mod tests {
 
         let tight = compile_timeline(temp.path(), "tight", false).unwrap();
         assert_eq!(tight.path, temp.path().join("edit/timeline-tight.json"));
+        let tight_bytes_before = fs::read(&tight.path).unwrap();
         let tight_timeline: Timeline = read_json(&tight.path).unwrap();
         assert_eq!(tight_timeline.tracks[0].segments.len(), 3);
-        // The generic alias mirrors the variant just compiled.
-        let alias: Timeline = read_json(&temp.path().join("edit/timeline.json")).unwrap();
-        assert_eq!(alias.tracks[0].segments.len(), 3);
+        // §6.1: no generic `edit/timeline.json` alias is written.
+        assert!(!temp.path().join("edit/timeline.json").is_file());
 
         compile_timeline(temp.path(), "natural", false).unwrap();
         let natural_timeline: Timeline =
             read_json(&temp.path().join("edit/timeline-natural.json")).unwrap();
         assert_eq!(natural_timeline.tracks[0].segments.len(), 2);
-        // The canonical tight timeline is untouched by compiling natural.
-        let tight_again: Timeline =
-            read_json(&temp.path().join("edit/timeline-tight.json")).unwrap();
-        assert_eq!(tight_again.tracks[0].segments.len(), 3);
+        // The canonical tight timeline is byte-identical after compiling
+        // natural — building one variant must never mutate another's state.
+        let tight_bytes_after = fs::read(&tight.path).unwrap();
+        assert_eq!(tight_bytes_before, tight_bytes_after);
+        assert!(!temp.path().join("edit/timeline.json").is_file());
     }
 
     #[test]
@@ -254,7 +259,7 @@ mod tests {
                 },
             ],
         };
-        write_json_atomic(&temp.path().join("edit/cut-plan.json"), &reordered).unwrap();
+        write_json_atomic(&temp.path().join("edit/cut-plan-natural.json"), &reordered).unwrap();
         let result = validate_edit(temp.path(), None).unwrap();
         assert_eq!(result.status, "valid");
         assert_eq!(result.count, 2);
@@ -282,7 +287,11 @@ mod tests {
                 },
             ],
         };
-        write_json_atomic(&temp.path().join("edit/cut-plan.json"), &overlapping).unwrap();
+        write_json_atomic(
+            &temp.path().join("edit/cut-plan-natural.json"),
+            &overlapping,
+        )
+        .unwrap();
         assert!(validate_edit(temp.path(), None).is_err());
     }
 

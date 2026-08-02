@@ -269,29 +269,35 @@ pub fn run_process(
     let (stderr_handle, stderr_buffer) = spawn_reader(stderr, spec.stderr_cap_bytes);
 
     let poll_interval = Duration::from_millis(20);
+    // Every exit path — success, cancellation, timeout, wait failure — falls
+    // out of this loop rather than returning from inside it, so the reader
+    // threads are always joined below. Returning early from the kill paths
+    // let `run_process` outlive its own readers: a panic in one was silently
+    // dropped, and the child's pipes could still be draining as we returned.
     let outcome_status = loop {
         if cancel.is_cancelled() {
             kill_tree(&mut child);
-            return Err(ProcessRunError::Cancelled(label));
+            break Err(ProcessRunError::Cancelled(label.clone()));
         }
         match child.try_wait() {
-            Ok(Some(status)) => break status,
+            Ok(Some(status)) => break Ok(status),
             Ok(None) => {
                 if start.elapsed() >= spec.timeout {
                     kill_tree(&mut child);
-                    return Err(ProcessRunError::Timeout(label, spec.timeout));
+                    break Err(ProcessRunError::Timeout(label.clone(), spec.timeout));
                 }
                 thread::sleep(poll_interval);
             }
             Err(error) => {
                 kill_tree(&mut child);
-                return Err(ProcessRunError::Spawn(label, error));
+                break Err(ProcessRunError::Spawn(label.clone(), error));
             }
         }
     };
 
     let _ = stdout_handle.join();
     let _ = stderr_handle.join();
+    let outcome_status = outcome_status?;
     let (stdout_bytes, stdout_truncated) = Arc::try_unwrap(stdout_buffer)
         .map(|m| m.into_inner().expect("stdout buffer mutex").into_parts())
         .unwrap_or_default_parts();

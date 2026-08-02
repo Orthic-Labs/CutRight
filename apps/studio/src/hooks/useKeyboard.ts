@@ -20,7 +20,7 @@ export function useKeyboard({
   setSourceIndex,
   sourceCount,
   reload,
-  playhead,
+  playheadRef,
   seek,
   togglePlayback,
   pause,
@@ -42,7 +42,12 @@ export function useKeyboard({
   setSourceIndex: (value: number) => void;
   sourceCount: number;
   reload: () => void;
-  playhead: number;
+  // A ref, not the committed `playhead` state — that state now only
+  // updates coarsely (see usePlayback), so reading it here would nudge
+  // J/K/L/,/. from a stale baseline during playback. This effect
+  // re-subscribes on every render anyway (no dep array), so the ref buys
+  // freshness without needing a callback-getter.
+  playheadRef: { current: number };
   seek: (ms: number) => void;
   togglePlayback: () => void;
   pause: () => void;
@@ -98,7 +103,7 @@ export function useKeyboard({
         event.preventDefault();
         togglePlayback();
       }
-      if (event.key.toLowerCase() === "j") seek(playhead - 2000);
+      if (event.key.toLowerCase() === "j") seek(playheadRef.current - 2000);
       if (event.key.toLowerCase() === "k") pause();
       if (event.key.toLowerCase() === "l") playOrIncreaseRate();
       if (event.key.toLowerCase() === "a" && mode === "compare") swap();
@@ -118,8 +123,8 @@ export function useKeyboard({
         event.shiftKey ? seekSegment(1) : seekWord(1);
       if (event.key === "ArrowLeft")
         event.shiftKey ? seekSegment(-1) : seekWord(-1);
-      if (event.key === ",") seek(playhead - frameDuration());
-      if (event.key === ".") seek(playhead + frameDuration());
+      if (event.key === ",") seek(playheadRef.current - frameDuration());
+      if (event.key === ".") seek(playheadRef.current + frameDuration());
     };
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);

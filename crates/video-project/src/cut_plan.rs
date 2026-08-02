@@ -114,20 +114,17 @@ pub fn build_cut_plan(
         ));
     }
     let path = project_path.join(format!("edit/cut-plan-{variant}.json"));
+    let segment_count = segments.len();
     if !dry_run {
+        // §6.1: the variant-scoped path is the ONLY authority. A generic
+        // `edit/cut-plan.json` alias used to be overwritten here on every
+        // build regardless of which variant produced it, so building
+        // `tight` then `natural` left the generic file holding whichever
+        // variant ran last — and any stage reading it via a silent fallback
+        // would silently mix variants. There is no in-crate reader of a
+        // generic alias left, so none is written.
         write_json_atomic(
             &path,
-            &CutPlan {
-                schema_version: SCHEMA_VERSION,
-                variant: variant.into(),
-                gap_threshold_ms,
-                head_margin_ms,
-                tail_margin_ms,
-                segments: segments.clone(),
-            },
-        )?;
-        write_json_atomic(
-            &project_path.join("edit/cut-plan.json"),
             &CutPlan {
                 schema_version: SCHEMA_VERSION,
                 variant: variant.into(),
@@ -161,13 +158,7 @@ pub fn build_cut_plan(
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
         path,
-        count: if dry_run {
-            0
-        } else {
-            read_json::<CutPlan>(&project_path.join("edit/cut-plan.json"))?
-                .segments
-                .len()
-        },
+        count: if dry_run { 0 } else { segment_count },
     })
 }
 
@@ -240,6 +231,7 @@ fn candidate_chunks(
 mod tests {
     use super::*;
     use crate::init_project;
+    use std::fs;
     use video_core::models::SourceEntry;
     use video_core::{Candidate, Transcript};
 
@@ -385,5 +377,100 @@ mod tests {
         assert_eq!(natural.segments.len(), 1);
         assert_eq!(tight.gap_threshold_ms, 220);
         assert_eq!(natural.gap_threshold_ms, 400);
+    }
+
+    /// REV2 plan §6.1 regression: building `natural` after `tight` must
+    /// leave `tight`'s cut plan byte-for-byte unchanged. Before the fix,
+    /// `build_cut_plan` additionally overwrote a shared generic
+    /// `edit/cut-plan.json` on every call regardless of variant, so a
+    /// downstream consumer that fell back to the generic alias when its own
+    /// variant-scoped file was absent could pick up the OTHER variant's
+    /// plan. The variant-scoped file itself was always correct, so this
+    /// test targets the exact generic-alias write that made the fallback
+    /// dangerous: `edit/cut-plan-tight.json` must be identical before and
+    /// after `natural` is built, and no `edit/cut-plan.json` may exist.
+    #[test]
+    fn building_natural_after_tight_leaves_tight_byte_identical_and_writes_no_generic_alias() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        write_json_atomic(
+            &temp.path().join("sources/manifest.json"),
+            &SourceManifest {
+                schema_version: SCHEMA_VERSION,
+                sources: vec![SourceEntry {
+                    source_id: "source-a".into(),
+                    path: "sources/source-a.mov".into(),
+                    blake3: "fixture".into(),
+                    duration_ms: Some(10_000),
+                    width: Some(1920),
+                    height: Some(1080),
+                    rotation_degrees: Some(0),
+                    is_hdr: Some(false),
+                    timebase: None,
+                }],
+            },
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("analysis/vad-source-a.json"),
+            &VadSignal {
+                schema_version: SCHEMA_VERSION,
+                source_id: "source-a".into(),
+                sample_rate: 16_000,
+                provider: "heardright-silero".into(),
+                regions: vec![video_core::VadRegion {
+                    start_ms: 0,
+                    end_ms: 500,
+                    mean_probability: 0.9,
+                }],
+            },
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("analysis/transcripts/source-a.json"),
+            &Transcript {
+                schema_version: SCHEMA_VERSION,
+                provider: "fixture".into(),
+                source_id: "source-a".into(),
+                language: "en".into(),
+                words: vec![word(0, 100), word(400, 500)],
+                events: Vec::new(),
+            },
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("edit/candidates.json"),
+            &CandidateManifest {
+                schema_version: SCHEMA_VERSION,
+                candidates: vec![Candidate {
+                    id: "candidate-1".into(),
+                    source_id: "source-a".into(),
+                    start_ms: 0,
+                    end_ms: 500,
+                    text: "two words".into(),
+                    beat_label: "hook".into(),
+                    take_rank: 1,
+                    drop_reason: None,
+                    filler_count: 0,
+                }],
+            },
+        )
+        .unwrap();
+
+        build_cut_plan(temp.path(), "tight", false).unwrap();
+        let tight_path = temp.path().join("edit/cut-plan-tight.json");
+        let tight_bytes_before = fs::read(&tight_path).unwrap();
+
+        build_cut_plan(temp.path(), "natural", false).unwrap();
+
+        let tight_bytes_after = fs::read(&tight_path).unwrap();
+        assert_eq!(
+            tight_bytes_before, tight_bytes_after,
+            "building natural must not mutate tight's cut plan"
+        );
+        assert!(
+            !temp.path().join("edit/cut-plan.json").is_file(),
+            "no generic edit/cut-plan.json alias should be written"
+        );
     }
 }

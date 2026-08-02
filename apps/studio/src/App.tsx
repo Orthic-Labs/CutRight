@@ -1,26 +1,27 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { swapTarget } from "./word-lock";
 import { cutMarkers } from "./cut-markers";
-import { REASONS } from "./contracts/review";
+import { selectLedgerView } from "./decision-selectors";
 import { useProject } from "./hooks/useProject";
 import { usePlayback } from "./hooks/usePlayback";
 import { useReviewLedger } from "./hooks/useReviewLedger";
 import { useKeyboard } from "./hooks/useKeyboard";
 import { Empty } from "./components/Empty";
-import { Reason } from "./components/Reason";
 import { Transcript } from "./components/Transcript";
 import { SourceFacts } from "./components/SourceFacts";
 import { SourceIntegrityPanel } from "./components/SourceIntegrityPanel";
 import { DecisionsLedger } from "./components/DecisionsLedger";
 import { Help } from "./components/Help";
 import { CommandPalette } from "./components/CommandPalette";
+import { TitleBar } from "./components/TitleBar";
+import { SourcesRail } from "./components/SourcesRail";
+import { VerdictPanel } from "./components/VerdictPanel";
+import { StatusStrip } from "./components/StatusStrip";
 import { SourcesMode } from "./modes/SourcesMode";
 import { CompareMode } from "./modes/CompareMode";
 import { FinalsMode } from "./modes/FinalsMode";
 import { QaMode } from "./modes/QaMode";
-import { artifactIssue } from "./types";
 import type { Mode } from "./types";
-import { tc } from "./lib/api";
 
 export function App() {
   const [help, setHelp] = useState(false);
@@ -64,6 +65,7 @@ export function App() {
   const {
     playhead,
     setPlayhead,
+    playheadRef,
     playing,
     setPlaying,
     videoRefs,
@@ -82,7 +84,7 @@ export function App() {
     mode,
     variant,
     cursor,
-    playhead,
+    playheadRef,
     activeVariant,
     setError,
   });
@@ -126,7 +128,7 @@ export function App() {
     const target = swapTarget(
       words[variant] ?? [],
       words[other] ?? [],
-      playhead,
+      playheadRef.current,
     );
     if (target.refused) {
       setError(`${other} has no content`);
@@ -165,7 +167,7 @@ export function App() {
     reload: () => {
       if (snapshot) void load(snapshot.project_path);
     },
-    playhead,
+    playheadRef,
     seek,
     togglePlayback,
     pause,
@@ -176,122 +178,40 @@ export function App() {
     frameDuration,
   });
 
+  // Perf fix (REV2 audit): a reversed-copy `.find()` plus two separate
+  // `.filter()` passes over `decisions` used to run on every render.
+  // Collapsed into one selector, memoized on the inputs that actually
+  // change it. See decision-selectors.ts.
+  const { latest, flaggedRecords, staleCount } = useMemo(
+    () => selectLedgerView(decisions, mode, variant, finalPreset),
+    [decisions, mode, variant, finalPreset],
+  );
+
   if (!snapshot) return <Empty onOpen={() => load()} error={error} />;
-  const latest = [...decisions]
-    .reverse()
-    .find(
-      (decision) =>
-        (mode === "compare" &&
-          decision.kind === "variant_verdict" &&
-          decision.variant === variant) ||
-        (mode === "finals" &&
-          decision.kind === "final_verdict" &&
-          decision.preset === finalPreset),
-    );
   const qaAcknowledged = decisions.some(
     (decision) => decision.kind === "qa_ack",
   );
   const benchProvisional =
     !snapshot.bench?.decision || snapshot.bench.decision === "unresolved";
-  const flaggedRecords = decisions.filter(
-    (decision) => decision.status && decision.status !== "current",
-  );
-  const staleCount = decisions.filter(
-    (decision) =>
-      decision.status === "stale_artifact" ||
-      decision.status === "missing_artifact",
-  ).length;
   return (
     <main className="studio" aria-label="CutRight Studio">
-      <header className="titlebar" data-tauri-drag-region>
-        <div className="wordmark">
-          Cut<span>Right</span>
-        </div>
-        <div className="project-title">
-          {snapshot.manifest.title ??
-            snapshot.manifest.project_id ??
-            "Untitled"}
-          <small>.video-project</small>
-        </div>
-        <div className="title-actions">
-          <button
-            aria-label="Toggle theme"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? "☼" : "◐"}
-          </button>
-          <button aria-label="Keyboard shortcuts" onClick={() => setHelp(true)}>
-            ?
-          </button>
-        </div>
-      </header>
+      <TitleBar
+        title={
+          snapshot.manifest.title ?? snapshot.manifest.project_id ?? "Untitled"
+        }
+        theme={theme}
+        onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
+        onHelp={() => setHelp(true)}
+      />
       <div className="shell">
-        <aside className="ledger">
-          <div className="rail-head">
-            <b>SOURCES</b>
-            <span>{snapshot.sources.length}</span>
-          </div>
-          {snapshot.sources.map((source, i) => (
-            <button
-              key={source.source_id}
-              className={`source-row ${i === sourceIndex ? "selected" : ""} ${source.file_present === false ? "missing" : ""}`}
-              aria-selected={i === sourceIndex}
-              onClick={() => {
-                setSourceIndex(i);
-                setMode("sources");
-              }}
-            >
-              <span className="poster">▣</span>
-              <span className="source-copy">
-                <strong>{source.display_name ?? source.source_id}</strong>
-                <small>
-                  {tc(source.duration_ms)} ·{" "}
-                  {source.width ? `${source.width}×${source.height}` : "—"}
-                </small>
-                <i>
-                  {[
-                    "ingested",
-                    "transcribed",
-                    "analyzed",
-                    "in_candidates",
-                    "in_cut",
-                  ].map((key) => (
-                    <em
-                      title={key}
-                      className={source.stages?.[key] ? "on" : ""}
-                      key={key}
-                    />
-                  ))}{" "}
-                  {source.is_hdr && <mark>HDR</mark>}
-                  {source.integrity && !source.integrity.granted && (
-                    <mark
-                      className="warn"
-                      title={source.integrity.error ?? "not granted for playback"}
-                    >
-                      BLOCKED
-                    </mark>
-                  )}
-                  {source.integrity?.granted && !source.integrity.verified && (
-                    <mark
-                      className="warn"
-                      title="current bytes do not match the registered hash"
-                    >
-                      UNVERIFIED
-                    </mark>
-                  )}
-                </i>
-              </span>
-            </button>
-          ))}
-          <footer>
-            {tc(
-              snapshot.sources.reduce(
-                (sum, item) => sum + (item.duration_ms ?? 0),
-                0,
-              ),
-            )}
-          </footer>
-        </aside>
+        <SourcesRail
+          sources={snapshot.sources}
+          sourceIndex={sourceIndex}
+          onSelect={(index) => {
+            setSourceIndex(index);
+            setMode("sources");
+          }}
+        />
         <section className="viewer">
           <nav className="modes" aria-label="Viewer modes">
             {(["sources", "compare", "finals", "qa"] as Mode[]).map((item) => (
@@ -329,6 +249,7 @@ export function App() {
               playing={playing}
               onPlaying={setPlaying}
               playhead={playhead}
+              playheadRef={playheadRef}
               onSeek={seek}
               markers={cutMarkers(undefined, sourceWords)}
             />
@@ -375,50 +296,20 @@ export function App() {
             />
           )}
           {(mode === "compare" || mode === "finals") && (
-            <div className="verdict">
-              <div>
-                {flagging && mode === "compare" ? (
-                  <Reason
-                    kind="rejected"
-                    title="Flag segment because"
-                    reasons={REASONS.segment}
-                    note={note}
-                    setNote={setNote}
-                    commit={commitSegment}
-                    onCancel={() => setFlagging(false)}
-                  />
-                ) : latest ? (
-                  <span className={`badge ${latest.verdict}`}>
-                    {latest.verdict === "approved" ? "✓" : "✕"} {latest.verdict}{" "}
-                    · {latest.reason}
-                  </span>
-                ) : reasonKind ? (
-                  <Reason
-                    kind={reasonKind}
-                    reasons={REASONS[mode]}
-                    note={note}
-                    setNote={setNote}
-                    commit={commit}
-                    onCancel={() => setReasonKind(null)}
-                  />
-                ) : (
-                  <>
-                    <button
-                      className="approve"
-                      onClick={() => setReasonKind("approved")}
-                    >
-                      ✓ Approve
-                    </button>
-                    <button
-                      className="reject"
-                      onClick={() => setReasonKind("rejected")}
-                    >
-                      ✕ Reject
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
+            <VerdictPanel
+              mode={mode}
+              flagging={flagging}
+              note={note}
+              setNote={setNote}
+              commitSegment={commitSegment}
+              onCancelFlag={() => setFlagging(false)}
+              latest={latest}
+              reasonKind={reasonKind}
+              commit={commit}
+              onCancelReason={() => setReasonKind(null)}
+              onApprove={() => setReasonKind("approved")}
+              onReject={() => setReasonKind("rejected")}
+            />
           )}
         </section>
         <aside className="inspector">
@@ -449,47 +340,22 @@ export function App() {
           )}
         </aside>
       </div>
-      <footer className="status-strip">
-        <span>
-          pipeline {Object.values(snapshot.stages).filter(Boolean).length}/
-          {Object.keys(snapshot.stages).length}
-        </span>
-        <span className={benchProvisional ? "warn" : "good"}>
-          ● bench: {snapshot.bench?.decision ?? "unavailable"}
-        </span>
-        <span className={snapshot.qa?.status === "pass" ? "good" : "warn"}>
-          ● QA: {snapshot.qa?.status ?? "pending"}
-        </span>
-        {artifactIssue(snapshot.qa_artifact) && (
-          <span className="warn" title={artifactIssue(snapshot.qa_artifact) ?? ""}>
-            ⚠ QA report {artifactIssue(snapshot.qa_artifact)}
-          </span>
-        )}
-        {artifactIssue(snapshot.bench_artifact) && (
-          <span className="warn" title={artifactIssue(snapshot.bench_artifact) ?? ""}>
-            ⚠ bench report {artifactIssue(snapshot.bench_artifact)}
-          </span>
-        )}
-        {artifactIssue(activeVariant?.cut_plan_artifact) && (
-          <span
-            className="warn"
-            title={artifactIssue(activeVariant?.cut_plan_artifact) ?? ""}
-          >
-            ⚠ cut plan {artifactIssue(activeVariant?.cut_plan_artifact)}
-          </span>
-        )}
-        <button
-          className="strip-toggle"
-          aria-expanded={ledgerOpen}
-          onClick={() => setLedgerOpen((open) => !open)}
-        >
-          decisions: session {sessionCount} · total {decisions.length}
-          {staleCount > 0 && ` · ${staleCount} stale`}
-          {malformedLines.length > 0 &&
-            ` · ${malformedLines.length} malformed`}
-        </button>
-        <button onClick={() => load(snapshot.project_path)}>Refresh</button>
-      </footer>
+      <StatusStrip
+        stages={snapshot.stages}
+        bench={snapshot.bench}
+        benchProvisional={benchProvisional}
+        qa={snapshot.qa}
+        qaArtifact={snapshot.qa_artifact}
+        benchArtifact={snapshot.bench_artifact}
+        cutPlanArtifact={activeVariant?.cut_plan_artifact}
+        ledgerOpen={ledgerOpen}
+        onToggleLedger={() => setLedgerOpen((open) => !open)}
+        sessionCount={sessionCount}
+        totalDecisions={decisions.length}
+        staleCount={staleCount}
+        malformedCount={malformedLines.length}
+        onRefresh={() => load(snapshot.project_path)}
+      />
       {ledgerOpen && (
         <DecisionsLedger
           flagged={flaggedRecords}

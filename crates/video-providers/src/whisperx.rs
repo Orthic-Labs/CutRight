@@ -17,11 +17,12 @@ use video_core::{Transcript, Word, SCHEMA_VERSION};
 use crate::heardright::ProviderError;
 use video_core::process_runner::{CancellationToken, ProcessSpec, TempFileGuard};
 
-/// Fallback WhisperX interpreter. WhisperX is the optional alignment
-/// verifier and is intentionally the only provider that still carries a
-/// workspace-local default path; it is not part of the HeardRight
-/// local-audio boundary.
-const DEFAULT_WHISPERX_PYTHON: &str = "/Volumes/D/claude/cutright/.venv-whisperx/bin/python";
+/// Project-local venv-relative interpreter path, tried only relative to
+/// this crate's own manifest directory (never an absolute developer path;
+/// §9.3). This lets a `.venv-whisperx` checked out next to the workspace
+/// resolve without any environment configuration, on any machine.
+const PROJECT_VENV_PYTHON_UNIX: &str = "../../.venv-whisperx/bin/python";
+const PROJECT_VENV_PYTHON_WINDOWS: &str = "../../.venv-whisperx/Scripts/python.exe";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(600);
 const OUTPUT_CAP_BYTES: usize = 16 * 1024 * 1024;
 
@@ -39,14 +40,81 @@ struct WhisperXWord {
     w: String,
 }
 
+/// Resolve the WhisperX Python interpreter (§9.3).
+///
+/// Discovery order:
+/// 1. explicit `CUTRIGHT_WHISPERX_PYTHON` override — if set, it must point
+///    at an existing file, or discovery fails immediately naming that path;
+/// 2. a project-local `.venv-whisperx` resolved *relative to this crate's
+///    own manifest directory* (workspace-root/.venv-whisperx), never an
+///    absolute developer path — this is what lets a checked-out venv work
+///    with zero configuration on any machine, including this one;
+/// 3. `python3`, then `python`, resolved on `PATH`;
+/// 4. a clear [`ProviderError::WhisperXPythonMissing`] naming every
+///    location that was checked.
+///
+/// WhisperX is the optional alignment verifier: an unavailable result here
+/// is a normal, expected outcome (never a panic), and callers treat it as
+/// "verifier unavailable" rather than a hard failure.
+fn discover_python() -> Result<PathBuf, ProviderError> {
+    if let Some(path) = env::var_os("CUTRIGHT_WHISPERX_PYTHON") {
+        let path = PathBuf::from(path);
+        if path.is_file() {
+            return Ok(path);
+        }
+        return Err(ProviderError::WhisperXPythonMissing(format!(
+            "CUTRIGHT_WHISPERX_PYTHON={} does not exist",
+            path.display()
+        )));
+    }
+
+    let project_venv_rel = if cfg!(windows) {
+        PROJECT_VENV_PYTHON_WINDOWS
+    } else {
+        PROJECT_VENV_PYTHON_UNIX
+    };
+    let project_venv = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(project_venv_rel);
+    if project_venv.is_file() {
+        return Ok(project_venv);
+    }
+
+    for candidate in ["python3", "python"] {
+        if let Some(found) = resolve_on_path(candidate) {
+            return Ok(found);
+        }
+    }
+
+    Err(ProviderError::WhisperXPythonMissing(format!(
+        "checked CUTRIGHT_WHISPERX_PYTHON (unset), {} (project-local venv), \
+         and python3/python on PATH",
+        project_venv.display()
+    )))
+}
+
+/// Search `PATH` for an executable file named `name`, without shelling out
+/// to `which`/`where`. This is the same style of PATH search the OS itself
+/// performs at spawn time, done ahead of time only so a missing interpreter
+/// can be reported as a clear discovery failure instead of a spawn error.
+fn resolve_on_path(name: &str) -> Option<PathBuf> {
+    let path_var = env::var_os("PATH")?;
+    for dir in env::split_paths(&path_var) {
+        let candidate = dir.join(name);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+        if cfg!(windows) {
+            let candidate_exe = dir.join(format!("{name}.exe"));
+            if candidate_exe.is_file() {
+                return Some(candidate_exe);
+            }
+        }
+    }
+    None
+}
+
 impl WhisperXProvider {
     pub fn discover() -> Result<Self, ProviderError> {
-        let python = env::var_os("CUTRIGHT_WHISPERX_PYTHON")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from(DEFAULT_WHISPERX_PYTHON));
-        if !python.is_file() {
-            return Err(ProviderError::WhisperXPythonMissing);
-        }
+        let python = discover_python()?;
         let script = env::var_os("CUTRIGHT_WHISPERX_SCRIPT")
             .map(PathBuf::from)
             .unwrap_or_else(|| {
@@ -217,5 +285,85 @@ impl TranscriptionProvider for WhisperXProvider {
                 },
             }
         })
+    }
+}
+
+#[cfg(test)]
+mod discovery_tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    // `discover_python` reads process-global environment variables; guard
+    // every test that touches them so parallel test threads cannot
+    // interleave sets/clears.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn clear_env() {
+        env::remove_var("CUTRIGHT_WHISPERX_PYTHON");
+    }
+
+    /// §9.3: no absolute developer path (this machine's or anyone else's)
+    /// may ship as a fallback default. Read this crate's own source and
+    /// assert the literal is gone, rather than trusting the const's name.
+    #[test]
+    fn no_hardcoded_developer_path_in_source() {
+        let source = fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/whisperx.rs"))
+            .expect("read whisperx.rs source");
+        // Built from fragments so this assertion's own text never contains
+        // the literal it is checking for.
+        let volumes_prefix = format!("{}{}", "/Vol", "umes/");
+        assert!(
+            !source.contains(&volumes_prefix),
+            "whisperx.rs must not contain an absolute developer path"
+        );
+        let old_default = format!("{}{}", "/claude/cutright/", ".venv-whisperx");
+        assert!(
+            !source.contains(&old_default),
+            "whisperx.rs must not contain a hard-coded developer-machine venv path"
+        );
+    }
+
+    /// `CUTRIGHT_WHISPERX_PYTHON` must win over every other discovery step,
+    /// including when it points somewhere neither the project-local venv
+    /// nor `PATH` would ever resolve to.
+    #[test]
+    fn env_override_wins_when_set_to_a_real_file() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_env();
+        let dir = std::env::temp_dir().join(format!("cutright-wx-discover-{}", std::process::id()));
+        fs::create_dir_all(&dir).expect("create temp dir");
+        let fake_python = dir.join("fake-python-override");
+        fs::write(&fake_python, "#!/bin/sh\n").expect("write fake python");
+
+        env::set_var("CUTRIGHT_WHISPERX_PYTHON", &fake_python);
+        let resolved = discover_python().expect("env override must resolve");
+        assert_eq!(resolved, fake_python);
+
+        clear_env();
+        fs::remove_dir_all(&dir).expect("cleanup");
+    }
+
+    /// A `CUTRIGHT_WHISPERX_PYTHON` pointing at a nonexistent file must
+    /// fail discovery immediately and name the path it checked — it must
+    /// never silently fall through to the project venv or PATH.
+    #[test]
+    fn env_override_pointing_nowhere_fails_clearly() {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        clear_env();
+        env::set_var(
+            "CUTRIGHT_WHISPERX_PYTHON",
+            "/nonexistent/cutright-whisperx-test-path/python",
+        );
+        let error = discover_python().expect_err("nonexistent override must fail");
+        match error {
+            ProviderError::WhisperXPythonMissing(message) => {
+                assert!(
+                    message.contains("/nonexistent/cutright-whisperx-test-path/python"),
+                    "message: {message}"
+                );
+            }
+            other => panic!("expected WhisperXPythonMissing, got {other:?}"),
+        }
+        clear_env();
     }
 }

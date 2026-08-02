@@ -47,7 +47,15 @@ pub fn render_final(
             "final rendering requires the selected rough cut: render/rough-cuts/{variant}.mp4"
         )));
     }
+    // §6.1/§13.2: every artifact this final binds is resolved for THIS
+    // variant and checked explicitly, unconditionally (dry-run included) —
+    // the same pattern already applied to the rough cut above. A missing
+    // variant artifact is a clear, variant-named error, never a silent
+    // fallback to a different variant's captions or timeline.
     let captions = variant_captions_path(project_path, &variant);
+    require_variant_artifact(project_path, &captions, &variant, "render.final")?;
+    let timeline_path = variant_timeline_path(project_path, &variant);
+    require_variant_artifact(project_path, &timeline_path, &variant, "render.final")?;
     let output = project_path.join(format!("render/finals/{preset}.mp4"));
     let reframe_anchors = if output_preset.aspect == "9:16" {
         Some(load_approved_reframe_anchors(project_path, &variant)?)
@@ -83,6 +91,7 @@ pub fn render_final(
                 output_preset,
                 input: &input,
                 captions: &captions,
+                timeline_path: &timeline_path,
                 output: &output,
                 reframed: reframe_anchors.is_some(),
             },
@@ -127,6 +136,7 @@ struct FinalProvenanceInput<'a> {
     output_preset: &'a OutputPreset,
     input: &'a Path,
     captions: &'a Path,
+    timeline_path: &'a Path,
     output: &'a Path,
     reframed: bool,
 }
@@ -146,10 +156,10 @@ fn write_final_provenance(
         output_preset,
         input,
         captions,
+        timeline_path,
         output,
         reframed,
     } = args;
-    let timeline_path = variant_timeline_path(project_path, variant);
     let mut provenance = serde_json::json!({
         "schema_version": SCHEMA_VERSION,
         "preset": preset,
@@ -161,8 +171,8 @@ fn write_final_provenance(
         "rough_cut_hash": format!("blake3:{}", hash_file(input)?),
         "captions_path": relative_artifact_path(project_path, captions),
         "captions_hash": format!("blake3:{}", hash_file(captions)?),
-        "timeline_path": relative_artifact_path(project_path, &timeline_path),
-        "timeline_hash": format!("blake3:{}", hash_file(&timeline_path)?),
+        "timeline_path": relative_artifact_path(project_path, timeline_path),
+        "timeline_hash": format!("blake3:{}", hash_file(timeline_path)?),
         "output_path": relative_artifact_path(project_path, output),
         "output_hash": format!("blake3:{}", hash_file(output)?),
         "created_at": Utc::now(),
@@ -237,16 +247,38 @@ mod tests {
     use crate::{init_project, select_variant};
     use std::fs;
 
+    /// Fakes the variant-scoped rough cut, captions, and timeline artifacts
+    /// `render_final` requires for `variant` (media-tool-free: dry-run never
+    /// shells out to ffmpeg, but the artifact-existence checks now run
+    /// unconditionally, so they must be present even for a dry run).
+    fn fake_variant_artifacts(project_path: &Path, variant: &str) {
+        fs::write(
+            project_path.join(format!("render/rough-cuts/{variant}.mp4")),
+            variant.as_bytes(),
+        )
+        .unwrap();
+        fs::write(
+            project_path.join(format!("edit/captions-{variant}.srt")),
+            b"1\n00:00:00,000 --> 00:00:01,000\nfixture\n\n",
+        )
+        .unwrap();
+        write_json_atomic(
+            &project_path.join(format!("edit/timeline-{variant}.json")),
+            &serde_json::json!({
+                "schema_version": SCHEMA_VERSION,
+                "timebase": { "fps_num": 30, "fps_den": 1 },
+                "tracks": [{ "id": "main", "track_type": "av", "segments": [] }]
+            }),
+        )
+        .unwrap();
+    }
+
     #[test]
     fn render_final_resolves_selected_variant_and_falls_back_to_natural() {
         let temp = tempfile::tempdir().unwrap();
         init_project(temp.path(), false).unwrap();
-        fs::write(
-            temp.path().join("render/rough-cuts/natural.mp4"),
-            b"natural",
-        )
-        .unwrap();
-        fs::write(temp.path().join("render/rough-cuts/tight.mp4"), b"tight").unwrap();
+        fake_variant_artifacts(temp.path(), "natural");
+        fake_variant_artifacts(temp.path(), "tight");
 
         // No selection -> resolves natural -> dry-run ok (youtube is 16:9).
         let ok = render_final(temp.path(), "youtube", None, true).unwrap();
@@ -264,5 +296,160 @@ mod tests {
         // Removing the selection falls back to natural.
         fs::remove_file(temp.path().join("feedback/variant-selection.json")).unwrap();
         assert!(render_final(temp.path(), "youtube", None, true).is_ok());
+    }
+
+    /// REV2 plan §6.1 regression — the P0 bug this fix closes: render
+    /// `tight` fully (its own rough cut, captions, timeline), never build
+    /// `natural`'s captions/timeline, then resolve a final for `natural`
+    /// (the default when nothing is explicitly selected). Before the fix,
+    /// `variant_captions_path`/`variant_timeline_path` silently fell back to
+    /// a shared generic alias that `tight`'s own build had just overwritten
+    /// — so this call would succeed and quietly bind `tight`'s captions and
+    /// timeline into a final whose provenance claimed `"variant": "natural"`.
+    /// It must ERROR instead, naming the missing variant, even though
+    /// `natural`'s own rough cut exists (proving the failure is specifically
+    /// about captions/timeline resolution, not the earlier rough-cut check).
+    #[test]
+    fn render_final_errors_instead_of_borrowing_a_different_variants_captions_or_timeline() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        // tight is fully built...
+        fake_variant_artifacts(temp.path(), "tight");
+        // ...but natural only has a rough cut — no captions, no timeline.
+        fs::write(
+            temp.path().join("render/rough-cuts/natural.mp4"),
+            b"natural",
+        )
+        .unwrap();
+
+        // No selection recorded -> resolves natural by default.
+        let error = render_final(temp.path(), "youtube", None, true).unwrap_err();
+        let message = error.to_string();
+        assert!(
+            message.contains("natural"),
+            "error must name the missing variant: {message}"
+        );
+        assert!(
+            !temp
+                .path()
+                .join("render/finals/youtube.provenance.json")
+                .is_file(),
+            "no provenance should be written for a rejected mixed-variant resolution"
+        );
+    }
+
+    /// Generates a tiny real (ffmpeg-encoded) mp4 so a full, non-dry-run
+    /// `render_final` can run without a real source ingest.
+    fn generate_fixture_mp4(path: &Path, seconds: &str) {
+        let status = std::process::Command::new("ffmpeg")
+            .args([
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=black:s=320x180:r=30",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=1000:sample_rate=48000",
+                "-t",
+                seconds,
+                "-c:v",
+                "libx264",
+                "-c:a",
+                "aac",
+            ])
+            .arg(path)
+            .status()
+            .expect("start fixture ffmpeg");
+        assert!(status.success(), "fixture ffmpeg encode failed");
+    }
+
+    /// REV2 plan §6.1/§13.2 regression, real render: every artifact a final
+    /// binds must belong to the SAME variant recorded in its own
+    /// provenance. Builds `tight` and `natural` each with their own real
+    /// rough cut, captions, and timeline, renders a real final for each,
+    /// then asserts each final's provenance points at (and hashes match)
+    /// only its own variant's captions/timeline — never the other
+    /// variant's, even though both exist on disk simultaneously.
+    #[test]
+    fn final_provenance_variant_always_matches_the_artifacts_it_binds() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+
+        // Each variant's rough cut, captions, and timeline exist
+        // simultaneously and have DIFFERENT content, so a provenance that
+        // accidentally bound the other variant's captions/timeline hash
+        // would be detectable.
+        for (variant, seconds, caption_text) in [
+            ("tight", "1", "tight caption"),
+            ("natural", "2", "natural caption"),
+        ] {
+            generate_fixture_mp4(
+                &temp.path().join(format!("render/rough-cuts/{variant}.mp4")),
+                seconds,
+            );
+            fs::write(
+                temp.path().join(format!("edit/captions-{variant}.srt")),
+                format!("1\n00:00:00,000 --> 00:00:01,000\n{caption_text}\n\n"),
+            )
+            .unwrap();
+            write_json_atomic(
+                &temp.path().join(format!("edit/timeline-{variant}.json")),
+                &serde_json::json!({
+                    "schema_version": SCHEMA_VERSION,
+                    "timebase": { "fps_num": 30, "fps_den": 1 },
+                    "tracks": [{ "id": "main", "track_type": "av", "segments": [] }]
+                }),
+            )
+            .unwrap();
+        }
+
+        let provenance_path = temp.path().join("render/finals/youtube.provenance.json");
+
+        // Render `tight` first and snapshot its provenance before `natural`
+        // overwrites the shared per-preset provenance file.
+        render_final(temp.path(), "youtube", Some("tight"), false).unwrap();
+        let tight_provenance: serde_json::Value = read_json(&provenance_path).unwrap();
+
+        render_final(temp.path(), "youtube", Some("natural"), false).unwrap();
+        let natural_provenance: serde_json::Value = read_json(&provenance_path).unwrap();
+
+        let tight_captions_hash = format!(
+            "blake3:{}",
+            hash_file(&temp.path().join("edit/captions-tight.srt")).unwrap()
+        );
+        let natural_captions_hash = format!(
+            "blake3:{}",
+            hash_file(&temp.path().join("edit/captions-natural.srt")).unwrap()
+        );
+        assert_ne!(tight_captions_hash, natural_captions_hash);
+
+        assert_eq!(tight_provenance["variant"], "tight");
+        assert_eq!(tight_provenance["captions_path"], "edit/captions-tight.srt");
+        assert_eq!(tight_provenance["captions_hash"], tight_captions_hash);
+        assert_eq!(
+            tight_provenance["timeline_path"],
+            "edit/timeline-tight.json"
+        );
+
+        assert_eq!(natural_provenance["variant"], "natural");
+        assert_eq!(
+            natural_provenance["captions_path"],
+            "edit/captions-natural.srt"
+        );
+        assert_eq!(natural_provenance["captions_hash"], natural_captions_hash);
+        assert_eq!(
+            natural_provenance["timeline_path"],
+            "edit/timeline-natural.json"
+        );
+
+        // Neither provenance ever names, or hashes to, the OTHER variant's
+        // captions — the exact binding the P0 bug allowed to drift.
+        assert_ne!(tight_provenance["captions_hash"], natural_captions_hash);
+        assert_ne!(natural_provenance["captions_hash"], tight_captions_hash);
     }
 }

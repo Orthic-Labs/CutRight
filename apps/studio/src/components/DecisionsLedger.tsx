@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import type { DecisionRecord, DecisionReplay } from "../contracts/review";
 
 export function DecisionsLedger({
@@ -9,8 +11,17 @@ export function DecisionsLedger({
   malformed: DecisionReplay["malformed_lines"];
   close: () => void;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useFocusTrap(true, ref);
   return (
-    <div className="decisions-panel" role="dialog" aria-label="Decision ledger">
+    <div
+      ref={ref}
+      className="decisions-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Decision ledger"
+      tabIndex={-1}
+    >
       <div className="panel-head">
         <b>DECISION LEDGER</b>
         <button aria-label="Close ledger" onClick={close}>

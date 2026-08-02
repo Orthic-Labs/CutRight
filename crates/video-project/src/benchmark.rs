@@ -582,6 +582,12 @@ fn aligned_boundary_checks(
                 "early_start"
             } else if side == "start" {
                 "late_start"
+            } else if boundary_ms < reference_word.start_ms {
+                // An end boundary landing before the reference word even starts
+                // is an EARLY cut, not a late one. Without this branch every
+                // non-clean end boundary reported `late_end`, which points a
+                // reviewer at the opposite edit.
+                "early_end"
             } else {
                 "late_end"
             };

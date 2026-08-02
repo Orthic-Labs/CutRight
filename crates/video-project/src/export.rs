@@ -10,7 +10,9 @@ pub fn export_otio(
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
     let variant = resolve_variant(project_path, variant)?;
-    let timeline: Timeline = read_json(&variant_timeline_path(project_path, &variant))?;
+    let timeline_path = variant_timeline_path(project_path, &variant);
+    require_variant_artifact(project_path, &timeline_path, &variant, "export.otio")?;
+    let timeline: Timeline = read_json(&timeline_path)?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
     let rate = timeline.timebase.fps_num as f64 / timeline.timebase.fps_den as f64;
     let children = timeline.tracks[0]
@@ -50,12 +52,12 @@ pub fn export_otio(
                 "children": [{ "OTIO_SCHEMA": "Track.1", "kind": "Video", "children": children }]
             }
         });
+        // §6.1: variant-scoped path only. The previous generic
+        // `exports/interchange/timeline.otio.json` alias had no reader in
+        // this crate and, like the other generic aliases, could only ever
+        // reflect whichever variant last exported — removed rather than
+        // kept and receipted, since nothing consumes it.
         write_json_atomic(&path, &value)?;
-        // Compatibility alias for the legacy generic interchange path.
-        write_json_atomic(
-            &project_path.join("exports/interchange/timeline.otio.json"),
-            &value,
-        )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
@@ -100,7 +102,11 @@ mod tests {
     fn otio_export_has_standard_timeline_clip_and_media_reference_schemas() {
         let temp = tempfile::tempdir().unwrap();
         init_project(temp.path(), false).unwrap();
-        write_json_atomic(&temp.path().join("edit/timeline.json"), &sample_timeline()).unwrap();
+        write_json_atomic(
+            &temp.path().join("edit/timeline-natural.json"),
+            &sample_timeline(),
+        )
+        .unwrap();
         write_json_atomic(
             &temp.path().join("sources/manifest.json"),
             &SourceManifest {
@@ -147,7 +153,11 @@ mod tests {
     fn otio_export_percent_encodes_reserved_and_unicode_source_paths() {
         let temp = tempfile::tempdir().unwrap();
         init_project(temp.path(), false).unwrap();
-        write_json_atomic(&temp.path().join("edit/timeline.json"), &sample_timeline()).unwrap();
+        write_json_atomic(
+            &temp.path().join("edit/timeline-natural.json"),
+            &sample_timeline(),
+        )
+        .unwrap();
         write_json_atomic(
             &temp.path().join("sources/manifest.json"),
             &SourceManifest {

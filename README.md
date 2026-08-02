@@ -37,7 +37,7 @@ flowchart LR
 
 ## Provider stack
 
-HeardRight owns the models and runtime; CutRight supplies media and policy over a supervised JSON-line stdin/stdout process. VAD policy defaults: threshold 0.5, 16 kHz, min speech 160 ms, min silence 180 ms. WhisperX runs from a local Python 3.11 venv as the one deliberately-external verifier. Wire it up with `CUTRIGHT_HEARDRIGHT_ENGINE`, `CUTRIGHT_HEARDRIGHT_MODELS_DIR`, and `CUTRIGHT_FFMPEG`; rough cuts use macOS `h264_videotoolbox`, and HDR input needs an FFmpeg build with `zscale`.
+HeardRight owns the models and runtime — including its own model discovery — and CutRight supplies media and policy over a supervised JSON-line stdin/stdout process; CutRight holds no model-directory path of its own. VAD policy defaults: threshold 0.5, 16 kHz, min speech 160 ms, min silence 180 ms. WhisperX runs from a project-local Python venv as the one deliberately-external verifier. Wire it up with `CUTRIGHT_HEARDRIGHT_ENGINE`, `CUTRIGHT_WHISPERX_PYTHON` (only needed if the venv isn't at the project-relative default or on `PATH`), and `CUTRIGHT_FFMPEG`; rough cuts use macOS `h264_videotoolbox`, and HDR input needs an FFmpeg build with `zscale`.
 
 ## Driving it
 
@@ -68,6 +68,10 @@ The full surface spans 23 subcommands — project, ingest, transcribe, bench, an
 - **cutaway / finish** — bridge-period Claude Code skills for short-form work (WhisperX rough cut, then a styling pass), shipping ahead of the control plane covering that ground natively.
 
 Not part of the local pipeline, by design: cloud analysis, effect/preset libraries, proxy generation, and preference learning.
+
+## Licensing
+
+Studio's bundled fonts (Tanker, Geist, Spline Sans Mono) ship under the ITF Free Font License and SIL OFL 1.1 respectively — see [`apps/studio/src/assets/fonts/LICENSES.md`](apps/studio/src/assets/fonts/LICENSES.md). The built app carries the same notice at `/LICENSES.md` (`apps/studio/public/LICENSES.md`, linked from `index.html`) so the notice travels with the shipped binary, per OFL.
 
 ## Status
 
