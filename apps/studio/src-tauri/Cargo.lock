@@ -3783,7 +3783,9 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 name = "video-core"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "chrono",
+ "libc",
  "serde",
  "serde_json",
  "thiserror 2.0.19",
@@ -3793,6 +3795,7 @@ dependencies = [
 name = "video-media"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "serde",
  "serde_json",
  "thiserror 2.0.19",
@@ -3818,7 +3821,6 @@ name = "video-providers"
 version = "0.1.0"
 dependencies = [
  "blake3",
- "libc",
  "serde",
  "serde_json",
  "thiserror 2.0.19",

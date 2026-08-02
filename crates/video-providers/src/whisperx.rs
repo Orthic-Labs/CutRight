@@ -15,7 +15,7 @@ use video_core::providers::{
 use video_core::{Transcript, Word, SCHEMA_VERSION};
 
 use crate::heardright::ProviderError;
-use crate::process_runner::{CancellationToken, ProcessSpec, TempFileGuard};
+use video_core::process_runner::{CancellationToken, ProcessSpec, TempFileGuard};
 
 /// Fallback WhisperX interpreter. WhisperX is the optional alignment
 /// verifier and is intentionally the only provider that still carries a
@@ -102,7 +102,7 @@ impl WhisperXProvider {
             stdout_cap_bytes: OUTPUT_CAP_BYTES,
             stderr_cap_bytes: OUTPUT_CAP_BYTES,
         };
-        let outcome = crate::process_runner::run_process(&spec, &CancellationToken::new())?;
+        let outcome = video_core::process_runner::run_process(&spec, &CancellationToken::new())?;
         if !outcome.success() {
             let mut message = String::from_utf8_lossy(&outcome.stderr).trim().to_string();
             if outcome.stderr_truncated {

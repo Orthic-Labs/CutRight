@@ -20,6 +20,8 @@ use std::process::ExitCode;
 /// | 4    | invalid command/config — clap usage error, or a doctor profile  |
 /// |      | name clap accepted but this binary could not otherwise resolve  |
 /// | 5    | `videoctl doctor` ran but a required check was not `ok`          |
+/// | 6    | `videoctl receipts verify` found a receipt whose input/output    |
+///       | bindings no longer match the bytes on disk                       |
 ///
 /// JSON always goes to stdout; this module never writes diagnostic text to
 /// stdout outside of the single final JSON document (clap's own `--help`/
@@ -29,6 +31,7 @@ const EXIT_ERROR: u8 = 1;
 const EXIT_NOT_IMPLEMENTED: u8 = 3;
 const EXIT_INVALID: u8 = 4;
 const EXIT_DOCTOR_FAIL: u8 = 5;
+const EXIT_RECEIPTS_FAIL: u8 = 6;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -112,6 +115,10 @@ enum Command {
     Export {
         #[command(subcommand)]
         command: ExportCommand,
+    },
+    Receipts {
+        #[command(subcommand)]
+        command: ReceiptsCommand,
     },
 }
 
@@ -283,6 +290,14 @@ enum ExportCommand {
     Otio(VariantPathCommand),
 }
 
+#[derive(Debug, Subcommand)]
+enum ReceiptsCommand {
+    /// Re-hash every recorded stage-receipt input/output against the bytes
+    /// currently on disk and report any binding that no longer holds
+    /// (hardening plan §10.4).
+    Verify(PathCommand),
+}
+
 fn main() -> ExitCode {
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,
@@ -340,6 +355,17 @@ fn main() -> ExitCode {
                 DoctorOutcome::NotReady => ExitCode::from(EXIT_DOCTOR_FAIL),
             }
         }
+        Ok(Outcome::Receipts(value, all_passed)) => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&value).expect("JSON serialization cannot fail")
+            );
+            if all_passed {
+                ExitCode::from(EXIT_OK)
+            } else {
+                ExitCode::from(EXIT_RECEIPTS_FAIL)
+            }
+        }
         Err(error) => {
             println!(
                 "{}",
@@ -362,6 +388,7 @@ enum Outcome {
     Value(Value),
     NotImplemented(Value),
     Doctor(Value, DoctorOutcome),
+    Receipts(Value, bool),
 }
 
 fn run(cli: Cli) -> Result<Outcome, String> {
@@ -512,6 +539,17 @@ fn run(cli: Cli) -> Result<Outcome, String> {
         } => video_project::export_otio(&args.project, args.variant.as_deref(), cli.dry_run)
             .map(|result| Outcome::Value(json!({ "event": "export.otio", "result": result })))
             .map_err(|error| error.to_string()),
+        Command::Receipts {
+            command: ReceiptsCommand::Verify(args),
+        } => video_project::verify_receipts(&args.project)
+            .map(|report| {
+                let all_passed = report.status == "pass";
+                Outcome::Receipts(
+                    json!({ "event": "receipts.verify", "result": report }),
+                    all_passed,
+                )
+            })
+            .map_err(|error| error.to_string()),
         Command::Review {
             command: ReviewCommand::Open(args),
         } => Ok(Outcome::Value(json!({
@@ -550,6 +588,7 @@ fn command_name(command: &Command) -> String {
         Command::Qa(_) => "qa run",
         Command::Package { .. } => "package social",
         Command::Export { .. } => "export otio",
+        Command::Receipts { .. } => "receipts verify",
         Command::Doctor(_) | Command::Project { .. } => "unknown",
     }
     .to_string()

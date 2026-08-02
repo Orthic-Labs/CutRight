@@ -1,5 +1,4 @@
 mod heardright;
-mod process_runner;
 mod vad;
 mod whisperx;
 

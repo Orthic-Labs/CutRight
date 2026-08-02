@@ -1,5 +1,10 @@
+mod receipts;
+
+pub use receipts::{verify_receipts, ReceiptCheck, ReceiptVerificationReport};
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -13,9 +18,9 @@ use video_core::{
     Track, Transcript, VadSignal, Word,
 };
 use video_media::{
-    compose_decision_evidence, extract_audio_f32, extract_frame, probe, render_boundary_probe,
-    render_preset_with_captions, render_preset_with_captions_and_reframe, render_segments,
-    render_source_segments, render_waveform, render_waveform_range, AudioError, ProbeError,
+    extract_audio_f32, extract_frame, probe, render_boundary_probe, render_preset_with_captions,
+    render_preset_with_captions_and_reframe, render_segments, render_source_segments,
+    render_waveform, render_waveform_range, resolve_toolchain, AudioError, ProbeError,
     ReframeAnchor, RenderError, RenderSegment, SourceRenderSegment,
 };
 use video_providers::{HeardRightProvider, ProviderError, WhisperXProvider};
@@ -557,6 +562,7 @@ pub fn ingest_sources(
     }
 
     let mut sources = Vec::with_capacity(source_paths.len());
+    let mut newly_ingested_paths: Vec<PathBuf> = Vec::new();
     for source_path in source_paths {
         let canonical_path = fs::canonicalize(source_path)
             .map_err(|_| ProjectError::InvalidSource(source_path.clone()))?;
@@ -591,6 +597,7 @@ pub fn ingest_sources(
             timebase: metadata.timebase,
         };
         manifest.sources.push(entry.clone());
+        newly_ingested_paths.push(canonical_path);
         sources.push(IngestedSource {
             status: "ingested",
             entry,
@@ -599,6 +606,21 @@ pub fn ingest_sources(
 
     if !dry_run {
         write_json_atomic(&manifest_path, &manifest)?;
+        if !newly_ingested_paths.is_empty() {
+            let inputs: Vec<&Path> = newly_ingested_paths.iter().map(PathBuf::as_path).collect();
+            let mut toolchains = BTreeMap::new();
+            if let Ok(toolchain) = resolve_toolchain() {
+                toolchains.insert("ffmpeg".to_string(), toolchain.identity());
+            }
+            receipts::write_stage_receipt(
+                &receipts::receipt_path_for(&manifest_path),
+                "ingest.sources",
+                &inputs,
+                &serde_json::json!({ "newly_ingested_count": newly_ingested_paths.len() }),
+                toolchains,
+                &[manifest_path.as_path()],
+            )?;
+        }
     }
     Ok(IngestResult {
         status: if dry_run {
@@ -696,6 +718,20 @@ pub fn transcribe_project(
                         provider_label,
                     },
                 )?;
+                let mut toolchains = BTreeMap::new();
+                toolchains.insert(provider.id().to_string(), output.provider_model.clone());
+                receipts::write_stage_receipt(
+                    &receipts::receipt_path_for(&transcript_path),
+                    "transcribe",
+                    &[Path::new(&source.path)],
+                    &serde_json::json!({
+                        "provider": provider.id(),
+                        "provider_model": output.provider_model,
+                        "language_hint": "en",
+                    }),
+                    toolchains,
+                    &[transcript_path.as_path()],
+                )?;
                 output.transcript
             }
         } else {
@@ -713,16 +749,7 @@ pub fn transcribe_project(
     if !dry_run && provider_suffix.is_none() {
         let first = transcripts.first().expect("sources are nonempty");
         write_json_atomic(&project_path.join("analysis/transcript.json"), first)?;
-        let packed = first
-            .words
-            .iter()
-            .map(|word| format!("- `{}–{}` {}", word.start_ms, word.end_ms, word.text))
-            .collect::<Vec<_>>()
-            .join("\n");
-        write_bytes_atomic(
-            &project_path.join("analysis/transcript-packed.md"),
-            (packed + "\n").as_bytes(),
-        )?;
+        write_project_transcript_pack(project_path, &sources.sources, &transcripts)?;
     }
     let path = project_path.join("analysis/transcripts");
     Ok(PipelineArtifact {
@@ -736,6 +763,54 @@ pub fn transcribe_project(
         path,
         count: sources.sources.len(),
     })
+}
+
+/// Project-level transcript pack (§15.1): one markdown document covering
+/// EVERY registered source under its own heading, not just the first. The
+/// previous version silently dropped every source after the first, so an
+/// agent reading only this file could receive an incomplete multi-source
+/// transcript without any signal that it was incomplete. The trailing
+/// content hash lets a reader confirm which exact pack they have.
+fn write_project_transcript_pack(
+    project_path: &Path,
+    sources: &[SourceEntry],
+    transcripts: &[Transcript],
+) -> Result<(), ProjectError> {
+    let mut body = String::new();
+    body.push_str("# Transcript pack\n\n");
+    body.push_str(&format!(
+        "sources: {} · generated: {}\n\n",
+        sources.len(),
+        Utc::now().to_rfc3339()
+    ));
+    for source in sources {
+        let transcript = transcripts
+            .iter()
+            .find(|transcript| transcript.source_id == source.source_id);
+        body.push_str(&format!(
+            "## Source `{}` — {}\n\n",
+            source.source_id, source.path
+        ));
+        match transcript {
+            Some(transcript) if !transcript.words.is_empty() => {
+                for word in &transcript.words {
+                    body.push_str(&format!(
+                        "- `{}` `{}–{}` {}\n",
+                        word.id, word.start_ms, word.end_ms, word.text
+                    ));
+                }
+            }
+            Some(_) => body.push_str("_(transcribed; no words)_\n"),
+            None => body.push_str("_(not yet transcribed)_\n"),
+        }
+        body.push('\n');
+    }
+    let content_hash = blake3::hash(body.as_bytes()).to_hex().to_string();
+    body.push_str(&format!("---\ncontent_hash: blake3:{content_hash}\n"));
+    write_bytes_atomic(
+        &project_path.join("analysis/transcript-packed.md"),
+        body.as_bytes(),
+    )
 }
 
 fn load_cached_transcription(
@@ -810,6 +885,15 @@ fn write_transcription_provenance(
     write_json_atomic(&envelope_path, &envelope)
 }
 
+/// Cache identity for one transcription request (REV2 plan §10.5).
+///
+/// Deliberately content-addressed: the source's absolute path is NOT part of
+/// the identity, because moving a project or relinking a source does not
+/// change a single byte of the audio being transcribed. Path stays available
+/// as provenance in the envelope; only content and policy decide reuse:
+/// source content, provider/model identity, decode and language policy, and
+/// the stage implementation version (so a change to how CutRight builds the
+/// request invalidates old entries).
 fn transcription_request_hash(
     source: &SourceEntry,
     provider: &str,
@@ -820,15 +904,16 @@ fn transcription_request_hash(
         "provider_model": provider_model,
         "source_id": source.source_id,
         "source_blake3": source.blake3,
-        "source_path": source.path,
-        "language_hint": "en"
+        "decode_policy": "pcm_f32le/16000/mono",
+        "language_hint": "en",
+        "stage_implementation_version": env!("CARGO_PKG_VERSION"),
     });
     Ok(blake3::hash(&serde_json::to_vec(&request)?)
         .to_hex()
         .to_string())
 }
 
-fn relative_artifact_path(project_path: &Path, path: &Path) -> String {
+pub(crate) fn relative_artifact_path(project_path: &Path, path: &Path) -> String {
     path.strip_prefix(project_path)
         .unwrap_or(path)
         .to_string_lossy()
@@ -1663,6 +1748,16 @@ pub fn build_candidates_with_policy(
                 candidates: candidates.clone(),
             },
         )?;
+        let transcript_paths = transcript_file_paths(project_path)?;
+        let inputs: Vec<&Path> = transcript_paths.iter().map(PathBuf::as_path).collect();
+        receipts::write_stage_receipt(
+            &receipts::receipt_path_for(&path),
+            "edit.candidates",
+            &inputs,
+            &serde_json::json!({ "policy": policy }),
+            BTreeMap::new(),
+            &[path.as_path()],
+        )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
@@ -1690,16 +1785,14 @@ pub fn analyze_local(project_path: &Path, dry_run: bool) -> Result<PipelineArtif
         let (signal, provenance) = provider
             .analyze_file_vad_with_provenance(&VadRequest {
                 source_id: source.source_id.clone(),
-                audio_path,
+                audio_path: audio_path.clone(),
                 sample_rate: 16_000,
                 threshold: 0.5,
             })
             .map_err(|error| ProjectError::InvalidState(error.to_string()))?;
         region_count += signal.regions.len();
-        write_json_atomic(
-            &project_path.join(format!("analysis/vad-{}.json", source.source_id)),
-            &signal,
-        )?;
+        let vad_path = project_path.join(format!("analysis/vad-{}.json", source.source_id));
+        write_json_atomic(&vad_path, &signal)?;
         // §10.7: VAD carries the same provenance ASR already does — which
         // model, which runtime, which thresholds, and against exactly which
         // decoded audio. Stored beside the signal rather than inside it so the
@@ -1722,6 +1815,29 @@ pub fn analyze_local(project_path: &Path, dry_run: bool) -> Result<PipelineArtif
                 "request_blake3": provenance.request_blake3,
                 "warnings": provenance.warnings,
             }),
+        )?;
+        let mut toolchains = BTreeMap::new();
+        toolchains.insert(
+            "heardright".to_string(),
+            format!(
+                "{}:{}",
+                provenance.model_revision, provenance.runtime_backend
+            ),
+        );
+        receipts::write_stage_receipt(
+            &receipts::receipt_path_for(&vad_path),
+            "analyze.vad",
+            &[audio_path.as_path()],
+            &serde_json::json!({
+                "source_id": source.source_id,
+                "threshold": provenance.threshold,
+                "min_speech_ms": provenance.min_speech_ms,
+                "min_silence_ms": provenance.min_silence_ms,
+                "sample_rate": provenance.sample_rate,
+                "decode_policy": provenance.decode_policy,
+            }),
+            toolchains,
+            &[vad_path.as_path()],
         )?;
     }
     Ok(PipelineArtifact {
@@ -1797,6 +1913,18 @@ pub fn reframe_plan(
         write_json_atomic(&path, &plan)?;
         // Compatibility alias for consumers not yet variant-aware.
         write_json_atomic(&project_path.join("analysis/reframe-plan.json"), &plan)?;
+        let mut toolchains = BTreeMap::new();
+        if let Ok(worker_hash) = hash_file(&worker) {
+            toolchains.insert("vision_anchor_worker".to_string(), worker_hash);
+        }
+        receipts::write_stage_receipt(
+            &receipts::receipt_path_for(&path),
+            "reframe.plan",
+            &[timeline_path.as_path()],
+            &serde_json::json!({ "variant": variant, "target_aspect": "9:16" }),
+            toolchains,
+            &[path.as_path()],
+        )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
@@ -1805,20 +1933,18 @@ pub fn reframe_plan(
     })
 }
 
+/// Materialize the embedded Vision anchor worker by CONTENT HASH (§10.2).
+///
+/// The old version-named temp file meant an edited worker with no crate
+/// version bump kept running the stale binary that happened to be on disk.
+/// Keying on the bytes makes a changed worker land at a different path, and
+/// on-disk bytes are verified before execution.
 fn vision_anchor_worker() -> Result<PathBuf, ProjectError> {
-    let worker = std::env::temp_dir().join(format!(
-        "cutright-vision-anchor-{}",
-        env!("CARGO_PKG_VERSION")
-    ));
-    if !worker.is_file() {
-        fs::write(&worker, include_bytes!(env!("CUTRIGHT_VISION_ANCHOR")))?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(&worker, fs::Permissions::from_mode(0o700))?;
-        }
-    }
-    Ok(worker)
+    video_core::content_store::materialize_worker(
+        include_bytes!(env!("CUTRIGHT_VISION_ANCHOR")),
+        "vision-anchor",
+    )
+    .map_err(|error| ProjectError::InvalidState(error.to_string()))
 }
 
 fn detect_vision_anchor(worker: &Path, frame: &Path) -> Result<VisionAnchorResponse, ProjectError> {
@@ -1978,6 +2104,26 @@ pub fn build_cut_plan(
                 segments,
             },
         )?;
+        let candidates_path = project_path.join("edit/candidates.json");
+        let mut input_paths: Vec<PathBuf> = vec![candidates_path];
+        for source in &sources.sources {
+            input_paths.push(project_path.join(format!("analysis/vad-{}.json", source.source_id)));
+        }
+        input_paths.extend(transcript_file_paths(project_path)?);
+        let inputs: Vec<&Path> = input_paths.iter().map(PathBuf::as_path).collect();
+        receipts::write_stage_receipt(
+            &receipts::receipt_path_for(&path),
+            "edit.cut_plan",
+            &inputs,
+            &serde_json::json!({
+                "variant": variant,
+                "gap_threshold_ms": gap_threshold_ms,
+                "head_margin_ms": head_margin_ms,
+                "tail_margin_ms": tail_margin_ms,
+            }),
+            BTreeMap::new(),
+            &[path.as_path()],
+        )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
@@ -2126,7 +2272,8 @@ pub fn compile_timeline(
 ) -> Result<PipelineArtifact, ProjectError> {
     validate_variant(variant)?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
-    let plan: CutPlan = read_json(&project_path.join(format!("edit/cut-plan-{variant}.json")))?;
+    let cut_plan_path = project_path.join(format!("edit/cut-plan-{variant}.json"));
+    let plan: CutPlan = read_json(&cut_plan_path)?;
     // Carry the explicit working/output timebase onto the timeline (§6.6) rather
     // than silently inheriting the first source's rate.
     let timebase = working_timebase(project_path, &sources);
@@ -2161,6 +2308,14 @@ pub fn compile_timeline(
         // Compatibility alias for consumers not yet variant-aware. It is written
         // from this named variant only, never from implicit last-command state.
         write_json_atomic(&project_path.join("edit/timeline.json"), &timeline)?;
+        receipts::write_stage_receipt(
+            &receipts::receipt_path_for(&path),
+            "edit.timeline",
+            &[cut_plan_path.as_path()],
+            &serde_json::json!({ "variant": variant, "timebase": timeline.timebase }),
+            BTreeMap::new(),
+            &[path.as_path()],
+        )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
@@ -2193,6 +2348,7 @@ pub fn render_edit(
                     .collect::<Vec<_>>(),
                 &output,
             )?;
+            write_rough_cut_receipt(&plan_path, &[Path::new(&source.path)], &output, &plan)?;
         } else {
             let inputs = sources
                 .sources
@@ -2221,6 +2377,8 @@ pub fn render_edit(
                 })
                 .collect::<Result<Vec<_>, ProjectError>>()?;
             render_source_segments(&inputs, &segments, &output)?;
+            let input_paths: Vec<&Path> = inputs.iter().map(PathBuf::as_path).collect();
+            write_rough_cut_receipt(&plan_path, &input_paths, &output, &plan)?;
         }
     }
     Ok(PipelineArtifact {
@@ -2228,6 +2386,35 @@ pub fn render_edit(
         path: output,
         count: plan.segments.len(),
     })
+}
+
+/// Writes the `render.rough_cut` stage receipt (hardening plan §10.4) beside
+/// the rendered rough cut, binding the exact cut plan and source file(s) that
+/// produced it plus the resolved ffmpeg toolchain identity.
+fn write_rough_cut_receipt(
+    plan_path: &Path,
+    source_paths: &[&Path],
+    output: &Path,
+    plan: &CutPlan,
+) -> Result<(), ProjectError> {
+    let mut inputs: Vec<&Path> = vec![plan_path];
+    inputs.extend_from_slice(source_paths);
+    let mut toolchains = BTreeMap::new();
+    if let Ok(toolchain) = resolve_toolchain() {
+        toolchains.insert("ffmpeg".to_string(), toolchain.identity());
+    }
+    receipts::write_stage_receipt(
+        &receipts::receipt_path_for(output),
+        "render.rough_cut",
+        &inputs,
+        &serde_json::json!({
+            "variant": plan.variant,
+            "segment_count": plan.segments.len(),
+        }),
+        toolchains,
+        &[output],
+    )?;
+    Ok(())
 }
 
 pub fn remap_transcript(
@@ -2308,12 +2495,76 @@ pub fn remap_transcript_with_variant(
             None => project_path.join("edit/captions.srt"),
         };
         write_srt(&captions_path, &transcript.words)?;
+
+        let mut inputs: Vec<PathBuf> = vec![plan_path.clone()];
+        inputs.extend(transcript_file_paths(project_path)?);
+        let input_refs: Vec<&Path> = inputs.iter().map(PathBuf::as_path).collect();
+        receipts::write_stage_receipt(
+            &receipts::receipt_path_for(&path),
+            "edit.transcript_remap",
+            &input_refs,
+            &serde_json::json!({ "variant": variant }),
+            BTreeMap::new(),
+            &[path.as_path(), captions_path.as_path()],
+        )?;
+
+        // §6.1: once a variant's plan, timeline, remapped transcript,
+        // captions, and rough cut all exist, bind them together into one
+        // per-variant package receipt. A no-op until the rough cut and
+        // timeline for this variant have both been rendered.
+        if let Some(variant) = variant {
+            write_variant_package_receipt(
+                project_path,
+                variant,
+                &plan_path,
+                &path,
+                &captions_path,
+            )?;
+        }
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
         path,
         count: transcript.words.len(),
     })
+}
+
+/// The §6.1 per-variant package receipt: binds the cut plan, timeline,
+/// remapped transcript, captions, and rough cut for one variant together as
+/// `render/rough-cuts/<variant>.artifact-receipt.json`. A no-op (not an
+/// error) until the timeline and rough cut for that variant both exist,
+/// since transcript remap can otherwise run before the rough cut render step
+/// in some call orders.
+fn write_variant_package_receipt(
+    project_path: &Path,
+    variant: &str,
+    plan_path: &Path,
+    output_transcript_path: &Path,
+    captions_path: &Path,
+) -> Result<(), ProjectError> {
+    let timeline_path = project_path.join(format!("edit/timeline-{variant}.json"));
+    let rough_cut_path = project_path.join(format!("render/rough-cuts/{variant}.mp4"));
+    if !timeline_path.is_file() || !rough_cut_path.is_file() {
+        return Ok(());
+    }
+    let inputs = [
+        plan_path,
+        timeline_path.as_path(),
+        output_transcript_path,
+        captions_path,
+        rough_cut_path.as_path(),
+    ];
+    let receipt_path =
+        project_path.join(format!("render/rough-cuts/{variant}.artifact-receipt.json"));
+    receipts::write_stage_receipt(
+        &receipt_path,
+        "edit.variant_package",
+        &inputs,
+        &serde_json::json!({ "variant": variant }),
+        BTreeMap::new(),
+        &[],
+    )?;
+    Ok(())
 }
 
 fn validate_variant(variant: &str) -> Result<(), ProjectError> {
@@ -2618,12 +2869,111 @@ pub fn render_final(
                 false,
             )?;
         }
+        write_final_provenance(
+            project_path,
+            FinalProvenanceInput {
+                preset,
+                variant: &variant,
+                output_preset,
+                input: &input,
+                captions: &captions,
+                output: &output,
+                reframed: reframe_anchors.is_some(),
+            },
+        )?;
+        let mut final_inputs = vec![input.as_path(), captions.as_path()];
+        let reframe_path = variant_reframe_path(project_path, &variant);
+        if reframe_anchors.is_some() && reframe_path.is_file() {
+            final_inputs.push(reframe_path.as_path());
+        }
+        let mut toolchains = BTreeMap::new();
+        if let Ok(toolchain) = resolve_toolchain() {
+            toolchains.insert("ffmpeg".to_string(), toolchain.identity());
+        }
+        receipts::write_stage_receipt(
+            &receipts::receipt_path_for(&output),
+            "render.final",
+            &final_inputs,
+            &serde_json::json!({
+                "preset": preset,
+                "variant": variant,
+                "width": output_preset.width,
+                "height": output_preset.height,
+                "aspect": output_preset.aspect,
+                "reframed": reframe_anchors.is_some(),
+            }),
+            toolchains,
+            &[output.as_path()],
+        )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
         path: output,
         count: 1,
     })
+}
+
+/// Grouped arguments for [`write_final_provenance`] — a plain data bag, not
+/// a persisted or public shape.
+struct FinalProvenanceInput<'a> {
+    preset: &'a str,
+    variant: &'a str,
+    output_preset: &'a OutputPreset,
+    input: &'a Path,
+    captions: &'a Path,
+    output: &'a Path,
+    reframed: bool,
+}
+
+/// Binds a final render to the exact variant, captions, and timeline it was
+/// produced from (§13.2/§13.5): `qa_run` reads this to reject a
+/// mixed-variant artifact graph, and `package_social` reads it to resolve
+/// each deliverable's own caption artifact instead of assuming a single
+/// generic one.
+fn write_final_provenance(
+    project_path: &Path,
+    args: FinalProvenanceInput<'_>,
+) -> Result<(), ProjectError> {
+    let FinalProvenanceInput {
+        preset,
+        variant,
+        output_preset,
+        input,
+        captions,
+        output,
+        reframed,
+    } = args;
+    let timeline_path = variant_timeline_path(project_path, variant);
+    let mut provenance = serde_json::json!({
+        "schema_version": SCHEMA_VERSION,
+        "preset": preset,
+        "variant": variant,
+        "aspect": output_preset.aspect,
+        "width": output_preset.width,
+        "height": output_preset.height,
+        "rough_cut_path": relative_artifact_path(project_path, input),
+        "rough_cut_hash": format!("blake3:{}", hash_file(input)?),
+        "captions_path": relative_artifact_path(project_path, captions),
+        "captions_hash": format!("blake3:{}", hash_file(captions)?),
+        "timeline_path": relative_artifact_path(project_path, &timeline_path),
+        "timeline_hash": format!("blake3:{}", hash_file(&timeline_path)?),
+        "output_path": relative_artifact_path(project_path, output),
+        "output_hash": format!("blake3:{}", hash_file(output)?),
+        "created_at": Utc::now(),
+    });
+    if reframed {
+        let reframe_path = variant_reframe_path(project_path, variant);
+        if reframe_path.is_file() {
+            provenance["reframe_plan_path"] =
+                serde_json::Value::String(relative_artifact_path(project_path, &reframe_path));
+            provenance["reframe_plan_hash"] =
+                serde_json::Value::String(format!("blake3:{}", hash_file(&reframe_path)?));
+        }
+    }
+    write_json_atomic(
+        &project_path.join(format!("render/finals/{preset}.provenance.json")),
+        &provenance,
+    )
 }
 
 fn load_approved_reframe_anchors(
@@ -2675,14 +3025,18 @@ fn load_approved_reframe_anchors(
         .collect())
 }
 
+/// Runs QA for exactly one deliverable preset and writes its own report at
+/// `qa/<preset>.report.json` (§13.2) — replacing the old single
+/// YouTube-shaped `qa/report.json`. Run once per preset (`--preset
+/// youtube|reels|tiktok`) to build the full `qa/youtube.report.json` +
+/// `qa/reels.report.json` + `qa/tiktok.report.json` set; every run refreshes
+/// `qa/summary.json` from whatever reports currently exist on disk.
 pub fn qa_run(
     project_path: &Path,
     variant: Option<&str>,
     preset: &str,
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
-    let variant = resolve_variant(project_path, variant)?;
-    validate_edit(project_path, Some(&variant))?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
     for source in &sources.sources {
         let actual = format!("blake3:{}", hash_file(Path::new(&source.path))?);
@@ -2690,8 +3044,6 @@ pub fn qa_run(
             return Err(ProjectError::SourceChanged(PathBuf::from(&source.path)));
         }
     }
-    let output = project_path.join(format!("render/finals/{preset}.mp4"));
-    let benchmark = project_path.join("analysis/bench/transcribe/report.json");
     let manifest = read_project_manifest(&project_path.join("project.json"))?;
     let output_preset = manifest
         .outputs
@@ -2700,177 +3052,634 @@ pub fn qa_run(
         .ok_or_else(|| {
             ProjectError::InvalidState(format!("project is missing the {preset} preset"))
         })?;
+    let output = project_path.join(format!("render/finals/{preset}.mp4"));
     if !output.is_file() {
         return Err(ProjectError::InvalidState(format!(
             "QA requires an explicit final render: {}",
             output.display()
         )));
     }
+    let provenance_path = project_path.join(format!("render/finals/{preset}.provenance.json"));
+    let provenance: serde_json::Value = read_json(&provenance_path).map_err(|_| {
+        ProjectError::InvalidState(format!(
+            "QA requires render.final provenance for {preset}; render the final first"
+        ))
+    })?;
+    let provenance_variant = provenance
+        .get("variant")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| ProjectError::InvalidState("final provenance is missing a variant".into()))?
+        .to_string();
+    // §13.2: QA must reject a mixed-variant artifact graph — if the caller
+    // asked for a specific variant (or the currently selected review base
+    // differs), that has to match the variant this final was actually
+    // rendered from.
+    let requested_variant = resolve_variant(project_path, variant)?;
+    if requested_variant != provenance_variant {
+        return Err(ProjectError::InvalidState(format!(
+            "QA rejects a mixed-variant artifact graph: {preset} was rendered from variant \
+             {provenance_variant} but variant {requested_variant} is currently selected/requested"
+        )));
+    }
+    let variant = provenance_variant;
+    validate_edit(project_path, Some(&variant))?;
+
+    let benchmark = project_path.join("analysis/bench/transcribe/report.json");
     let benchmark_report: serde_json::Value = read_json(&benchmark).map_err(|_| {
         ProjectError::InvalidState(
             "QA requires a resolved `videoctl bench transcribe <project>` report".into(),
         )
     })?;
-    if benchmark_report
+    let benchmark_decision = benchmark_report
         .get("decision")
         .and_then(serde_json::Value::as_str)
-        == Some("unresolved")
-    {
+        .unwrap_or("unresolved")
+        .to_string();
+    if benchmark_decision == "unresolved" {
         return Err(ProjectError::InvalidState(
             "QA rejects an unresolved transcription benchmark".into(),
         ));
     }
-    let report_path = project_path.join(format!("qa/{variant}/{preset}/report.json"));
-    let media = &output;
-    if !dry_run {
-        let metadata = probe(media)?;
-        if metadata.duration_ms.unwrap_or(0) <= 0 {
-            return Err(ProjectError::InvalidState(
-                "rendered output has no duration".into(),
-            ));
-        }
-        if !metadata.has_video || !metadata.has_audio {
-            return Err(ProjectError::InvalidState(
-                "final output must contain both video and audio streams".into(),
-            ));
-        }
-        if metadata.width != Some(output_preset.width)
-            || metadata.height != Some(output_preset.height)
-        {
-            return Err(ProjectError::InvalidState(format!(
-                "final output dimensions must be {}x{}",
-                output_preset.width, output_preset.height
-            )));
-        }
-        let captions = variant_captions_path(project_path, &variant);
-        let evidence = project_path.join("analysis/evidence/manifest.json");
-        if !captions.is_file() || !evidence.is_file() {
-            return Err(ProjectError::InvalidState(
-                "QA requires generated captions and visual evidence".into(),
-            ));
-        }
-        let report = serde_json::json!({
-            "schema_version": SCHEMA_VERSION,
-            "status": "pass",
-            "variant": variant,
-            "preset": preset,
-            "output": media,
-            "duration_ms": metadata.duration_ms,
-            "source_hashes": "unchanged",
-            "checks": [{
-                "id": "final.explicit",
-                "status": "pass",
-                "evidence": media
-            }, {
-                "id": "transcript.benchmark",
-                "status": "pass",
-                "evidence": benchmark
-            }, {
-                "id": "media.duration",
-                "status": "pass",
-                "evidence": metadata.duration_ms
-            }, {
-                "id": "media.streams",
-                "status": "pass",
-                "evidence": {"video": metadata.has_video, "audio": metadata.has_audio}
-            }, {
-                "id": "media.dimensions",
-                "status": "pass",
-                "evidence": {"width": metadata.width, "height": metadata.height}
-            }, {
-                "id": "captions.source_and_evidence",
-                "status": "pass",
-                "evidence": {"captions": captions, "evidence": evidence}
-            }]
+
+    let report_path = project_path.join(format!("qa/{preset}.report.json"));
+    if dry_run {
+        return Ok(PipelineArtifact {
+            status: "dry-run",
+            path: report_path,
+            count: 1,
         });
-        write_json_atomic(&report_path, &report)?;
-        // Compatibility alias for consumers not yet variant/preset-aware.
-        write_json_atomic(&project_path.join("qa/report.json"), &report)?;
     }
+
+    let captions = variant_captions_path(project_path, &variant);
+    let timeline_path = variant_timeline_path(project_path, &variant);
+    let timeline: Timeline = read_json(&timeline_path)?;
+    let evidence = project_path.join("analysis/evidence/manifest.json");
+    let output_hash = format!("blake3:{}", hash_file(&output)?);
+    let recorded_output_hash = provenance
+        .get("output_hash")
+        .and_then(serde_json::Value::as_str);
+
+    let mut checks = Vec::new();
+    checks.push(serde_json::json!({
+        "id": "provenance.output_unchanged",
+        "status": if recorded_output_hash == Some(output_hash.as_str()) { "pass" } else { "fail" },
+        "evidence": { "path": relative_artifact_path(project_path, &output), "live_hash": output_hash, "recorded_hash": recorded_output_hash }
+    }));
+    for (label, live_path, recorded_key) in [
+        ("captions", captions.as_path(), "captions_hash"),
+        ("timeline", timeline_path.as_path(), "timeline_hash"),
+    ] {
+        let live_hash = format!("blake3:{}", hash_file(live_path)?);
+        let recorded_hash = provenance
+            .get(recorded_key)
+            .and_then(serde_json::Value::as_str);
+        checks.push(serde_json::json!({
+            "id": format!("provenance.{label}_unchanged"),
+            "status": if recorded_hash == Some(live_hash.as_str()) { "pass" } else { "fail" },
+            "evidence": { "path": relative_artifact_path(project_path, live_path), "live_hash": live_hash, "recorded_hash": recorded_hash }
+        }));
+    }
+
+    let metadata = probe(&output)?;
+    let expected_duration_ms = timeline
+        .tracks
+        .first()
+        .and_then(|track| track.segments.last())
+        .map(|segment| segment.output_end_ms)
+        .unwrap_or(0);
+    let duration_ok = metadata
+        .duration_ms
+        .is_some_and(|actual| (actual - expected_duration_ms).abs() <= 250);
+    checks.push(serde_json::json!({
+        "id": "media.duration",
+        "status": if duration_ok { "pass" } else { "fail" },
+        "evidence": { "expected_ms": expected_duration_ms, "probed_ms": metadata.duration_ms }
+    }));
+    checks.push(serde_json::json!({
+        "id": "media.streams",
+        "status": if metadata.has_video && metadata.has_audio { "pass" } else { "fail" },
+        "evidence": { "video": metadata.has_video, "audio": metadata.has_audio }
+    }));
+    let dimensions_ok = metadata.width == Some(output_preset.width)
+        && metadata.height == Some(output_preset.height);
+    checks.push(serde_json::json!({
+        "id": "media.dimensions",
+        "status": if dimensions_ok { "pass" } else { "fail" },
+        "evidence": {
+            "expected": { "width": output_preset.width, "height": output_preset.height },
+            "probed": { "width": metadata.width, "height": metadata.height }
+        }
+    }));
+    let expected_fps = fps(&timeline.timebase);
+    let probed_fps = metadata.timebase.as_ref().map(fps);
+    let fps_ok = probed_fps.is_some_and(|value| (value - expected_fps).abs() < 0.05);
+    checks.push(serde_json::json!({
+        "id": "media.frame_rate",
+        "status": if fps_ok { "pass" } else { "fail" },
+        "evidence": { "expected_fps": expected_fps, "probed_fps": probed_fps }
+    }));
+
+    let decoded_clean = decode_through_end(&output)?;
+    checks.push(serde_json::json!({
+        "id": "media.decode_through_end",
+        "status": if decoded_clean { "pass" } else { "fail" },
+        "evidence": { "path": relative_artifact_path(project_path, &output) }
+    }));
+
+    let (tail_black, tail_frozen) =
+        detect_tail_black_or_frozen(&output, metadata.duration_ms.unwrap_or(0), 2_000)?;
+    checks.push(serde_json::json!({
+        "id": "media.tail_not_black_or_frozen",
+        "status": if !tail_black && !tail_frozen { "pass" } else { "fail" },
+        "evidence": { "black_tail": tail_black, "frozen_tail": tail_frozen }
+    }));
+
+    let loudness = measure_loudness(&output)?;
+    let loudness_ok = loudness.integrated_lufs.is_some() && loudness.clipped_samples == 0;
+    checks.push(serde_json::json!({
+        "id": "audio.loudness_true_peak_clipping",
+        "status": if loudness_ok { "pass" } else { "fail" },
+        "evidence": {
+            "integrated_lufs": loudness.integrated_lufs,
+            "true_peak_dbtp": loudness.true_peak_dbtp,
+            "clipped_samples": loudness.clipped_samples
+        }
+    }));
+
+    if captions.is_file() {
+        let (cue_count, last_end_ms) = caption_timing_coverage(&captions)?;
+        let coverage_gap_ms = last_end_ms.map(|end| (expected_duration_ms - end).max(0));
+        let coverage_ok = cue_count > 0 && coverage_gap_ms.is_some_and(|gap| gap <= 2_000);
+        checks.push(serde_json::json!({
+            "id": "captions.timing_coverage",
+            "status": if coverage_ok { "pass" } else { "fail" },
+            "evidence": { "cue_count": cue_count, "last_cue_end_ms": last_end_ms, "coverage_gap_ms": coverage_gap_ms }
+        }));
+    } else {
+        checks.push(serde_json::json!({
+            "id": "captions.timing_coverage",
+            "status": "fail",
+            "evidence": { "path": relative_artifact_path(project_path, &captions) }
+        }));
+    }
+
+    checks.push(serde_json::json!({
+        "id": "evidence.present",
+        "status": if evidence.is_file() { "pass" } else { "fail" },
+        "evidence": { "path": relative_artifact_path(project_path, &evidence) }
+    }));
+
+    if output_preset.aspect == "9:16" {
+        let reframe_path = variant_reframe_path(project_path, &variant);
+        let recorded_reframe_hash = provenance
+            .get("reframe_plan_hash")
+            .and_then(serde_json::Value::as_str);
+        let identity_ok = reframe_path.is_file()
+            && recorded_reframe_hash.is_some_and(|recorded| {
+                hash_file(&reframe_path)
+                    .map(|hash| format!("blake3:{hash}") == recorded)
+                    .unwrap_or(false)
+            });
+        checks.push(serde_json::json!({
+            "id": "reframe.plan_identity",
+            "status": if identity_ok { "pass" } else { "fail" },
+            "evidence": { "path": relative_artifact_path(project_path, &reframe_path), "recorded_hash": recorded_reframe_hash }
+        }));
+    }
+
+    checks.push(serde_json::json!({
+        "id": "transcript.benchmark",
+        "status": "pass",
+        "evidence": { "path": relative_artifact_path(project_path, &benchmark), "decision": benchmark_decision }
+    }));
+
+    // §8 taste gate: a deliverable never ships on automated checks alone.
+    let verdict_path = project_path.join(format!("feedback/verdict/{preset}.json"));
+    let verdict: Option<serde_json::Value> = read_json_if_file(&verdict_path);
+    let verdict_ok = verdict
+        .as_ref()
+        .and_then(|value| value.get("approved"))
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+    checks.push(serde_json::json!({
+        "id": "human.final_verdict",
+        "status": if verdict_ok { "pass" } else { "pending" },
+        "evidence": { "path": relative_artifact_path(project_path, &verdict_path), "present": verdict.is_some() }
+    }));
+
+    let overall_pass = checks
+        .iter()
+        .all(|check| check.get("status").and_then(serde_json::Value::as_str) == Some("pass"));
+    let report = serde_json::json!({
+        "schema_version": SCHEMA_VERSION,
+        "status": if overall_pass { "pass" } else { "fail" },
+        "preset": preset,
+        "variant": variant,
+        "output": relative_artifact_path(project_path, &output),
+        "output_hash": output_hash,
+        "source_hashes": sources.sources.iter().map(|source| serde_json::json!({
+            "source_id": source.source_id,
+            "blake3": source.blake3,
+        })).collect::<Vec<_>>(),
+        "selected_variant_hash": format!("blake3:{}", hash_file(&timeline_path)?),
+        "benchmark_decision": benchmark_decision,
+        "checks": checks,
+        "generated_at": Utc::now(),
+    });
+    write_json_atomic(&report_path, &report)?;
+    write_qa_summary(project_path)?;
+    receipts::write_stage_receipt(
+        &receipts::receipt_path_for(&report_path),
+        "qa.run",
+        &[
+            output.as_path(),
+            captions.as_path(),
+            timeline_path.as_path(),
+            benchmark.as_path(),
+        ],
+        &serde_json::json!({ "preset": preset, "variant": variant }),
+        BTreeMap::new(),
+        &[report_path.as_path()],
+    )?;
+
     Ok(PipelineArtifact {
-        status: if dry_run { "dry-run" } else { "pass" },
+        status: if overall_pass { "pass" } else { "fail" },
         path: report_path,
         count: 1,
     })
 }
 
+/// Aggregates every per-deliverable QA report into one `qa/summary.json`
+/// (§13.2) by scanning `qa/*.report.json` on disk — not just the
+/// deliverable the current run touched — so the summary always reflects
+/// every report that currently exists, in one place.
+fn write_qa_summary(project_path: &Path) -> Result<(), ProjectError> {
+    let qa_dir = project_path.join("qa");
+    let mut deliverables = Vec::new();
+    if qa_dir.is_dir() {
+        let mut paths = fs::read_dir(&qa_dir)?
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.ends_with(".report.json"))
+            })
+            .collect::<Vec<_>>();
+        paths.sort();
+        for path in paths {
+            let report: serde_json::Value = read_json(&path)?;
+            deliverables.push(serde_json::json!({
+                "preset": report.get("preset").cloned().unwrap_or(serde_json::Value::Null),
+                "status": report.get("status").cloned().unwrap_or(serde_json::Value::Null),
+                "output_hash": report.get("output_hash").cloned().unwrap_or(serde_json::Value::Null),
+                "report_path": relative_artifact_path(project_path, &path),
+                "report_hash": format!("blake3:{}", hash_file(&path)?),
+            }));
+        }
+    }
+    let overall_status = if deliverables.is_empty() {
+        "pending"
+    } else if deliverables
+        .iter()
+        .all(|item| item.get("status").and_then(serde_json::Value::as_str) == Some("pass"))
+    {
+        "pass"
+    } else {
+        "fail"
+    };
+    write_json_atomic(
+        &project_path.join("qa/summary.json"),
+        &serde_json::json!({
+            "schema_version": SCHEMA_VERSION,
+            "status": overall_status,
+            "deliverables": deliverables,
+            "generated_at": Utc::now(),
+        }),
+    )
+}
+
+struct LoudnessMeasurement {
+    integrated_lufs: Option<f64>,
+    true_peak_dbtp: Option<f64>,
+    clipped_samples: u64,
+}
+
+fn qa_ffmpeg_bin() -> PathBuf {
+    std::env::var_os("CUTRIGHT_FFMPEG")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("ffmpeg"))
+}
+
+/// Decodes the whole file end-to-end and requires a clean exit with no
+/// decoder errors on stderr — catches truncated/corrupt renders that probe
+/// alone (container metadata only) would not.
+fn decode_through_end(path: &Path) -> Result<bool, ProjectError> {
+    let output = Command::new(qa_ffmpeg_bin())
+        .args(["-v", "error", "-i"])
+        .arg(path)
+        .args(["-f", "null", "-"])
+        .output()
+        .map_err(|error| {
+            ProjectError::InvalidState(format!("ffmpeg decode check could not start: {error}"))
+        })?;
+    Ok(output.status.success() && output.stderr.is_empty())
+}
+
+/// Runs blackdetect + freezedetect over just the tail window of the render
+/// so a deliverable that silently drops to black or freezes at the very end
+/// (a common truncated-render symptom) fails QA instead of shipping.
+fn detect_tail_black_or_frozen(
+    path: &Path,
+    duration_ms: i64,
+    tail_ms: i64,
+) -> Result<(bool, bool), ProjectError> {
+    let start_seconds = (duration_ms - tail_ms).max(0) as f64 / 1000.0;
+    let output = Command::new(qa_ffmpeg_bin())
+        .args(["-v", "info", "-ss"])
+        .arg(format!("{start_seconds:.3}"))
+        .arg("-i")
+        .arg(path)
+        .args([
+            "-vf",
+            "blackdetect=d=0.5:pic_th=0.98,freezedetect=n=-60dB:d=0.5",
+            "-an",
+            "-f",
+            "null",
+            "-",
+        ])
+        .output()
+        .map_err(|error| {
+            ProjectError::InvalidState(format!("ffmpeg tail check could not start: {error}"))
+        })?;
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Ok((
+        stderr.contains("black_start"),
+        stderr.contains("freeze_start"),
+    ))
+}
+
+/// Measures integrated loudness (LUFS) and true peak (dBTP) via `ebur128`
+/// and sums clipped-sample counts across channels via `astats`, all in one
+/// ffmpeg pass over the audio.
+fn measure_loudness(path: &Path) -> Result<LoudnessMeasurement, ProjectError> {
+    let output = Command::new(qa_ffmpeg_bin())
+        .args(["-v", "info", "-i"])
+        .arg(path)
+        .args(["-af", "astats=reset=1,ebur128=peak=true", "-f", "null", "-"])
+        .output()
+        .map_err(|error| {
+            ProjectError::InvalidState(format!("ffmpeg loudness check could not start: {error}"))
+        })?;
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Ok(LoudnessMeasurement {
+        integrated_lufs: parse_last_labeled_f64(&stderr, "I:"),
+        true_peak_dbtp: parse_last_labeled_f64(&stderr, "Peak:"),
+        clipped_samples: parse_summed_labeled_u64(&stderr, "Number of clipped samples:"),
+    })
+}
+
+fn parse_last_labeled_f64(text: &str, label: &str) -> Option<f64> {
+    text.lines().rev().find_map(|line| {
+        line.trim()
+            .strip_prefix(label)
+            .and_then(|rest| rest.split_whitespace().next())
+            .and_then(|token| token.parse::<f64>().ok())
+    })
+}
+
+fn parse_summed_labeled_u64(text: &str, label: &str) -> u64 {
+    text.lines()
+        .filter_map(|line| {
+            line.trim()
+                .strip_prefix(label)
+                .and_then(|rest| rest.split_whitespace().next())
+                .and_then(|token| token.parse::<u64>().ok())
+        })
+        .sum()
+}
+
+/// Counts SRT cues and finds the last cue's end timestamp so QA can compare
+/// caption coverage against the deliverable's actual duration.
+fn caption_timing_coverage(captions_path: &Path) -> Result<(usize, Option<i64>), ProjectError> {
+    let text = fs::read_to_string(captions_path)?;
+    let mut cue_count = 0_usize;
+    let mut last_end_ms = None;
+    for line in text.lines() {
+        if let Some((_, end)) = line.split_once("-->") {
+            cue_count += 1;
+            if let Some(ms) = parse_srt_timestamp(end.trim()) {
+                last_end_ms = Some(ms);
+            }
+        }
+    }
+    Ok((cue_count, last_end_ms))
+}
+
+fn parse_srt_timestamp(value: &str) -> Option<i64> {
+    let (hms, millis) = value.split_once(',')?;
+    let mut parts = hms.split(':');
+    let hours: i64 = parts.next()?.parse().ok()?;
+    let minutes: i64 = parts.next()?.parse().ok()?;
+    let seconds: i64 = parts.next()?.parse().ok()?;
+    let millis: i64 = millis.parse().ok()?;
+    Some((hours * 3_600 + minutes * 60 + seconds) * 1_000 + millis)
+}
+
+/// Builds final decision evidence from the SELECTED VARIANT TIMELINE's
+/// actual cut boundaries (§13.1), not from pre-selection candidates. Every
+/// join between two adjacent timeline segments is a real cut that shipped;
+/// for each one this records the source frames immediately before/at/after
+/// the cut, the output frames around the join in the actual rendered
+/// artifact, source and output waveform snippets, the nearest transcript
+/// word id on each side, the removed-gap duration, and the source/output
+/// time mapping — plus the render artifact's own hash, so the evidence is
+/// bound to the exact bytes it was extracted from.
 pub fn evidence_build(
     project_path: &Path,
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
-    let candidates: CandidateManifest = read_json(&project_path.join("edit/candidates.json"))?;
+    let variant = resolve_variant(project_path, None)?;
+    let timeline_path = variant_timeline_path(project_path, &variant);
+    let timeline: Timeline = read_json(&timeline_path)?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
+    let segments = &timeline
+        .tracks
+        .first()
+        .ok_or_else(|| ProjectError::InvalidState("timeline has no main track".into()))?
+        .segments;
+    let rough_cut = project_path.join(format!("render/rough-cuts/{variant}.mp4"));
     let path = project_path.join("analysis/evidence/manifest.json");
+    let join_count = segments.len().saturating_sub(1);
     if !dry_run {
+        if !rough_cut.is_file() {
+            return Err(ProjectError::InvalidState(format!(
+                "evidence build requires the rendered rough cut: render/rough-cuts/{variant}.mp4"
+            )));
+        }
+        let transcripts = load_transcripts(project_path)?;
+        let render_artifact_hash = format!("blake3:{}", hash_file(&rough_cut)?);
         let boundary_dir = project_path.join("analysis/evidence/boundaries");
-        let mut artifacts = Vec::new();
-        for candidate in &candidates.candidates {
-            let source = sources
-                .sources
-                .iter()
-                .find(|source| source.source_id == candidate.source_id)
-                .ok_or_else(|| {
-                    ProjectError::InvalidState(format!(
-                        "candidate {} references a missing source",
-                        candidate.id
-                    ))
-                })?;
-            let decision_start = candidate.start_ms.saturating_sub(750).max(0);
-            let decision_end = candidate.end_ms.saturating_add(750);
-            let mut frames = Vec::new();
-            for (edge, timestamp_ms) in [
-                ("before", decision_start),
-                ("decision", candidate.start_ms),
-                ("after", candidate.end_ms),
-            ] {
-                let frame = boundary_dir.join(format!("{}-{edge}.jpg", candidate.id));
-                extract_frame(Path::new(&source.path), timestamp_ms, &frame)?;
-                artifacts.push(serde_json::json!({
-                    "kind": "boundary_frame",
-                    "candidate_id": candidate.id,
-                    "edge": edge,
-                    "source_id": source.source_id,
-                    "timestamp_ms": timestamp_ms,
-                    "path": frame.strip_prefix(project_path).unwrap_or(&frame)
-                }));
-                frames.push(frame);
-            }
-            let waveform =
-                project_path.join(format!("analysis/evidence/waveforms/{}.png", candidate.id));
-            render_waveform_range(
-                Path::new(&source.path),
-                decision_start,
-                decision_end,
-                &waveform,
+        let waveform_dir = project_path.join("analysis/evidence/waveforms");
+        let mut cuts = Vec::new();
+        for (index, pair) in segments.windows(2).enumerate() {
+            let (left, right) = (&pair[0], &pair[1]);
+            let cut_id = format!("cut-{:03}", index + 1);
+            let left_source = find_source(&sources, &left.source_id)?;
+            let right_source = find_source(&sources, &right.source_id)?;
+
+            let source_before = boundary_dir.join(format!("{cut_id}-source-before.jpg"));
+            let source_at = boundary_dir.join(format!("{cut_id}-source-at.jpg"));
+            let source_after = boundary_dir.join(format!("{cut_id}-source-after.jpg"));
+            extract_frame(
+                Path::new(&left_source.path),
+                left.source_end_ms.saturating_sub(200).max(0),
+                &source_before,
             )?;
-            let composite =
-                project_path.join(format!("analysis/evidence/filmstrips/{}.png", candidate.id));
-            compose_decision_evidence(&frames, &waveform, &composite)?;
-            artifacts.push(serde_json::json!({
-                "kind": "decision_filmstrip",
-                "candidate_id": candidate.id,
-                "source_id": source.source_id,
-                "start_ms": decision_start,
-                "end_ms": decision_end,
-                "path": composite.strip_prefix(project_path).unwrap_or(&composite)
+            extract_frame(Path::new(&left_source.path), left.source_end_ms, &source_at)?;
+            extract_frame(
+                Path::new(&right_source.path),
+                right.source_start_ms,
+                &source_after,
+            )?;
+
+            let output_before = boundary_dir.join(format!("{cut_id}-output-before.jpg"));
+            let output_after = boundary_dir.join(format!("{cut_id}-output-after.jpg"));
+            extract_frame(
+                &rough_cut,
+                left.output_end_ms.saturating_sub(200).max(0),
+                &output_before,
+            )?;
+            extract_frame(
+                &rough_cut,
+                left.output_end_ms.saturating_add(200),
+                &output_after,
+            )?;
+
+            let source_waveform = waveform_dir.join(format!("{cut_id}-source.png"));
+            render_waveform_range(
+                Path::new(&left_source.path),
+                left.source_end_ms.saturating_sub(750).max(0),
+                left.source_end_ms.saturating_add(750),
+                &source_waveform,
+            )?;
+            let output_waveform = waveform_dir.join(format!("{cut_id}-output.png"));
+            render_waveform_range(
+                &rough_cut,
+                left.output_end_ms.saturating_sub(750).max(0),
+                left.output_end_ms.saturating_add(750),
+                &output_waveform,
+            )?;
+
+            let previous_word_id =
+                nearest_word_before(&transcripts, &left.source_id, left.source_end_ms);
+            let next_word_id =
+                nearest_word_after(&transcripts, &right.source_id, right.source_start_ms);
+            let removed_gap_ms = if left.source_id == right.source_id {
+                Some((right.source_start_ms - left.source_end_ms).max(0))
+            } else {
+                None
+            };
+
+            cuts.push(serde_json::json!({
+                "id": cut_id,
+                "join_output_ms": left.output_end_ms,
+                "removed_gap_ms": removed_gap_ms,
+                "previous_word_id": previous_word_id,
+                "next_word_id": next_word_id,
+                "left": {
+                    "segment_id": left.id,
+                    "source_id": left.source_id,
+                    "source_start_ms": left.source_start_ms,
+                    "source_end_ms": left.source_end_ms,
+                    "output_start_ms": left.output_start_ms,
+                    "output_end_ms": left.output_end_ms,
+                },
+                "right": {
+                    "segment_id": right.id,
+                    "source_id": right.source_id,
+                    "source_start_ms": right.source_start_ms,
+                    "source_end_ms": right.source_end_ms,
+                    "output_start_ms": right.output_start_ms,
+                    "output_end_ms": right.output_end_ms,
+                },
+                "source_frames": {
+                    "before": relative_artifact_path(project_path, &source_before),
+                    "at": relative_artifact_path(project_path, &source_at),
+                    "after": relative_artifact_path(project_path, &source_after),
+                },
+                "output_frames": {
+                    "before": relative_artifact_path(project_path, &output_before),
+                    "after": relative_artifact_path(project_path, &output_after),
+                },
+                "source_waveform": relative_artifact_path(project_path, &source_waveform),
+                "output_waveform": relative_artifact_path(project_path, &output_waveform),
             }));
         }
-        let waveform = project_path.join("analysis/evidence/waveforms/natural.png");
-        render_waveform(
-            &project_path.join("render/rough-cuts/natural.mp4"),
-            &waveform,
-        )?;
-        artifacts.push(serde_json::json!({"kind": "waveform", "path": waveform.strip_prefix(project_path).unwrap_or(&waveform)}));
+        let full_output_waveform = waveform_dir.join(format!("{variant}-output.png"));
+        render_waveform(&rough_cut, &full_output_waveform)?;
         write_json_atomic(
             &path,
-            &serde_json::json!({"schema_version": SCHEMA_VERSION, "artifacts": artifacts}),
+            &serde_json::json!({
+                "schema_version": SCHEMA_VERSION,
+                "variant": variant,
+                "render_artifact_path": relative_artifact_path(project_path, &rough_cut),
+                "render_artifact_hash": render_artifact_hash,
+                "full_output_waveform": relative_artifact_path(project_path, &full_output_waveform),
+                "cuts": cuts,
+            }),
+        )?;
+        receipts::write_stage_receipt(
+            &receipts::receipt_path_for(&path),
+            "evidence.build",
+            &[timeline_path.as_path(), rough_cut.as_path()],
+            &serde_json::json!({ "variant": variant, "cut_count": join_count }),
+            BTreeMap::new(),
+            &[path.as_path()],
         )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
         path,
-        count: candidates.candidates.len(),
+        count: join_count,
     })
+}
+
+fn find_source<'a>(
+    sources: &'a SourceManifest,
+    source_id: &str,
+) -> Result<&'a SourceEntry, ProjectError> {
+    sources
+        .sources
+        .iter()
+        .find(|source| source.source_id == source_id)
+        .ok_or_else(|| {
+            ProjectError::InvalidState(format!("evidence references missing source {source_id}"))
+        })
+}
+
+/// The nearest transcript word on `source_id` that ends at or before
+/// `at_ms` — the last word spoken before a cut point in that source.
+fn nearest_word_before(transcripts: &[Transcript], source_id: &str, at_ms: i64) -> Option<String> {
+    transcripts
+        .iter()
+        .filter(|transcript| transcript.source_id == source_id)
+        .flat_map(|transcript| transcript.words.iter())
+        .filter(|word| word.end_ms <= at_ms)
+        .max_by_key(|word| word.end_ms)
+        .map(|word| word.id.clone())
+}
+
+/// The nearest transcript word on `source_id` that starts at or after
+/// `at_ms` — the first word spoken after a cut point in that source.
+fn nearest_word_after(transcripts: &[Transcript], source_id: &str, at_ms: i64) -> Option<String> {
+    transcripts
+        .iter()
+        .filter(|transcript| transcript.source_id == source_id)
+        .flat_map(|transcript| transcript.words.iter())
+        .filter(|word| word.start_ms >= at_ms)
+        .min_by_key(|word| word.start_ms)
+        .map(|word| word.id.clone())
 }
 
 pub fn propose_shorts(
@@ -2974,6 +3783,14 @@ pub fn finish_validate(
         write_json_atomic(&path, &plan)?;
         // Compatibility alias for consumers not yet variant-aware.
         write_json_atomic(&project_path.join("finish/finish-plan.json"), &plan)?;
+        receipts::write_stage_receipt(
+            &receipts::receipt_path_for(&path),
+            "finish.validate",
+            &[timeline_path.as_path()],
+            &serde_json::json!({ "variant": variant }),
+            BTreeMap::new(),
+            &[path.as_path()],
+        )?;
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "valid" },
@@ -3030,32 +3847,129 @@ pub fn render_slot(
     }
 }
 
+/// Packages every configured deliverable preset (§13.3/§13.5). Each
+/// deliverable resolves its OWN captions from the variant its final was
+/// actually rendered from (via that final's provenance) instead of copying
+/// one generic SRT into every package by assumption, and packaging refuses
+/// any preset whose QA report has not passed — the taste gate (§8) sits
+/// upstream of QA via the `human.final_verdict` check, so a package can
+/// only be built from deliverables Adrian has already signed off on. Every
+/// package emits one manifest (`exports/package-manifest.json`) binding
+/// artifact paths, hashes, sizes, selected variant, preset/profile
+/// versions, QA report hash, caption artifact hash, creation time, and
+/// toolchain identity — copying files alone is not a release package.
 pub fn package_social(
     project_path: &Path,
     dry_run: bool,
 ) -> Result<PipelineArtifact, ProjectError> {
-    let final_video = project_path.join("render/finals/youtube.mp4");
-    let vertical_video = project_path.join("render/finals/reels.mp4");
-    let caption_file = project_path.join("edit/captions.srt");
-    let video_export = project_path.join("exports/youtube/youtube.mp4");
-    let vertical_export = project_path.join("exports/vertical/reels.mp4");
-    let caption_export = project_path.join("exports/captions/youtube.srt");
-    let vertical_caption_export = project_path.join("exports/captions/reels.srt");
-    if !dry_run {
-        if !final_video.is_file() || !vertical_video.is_file() || !caption_file.is_file() {
-            return Err(ProjectError::InvalidState(
-                "social packaging requires YouTube, vertical, and caption artifacts".into(),
-            ));
-        }
-        fs::copy(&final_video, &video_export)?;
-        fs::copy(&vertical_video, &vertical_export)?;
-        fs::copy(&caption_file, &caption_export)?;
-        fs::copy(&caption_file, &vertical_caption_export)?;
+    let manifest = read_project_manifest(&project_path.join("project.json"))?;
+    let path = project_path.join("exports/package-manifest.json");
+    if dry_run {
+        return Ok(PipelineArtifact {
+            status: "dry-run",
+            path,
+            count: manifest.outputs.len(),
+        });
     }
+    let mut deliverables = Vec::new();
+    let mut package_inputs: Vec<PathBuf> = Vec::new();
+    for preset in &manifest.outputs {
+        let final_video = project_path.join(format!("render/finals/{}.mp4", preset.id));
+        let provenance_path =
+            project_path.join(format!("render/finals/{}.provenance.json", preset.id));
+        if !final_video.is_file() || !provenance_path.is_file() {
+            return Err(ProjectError::InvalidState(format!(
+                "social packaging requires a rendered final and provenance for preset {}",
+                preset.id
+            )));
+        }
+        let provenance: serde_json::Value = read_json(&provenance_path)?;
+        let variant = provenance
+            .get("variant")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| {
+                ProjectError::InvalidState(format!("{} provenance is missing a variant", preset.id))
+            })?
+            .to_string();
+        // §13.3: this preset's OWN captions, resolved from the variant it
+        // was actually rendered from — never a generic file assumed shared.
+        let captions = variant_captions_path(project_path, &variant);
+        if !captions.is_file() {
+            return Err(ProjectError::InvalidState(format!(
+                "social packaging requires captions for preset {} (variant {variant})",
+                preset.id
+            )));
+        }
+        let qa_report_path = project_path.join(format!("qa/{}.report.json", preset.id));
+        let qa_report: serde_json::Value = read_json(&qa_report_path).map_err(|_| {
+            ProjectError::InvalidState(format!(
+                "social packaging requires a QA report for preset {}: run `videoctl qa <project> --preset {}` first",
+                preset.id, preset.id
+            ))
+        })?;
+        if qa_report.get("status").and_then(serde_json::Value::as_str) != Some("pass") {
+            return Err(ProjectError::InvalidState(format!(
+                "social packaging refuses preset {} whose QA report did not pass",
+                preset.id
+            )));
+        }
+
+        let export_dir = project_path.join(format!("exports/{}", preset.id));
+        let video_export = export_dir.join(format!("{}.mp4", preset.id));
+        let caption_export = export_dir.join(format!("{}.srt", preset.id));
+        fs::create_dir_all(&export_dir)?;
+        fs::copy(&final_video, &video_export)?;
+        fs::copy(&captions, &caption_export)?;
+
+        deliverables.push(serde_json::json!({
+            "preset": preset.id,
+            "aspect": preset.aspect,
+            "selected_variant": variant,
+            "video": {
+                "path": relative_artifact_path(project_path, &video_export),
+                "hash": format!("blake3:{}", hash_file(&video_export)?),
+                "size_bytes": fs::metadata(&video_export)?.len(),
+            },
+            "captions": {
+                "path": relative_artifact_path(project_path, &caption_export),
+                "hash": format!("blake3:{}", hash_file(&caption_export)?),
+                "size_bytes": fs::metadata(&caption_export)?.len(),
+            },
+            "preset_version": SCHEMA_VERSION,
+            "caption_profile_version": SCHEMA_VERSION,
+            "qa_report_path": relative_artifact_path(project_path, &qa_report_path),
+            "qa_report_hash": format!("blake3:{}", hash_file(&qa_report_path)?),
+        }));
+        package_inputs.push(final_video);
+        package_inputs.push(qa_report_path);
+    }
+    let package = serde_json::json!({
+        "schema_version": SCHEMA_VERSION,
+        "created_at": Utc::now(),
+        "toolchain_identity": {
+            "videoctl_version": env!("CARGO_PKG_VERSION"),
+            "ffmpeg": std::env::var("CUTRIGHT_FFMPEG").unwrap_or_else(|_| "ffmpeg".into()),
+        },
+        "deliverables": deliverables,
+    });
+    write_json_atomic(&path, &package)?;
+    let input_refs: Vec<&Path> = package_inputs.iter().map(PathBuf::as_path).collect();
+    let mut toolchains = BTreeMap::new();
+    if let Ok(toolchain) = resolve_toolchain() {
+        toolchains.insert("ffmpeg".to_string(), toolchain.identity());
+    }
+    receipts::write_stage_receipt(
+        &receipts::receipt_path_for(&path),
+        "package.social",
+        &input_refs,
+        &serde_json::json!({ "preset_count": manifest.outputs.len() }),
+        toolchains,
+        &[path.as_path()],
+    )?;
     Ok(PipelineArtifact {
-        status: if dry_run { "dry-run" } else { "created" },
-        path: video_export,
-        count: 4,
+        status: "created",
+        path,
+        count: deliverables.len(),
     })
 }
 
@@ -3084,7 +3998,7 @@ pub fn export_otio(
                 "name": segment.id,
                 "media_reference": {
                     "OTIO_SCHEMA": "ExternalReference.1",
-                    "target_url": format!("file://{}", source.path.replace(' ', "%20"))
+                    "target_url": format!("file://{}", percent_encode_file_url_path(&source.path))
                 },
                 "source_range": {
                     "OTIO_SCHEMA": "TimeRange.1",
@@ -3119,7 +4033,10 @@ pub fn export_otio(
     })
 }
 
-fn load_transcripts(project_path: &Path) -> Result<Vec<Transcript>, ProjectError> {
+/// The exact set of transcript files [`load_transcripts`] reads, exposed
+/// separately so stage receipts can bind the real input paths without
+/// re-parsing every transcript.
+fn transcript_file_paths(project_path: &Path) -> Result<Vec<PathBuf>, ProjectError> {
     let directory = project_path.join("analysis/transcripts");
     let mut paths = if directory.is_dir() {
         fs::read_dir(directory)?
@@ -3142,7 +4059,14 @@ fn load_transcripts(project_path: &Path) -> Result<Vec<Transcript>, ProjectError
             "transcribe must run before editing".into(),
         ));
     }
-    paths.into_iter().map(|path| read_json(&path)).collect()
+    Ok(paths)
+}
+
+fn load_transcripts(project_path: &Path) -> Result<Vec<Transcript>, ProjectError> {
+    transcript_file_paths(project_path)?
+        .into_iter()
+        .map(|path| read_json(&path))
+        .collect()
 }
 
 fn group_words(words: &[Word], gap_threshold_ms: i64) -> Vec<Vec<Word>> {
@@ -3199,7 +4123,25 @@ fn srt_time(milliseconds: i64) -> String {
     )
 }
 
-fn hash_file(path: &Path) -> Result<String, ProjectError> {
+/// RFC 3986 percent-encoding for a filesystem path embedded in a `file://`
+/// URL (§13.6). Keeps `/` as the path separator and the unreserved set
+/// (ALPHA / DIGIT / "-" "." "_" "~") literal; every other byte — spaces,
+/// `#`, `%`, and non-ASCII UTF-8 bytes — is escaped as uppercase `%XX` so
+/// the URL is unambiguous and round-trips through OTIO-consuming tools.
+fn percent_encode_file_url_path(path: &str) -> String {
+    let mut out = String::with_capacity(path.len());
+    for byte in path.as_bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' => {
+                out.push(*byte as char)
+            }
+            other => out.push_str(&format!("%{other:02X}")),
+        }
+    }
+    out
+}
+
+pub(crate) fn hash_file(path: &Path) -> Result<String, ProjectError> {
     let mut file = fs::File::open(path)?;
     let mut hasher = blake3::Hasher::new();
     let mut buffer = [0_u8; 64 * 1024];
@@ -3254,7 +4196,7 @@ fn fresh_instance_id() -> String {
     format!("pin_{}", &blake3::hash(seed.as_bytes()).to_hex()[..32])
 }
 
-fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<(), ProjectError> {
+pub(crate) fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<(), ProjectError> {
     let mut bytes = serde_json::to_vec_pretty(value)?;
     bytes.push(b'\n');
     write_bytes_atomic(path, &bytes)
@@ -3352,6 +4294,46 @@ mod tests {
         assert_eq!(second.status, "existing");
         assert_eq!(manifest_before, manifest_after);
         assert!(temp.path().join("analysis/bench/transcribe").is_dir());
+    }
+
+    #[test]
+    fn transcription_cache_identity_survives_a_moved_source() {
+        // §10.5: cache identity is content-addressed. A project copied to
+        // another disk, or a source relinked to a new path, must reuse valid
+        // analysis instead of paying for a full re-transcription.
+        let entry = |path: &str| SourceEntry {
+            source_id: "cam-a-001".into(),
+            path: path.into(),
+            blake3: "blake3:same-bytes".into(),
+            duration_ms: Some(1_000),
+            width: None,
+            height: None,
+            rotation_degrees: None,
+            is_hdr: None,
+            timebase: None,
+        };
+        let here =
+            transcription_request_hash(&entry("/Volumes/A/clip.mov"), "heardright", "tdt-v3")
+                .unwrap();
+        let moved = transcription_request_hash(
+            &entry("/Volumes/B/archive/clip.mov"),
+            "heardright",
+            "tdt-v3",
+        )
+        .unwrap();
+        assert_eq!(here, moved);
+
+        // Different BYTES must still miss the cache.
+        let mut other = entry("/Volumes/A/clip.mov");
+        other.blake3 = "blake3:different-bytes".into();
+        let different = transcription_request_hash(&other, "heardright", "tdt-v3").unwrap();
+        assert_ne!(here, different);
+
+        // So must a different engine.
+        let other_engine =
+            transcription_request_hash(&entry("/Volumes/A/clip.mov"), "whisperx", "tdt-v3")
+                .unwrap();
+        assert_ne!(here, other_engine);
     }
 
     #[test]
@@ -3663,6 +4645,70 @@ mod tests {
         assert_eq!(
             clip["media_reference"]["target_url"],
             "file:///captures/cam%20one.mov"
+        );
+    }
+
+    #[test]
+    fn percent_encode_file_url_path_covers_reserved_and_unicode_bytes() {
+        // §13.6 fixtures: spaces, Unicode, `#`, `%`, and non-ASCII paths must
+        // round-trip through a real percent-encoder, not a single `' '` ->
+        // `%20` substitution.
+        assert_eq!(
+            percent_encode_file_url_path("/captures/cam one.mov"),
+            "/captures/cam%20one.mov"
+        );
+        assert_eq!(
+            percent_encode_file_url_path("/captures/café münchen.mov"),
+            "/captures/caf%C3%A9%20m%C3%BCnchen.mov"
+        );
+        assert_eq!(
+            percent_encode_file_url_path("/captures/take#3 100%.mov"),
+            "/captures/take%233%20100%25.mov"
+        );
+        assert_eq!(
+            percent_encode_file_url_path("/captures/日本語.mov"),
+            "/captures/%E6%97%A5%E6%9C%AC%E8%AA%9E.mov"
+        );
+        // Unreserved characters and the path separator stay literal.
+        assert_eq!(
+            percent_encode_file_url_path("/a-b/c_d.e~f/g.mov"),
+            "/a-b/c_d.e~f/g.mov"
+        );
+    }
+
+    #[test]
+    fn otio_export_percent_encodes_reserved_and_unicode_source_paths() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        write_json_atomic(&temp.path().join("edit/timeline.json"), &sample_timeline()).unwrap();
+        write_json_atomic(
+            &temp.path().join("sources/manifest.json"),
+            &SourceManifest {
+                schema_version: SCHEMA_VERSION,
+                sources: vec![SourceEntry {
+                    source_id: "source-001".into(),
+                    path: "/captures/take #3 café 日本語 100%.mov".into(),
+                    blake3: "fixture".into(),
+                    duration_ms: Some(10_000),
+                    width: Some(1920),
+                    height: Some(1080),
+                    rotation_degrees: Some(0),
+                    is_hdr: Some(false),
+                    timebase: Some(Timebase {
+                        fps_num: 30,
+                        fps_den: 1,
+                    }),
+                }],
+            },
+        )
+        .unwrap();
+
+        let result = export_otio(temp.path(), None, false).unwrap();
+        let otio: serde_json::Value = read_json(&result.path).unwrap();
+        let clip = &otio["tracks"]["children"][0]["children"][0];
+        assert_eq!(
+            clip["media_reference"]["target_url"],
+            "file:///captures/take%20%233%20caf%C3%A9%20%E6%97%A5%E6%9C%AC%E8%AA%9E%20100%25.mov"
         );
     }
 
@@ -4387,5 +5433,96 @@ mod tests {
                 fps_den: 1,
             }
         );
+    }
+
+    /// End-to-end (media-tool-free) run through candidates → cut plan →
+    /// timeline → transcript remap → finish validate, asserting that each
+    /// stage that actually ran left a verifiable `StageReceipt` beside its
+    /// artifact (hardening plan §10.4 requirement 5), that `verify_receipts`
+    /// reports every one of them as passing, and that tampering with a
+    /// bound output afterward makes verification fail.
+    #[test]
+    fn stage_pipeline_writes_verifiable_receipts_for_every_stage_that_ran() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        write_json_atomic(
+            &temp.path().join("sources/manifest.json"),
+            &SourceManifest {
+                schema_version: SCHEMA_VERSION,
+                sources: vec![SourceEntry {
+                    source_id: "source-a".into(),
+                    path: "sources/source-a.mov".into(),
+                    blake3: "fixture".into(),
+                    duration_ms: Some(10_000),
+                    width: Some(1920),
+                    height: Some(1080),
+                    rotation_degrees: Some(0),
+                    is_hdr: Some(false),
+                    timebase: None,
+                }],
+            },
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("analysis/vad-source-a.json"),
+            &VadSignal {
+                schema_version: SCHEMA_VERSION,
+                source_id: "source-a".into(),
+                sample_rate: 16_000,
+                provider: "heardright-silero".into(),
+                regions: vec![video_core::VadRegion {
+                    start_ms: 0,
+                    end_ms: 900,
+                    mean_probability: 0.9,
+                }],
+            },
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("analysis/transcripts/source-a.json"),
+            &Transcript {
+                schema_version: SCHEMA_VERSION,
+                provider: "fixture".into(),
+                source_id: "source-a".into(),
+                language: "en".into(),
+                words: vec![word(0, 100), word(150, 500)],
+                events: Vec::new(),
+            },
+        )
+        .unwrap();
+
+        build_candidates_with_policy(temp.path(), FillerPolicy::SuggestOnly, false).unwrap();
+        assert!(receipts::receipt_path_for(&temp.path().join("edit/candidates.json")).is_file());
+
+        build_cut_plan(temp.path(), "natural", false).unwrap();
+        let cut_plan_path = temp.path().join("edit/cut-plan-natural.json");
+        assert!(receipts::receipt_path_for(&cut_plan_path).is_file());
+
+        compile_timeline(temp.path(), "natural", false).unwrap();
+        let timeline_path = temp.path().join("edit/timeline-natural.json");
+        assert!(receipts::receipt_path_for(&timeline_path).is_file());
+
+        remap_transcript_for_variant(temp.path(), "natural", false).unwrap();
+        let output_transcript_path = temp.path().join("edit/output-transcript-natural.json");
+        assert!(receipts::receipt_path_for(&output_transcript_path).is_file());
+
+        finish_validate(temp.path(), Some("natural"), false).unwrap();
+        let finish_plan_path = temp.path().join("finish/natural/finish-plan.json");
+        assert!(receipts::receipt_path_for(&finish_plan_path).is_file());
+
+        let report = verify_receipts(temp.path()).unwrap();
+        assert_eq!(report.status, "pass");
+        assert!(report.checked >= 5);
+        assert!(report.results.iter().all(|result| result.status == "pass"));
+
+        // Tamper with a bound output after the fact: the receipt binding it
+        // must fail verification.
+        fs::write(&cut_plan_path, b"{\"tampered\":true}").unwrap();
+        let report = verify_receipts(temp.path()).unwrap();
+        assert_eq!(report.status, "fail");
+        assert!(report
+            .results
+            .iter()
+            .any(|result| result.status == "fail" && !result.failures.is_empty()));
     }
 }

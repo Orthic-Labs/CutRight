@@ -16,11 +16,10 @@
 //! - protocol-major rejection with minor-version negotiation;
 //! - a per-request timeout (the engine itself may run indefinitely, but no
 //!   single request blocks CutRight forever);
-//! - bounded stderr capture (via [`crate::process_runner::ManagedChild`]);
+//! - bounded stderr capture (via [`video_core::process_runner::ManagedChild`]);
 //! - exactly one controlled restart after an unexpected engine exit;
 //! - no model download or network fallback of any kind.
 
-use crate::process_runner::{ManagedChild, ProcessSpec};
 use serde_json::Value;
 use std::env;
 use std::io::{BufRead, BufReader, Write};
@@ -31,6 +30,7 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use thiserror::Error;
+use video_core::process_runner::{ManagedChild, ProcessSpec};
 
 /// Protocol major version this client speaks. A session whose handshake
 /// reports a different major version is rejected outright (§9.2).
@@ -99,7 +99,7 @@ pub enum ProviderError {
     #[error("WhisperX alignment script was not found; set CUTRIGHT_WHISPERX_SCRIPT")]
     WhisperXScriptMissing,
     #[error("WhisperX invocation failed: {0}")]
-    WhisperXProcess(#[from] crate::process_runner::ProcessRunError),
+    WhisperXProcess(#[from] video_core::process_runner::ProcessRunError),
     #[error("WhisperX invocation exited with a nonzero status: {0}")]
     WhisperXExit(String),
 }
@@ -217,7 +217,7 @@ impl Session {
             stderr_cap_bytes: STDERR_CAP_BYTES,
         };
         let (process, stdin, stdout) = ManagedChild::spawn(&spec).map_err(|error| match error {
-            crate::process_runner::ProcessRunError::Spawn(_, io_error) => {
+            video_core::process_runner::ProcessRunError::Spawn(_, io_error) => {
                 ProviderError::Start(io_error)
             }
             other => ProviderError::Engine(other.to_string()),
