@@ -10,8 +10,15 @@ name = "videoctl"
 path = "src/main.rs"
 
 [dependencies]
+blake3.workspace = true
+chrono.workspace = true
 clap.workspace = true
 serde_json.workspace = true
 video-core = { path = "../video-core" }
 video-media = { path = "../video-media" }
 video-project = { path = "../video-project" }
+video-providers = { path = "../video-providers" }
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.1"

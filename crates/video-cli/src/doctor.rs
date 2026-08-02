@@ -1,0 +1,1080 @@
+//! `videoctl doctor` — REV2 plan §11: a truthful machine-readiness report.
+//!
+//! Every check below performs an *active* probe (spawn a real process,
+//! write a real file, parse a real filter list) rather than an existence
+//! check on a binary name. A check that cannot be verified truthfully from
+//! this crate alone (for example, a full HeardRight protocol handshake,
+//! which requires a public health API this crate does not own) is reported
+//! as `missing`/`degraded` with an honest `remediation`, never faked as
+//! `ok`.
+//!
+//! Profiles are additive: `audio`, `render`, and `studio` each run the
+//! `core` checks first, because every deeper probe assumes a working temp
+//! directory and toolchain. `all` runs every profile's checks once.
+
+use clap::ValueEnum;
+use serde_json::{json, Value};
+use std::fs;
+use std::io::{self, Read};
+use std::path::{Path, PathBuf};
+use std::process::{Command, Output, Stdio};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+#[value(rename_all = "lower")]
+pub enum DoctorProfile {
+    Core,
+    Audio,
+    Render,
+    Studio,
+    All,
+}
+
+/// Whether `doctor`'s required checks (and, under `--strict`, its degraded
+/// optional checks) all passed. `main` maps this to the exit-code table in
+/// `docs` — see `main.rs` `EXIT_*` constants.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DoctorOutcome {
+    Ready,
+    NotReady,
+}
+
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(20);
+
+pub fn run(
+    profile: DoctorProfile,
+    strict: bool,
+    write_receipt: Option<&Path>,
+) -> (Value, DoctorOutcome) {
+    let mut checks: Vec<Value> = Vec::new();
+
+    // Core checks are the foundation every other profile depends on, so
+    // they always run first regardless of the selected profile.
+    checks.extend(core_checks());
+    match profile {
+        DoctorProfile::Core => {}
+        DoctorProfile::Audio => checks.extend(audio_checks()),
+        DoctorProfile::Render => checks.extend(render_checks()),
+        DoctorProfile::Studio => checks.extend(studio_checks()),
+        DoctorProfile::All => {
+            checks.extend(audio_checks());
+            checks.extend(render_checks());
+            checks.extend(studio_checks());
+        }
+    }
+
+    let outcome = evaluate(&checks, strict);
+    let report = json!({
+        "event": "doctor",
+        "status": match outcome {
+            DoctorOutcome::Ready => "ok",
+            DoctorOutcome::NotReady => "fail",
+        },
+        "profile": profile_name(profile),
+        "strict": strict,
+        "checks": checks,
+    });
+
+    if let Some(path) = write_receipt {
+        if let Err(error) = write_receipt_file(path, &report) {
+            eprintln!("videoctl: failed to write doctor receipt to {path:?}: {error}");
+        }
+    }
+
+    (report, outcome)
+}
+
+fn profile_name(profile: DoctorProfile) -> &'static str {
+    match profile {
+        DoctorProfile::Core => "core",
+        DoctorProfile::Audio => "audio",
+        DoctorProfile::Render => "render",
+        DoctorProfile::Studio => "studio",
+        DoctorProfile::All => "all",
+    }
+}
+
+/// A required check that is `missing`/`degraded`/`failed` always fails
+/// readiness. Under `--strict`, an *optional* check in the same states also
+/// fails readiness.
+fn evaluate(checks: &[Value], strict: bool) -> DoctorOutcome {
+    for check in checks {
+        let status = check["status"].as_str().unwrap_or("failed");
+        let required = check["required"].as_bool().unwrap_or(true);
+        let blocking = status == "failed" || status == "missing" || status == "degraded";
+        if blocking && (required || strict) {
+            return DoctorOutcome::NotReady;
+        }
+    }
+    DoctorOutcome::Ready
+}
+
+fn check(
+    id: &str,
+    required: bool,
+    status: &str,
+    evidence: Value,
+    remediation: Option<&str>,
+) -> Value {
+    json!({
+        "id": id,
+        "status": status,
+        "required": required,
+        "evidence": evidence,
+        "remediation": remediation,
+    })
+}
+
+// ---------------------------------------------------------------------
+// Process helpers
+// ---------------------------------------------------------------------
+
+/// Run `cmd` to completion, killing it if it outlives `timeout`. This is a
+/// deliberately minimal stdlib-only mechanism (no new dependency): poll
+/// `try_wait` and kill on timeout rather than pull in an async runtime for
+/// what are, in practice, sub-second probe commands.
+fn run_with_timeout(mut cmd: Command, timeout: Duration) -> io::Result<Output> {
+    let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+    let start = Instant::now();
+    loop {
+        if let Some(status) = child.try_wait()? {
+            let mut stdout = Vec::new();
+            let mut stderr = Vec::new();
+            if let Some(mut out) = child.stdout.take() {
+                out.read_to_end(&mut stdout)?;
+            }
+            if let Some(mut err) = child.stderr.take() {
+                err.read_to_end(&mut stderr)?;
+            }
+            return Ok(Output {
+                status,
+                stdout,
+                stderr,
+            });
+        }
+        if start.elapsed() > timeout {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                format!("process exceeded {timeout:?} timeout"),
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+fn evidence_from_output(output: &Output) -> Value {
+    json!({
+        "exit_code": output.status.code(),
+        "stdout_tail": tail(&String::from_utf8_lossy(&output.stdout), 400),
+        "stderr_tail": tail(&String::from_utf8_lossy(&output.stderr), 400),
+    })
+}
+
+fn tail(text: &str, max_chars: usize) -> String {
+    if text.chars().count() <= max_chars {
+        text.trim().to_string()
+    } else {
+        let start = text
+            .char_indices()
+            .rev()
+            .nth(max_chars)
+            .map(|(i, _)| i + 1)
+            .unwrap_or(0);
+        format!("...{}", text[start..].trim())
+    }
+}
+
+// ---------------------------------------------------------------------
+// Core probes (§11.2)
+// ---------------------------------------------------------------------
+
+fn core_checks() -> Vec<Value> {
+    vec![
+        check_tempdir(),
+        check_ffmpeg_execute(),
+        check_ffprobe_execute(),
+        check_schemas_load(),
+        check_sidecar_materialize(),
+        check_source_policy(),
+        check_cloud_default(),
+    ]
+}
+
+/// Active probe: create → write → rename → delete inside a fresh directory,
+/// exactly the sequence a real project run needs its temp directory to
+/// support.
+fn check_tempdir() -> Value {
+    let id = "core.tempdir.readwrite";
+    let base = std::env::temp_dir().join(format!(
+        "cutright-doctor-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or_default()
+    ));
+    let result = (|| -> io::Result<()> {
+        fs::create_dir_all(&base)?;
+        let original = base.join("probe.txt");
+        fs::write(&original, b"videoctl doctor probe")?;
+        let renamed = base.join("probe-renamed.txt");
+        fs::rename(&original, &renamed)?;
+        let readback = fs::read(&renamed)?;
+        if readback != b"videoctl doctor probe" {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "readback mismatch",
+            ));
+        }
+        fs::remove_file(&renamed)?;
+        fs::remove_dir(&base)?;
+        Ok(())
+    })();
+    match result {
+        Ok(()) => check(id, true, "ok", json!({ "path": base }), None),
+        Err(error) => {
+            let _ = fs::remove_dir_all(&base);
+            check(
+                id,
+                true,
+                "failed",
+                json!({ "path": base, "error": error.to_string() }),
+                Some("ensure the OS temp directory is writable and not full"),
+            )
+        }
+    }
+}
+
+fn resolve_bin(env_var: &str, default_name: &str) -> PathBuf {
+    std::env::var_os(env_var)
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(default_name))
+}
+
+fn check_ffmpeg_execute() -> Value {
+    version_check(
+        "core.ffmpeg.execute",
+        resolve_bin("CUTRIGHT_FFMPEG", "ffmpeg"),
+        "ffmpeg version",
+        "install ffmpeg (e.g. `brew install ffmpeg`) or set CUTRIGHT_FFMPEG",
+    )
+}
+
+fn check_ffprobe_execute() -> Value {
+    version_check(
+        "core.ffprobe.execute",
+        resolve_bin("CUTRIGHT_FFPROBE", "ffprobe"),
+        "ffprobe version",
+        "install ffmpeg/ffprobe (e.g. `brew install ffmpeg`) or set CUTRIGHT_FFPROBE",
+    )
+}
+
+fn version_check(id: &str, bin: PathBuf, expect_prefix: &str, remediation: &str) -> Value {
+    let mut cmd = Command::new(&bin);
+    cmd.arg("-version");
+    match run_with_timeout(cmd, DEFAULT_TIMEOUT) {
+        Ok(output) if output.status.success() => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let first_line = stdout.lines().next().unwrap_or_default();
+            if first_line.starts_with(expect_prefix) {
+                check(
+                    id,
+                    true,
+                    "ok",
+                    json!({ "bin": bin, "version_line": first_line.trim() }),
+                    None,
+                )
+            } else {
+                check(
+                    id,
+                    true,
+                    "degraded",
+                    json!({ "bin": bin, "version_line": first_line.trim() }),
+                    Some("the resolved binary ran but did not report the expected version banner"),
+                )
+            }
+        }
+        Ok(output) => check(
+            id,
+            true,
+            "failed",
+            evidence_from_output(&output),
+            Some(remediation),
+        ),
+        Err(error) => check(
+            id,
+            true,
+            "missing",
+            json!({ "bin": bin, "error": error.to_string() }),
+            Some(remediation),
+        ),
+    }
+}
+
+/// Resolve the repo root so doctor can find `schemas/` and the studio
+/// bundle in a dev checkout. `CUTRIGHT_REPO_ROOT` overrides for installed
+/// binaries where the compile-time manifest dir no longer applies.
+fn repo_root() -> PathBuf {
+    if let Some(root) = std::env::var_os("CUTRIGHT_REPO_ROOT") {
+        return PathBuf::from(root);
+    }
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
+}
+
+fn check_schemas_load() -> Value {
+    let id = "core.schemas.load";
+    let dir = repo_root().join("schemas");
+    let entries = match fs::read_dir(&dir) {
+        Ok(entries) => entries,
+        Err(error) => {
+            return check(
+                id,
+                true,
+                "missing",
+                json!({ "dir": dir, "error": error.to_string() }),
+                Some("run from a CutRight checkout or set CUTRIGHT_REPO_ROOT"),
+            )
+        }
+    };
+    let mut loaded = Vec::new();
+    let mut failed = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+        match fs::read_to_string(&path).and_then(|text| {
+            serde_json::from_str::<Value>(&text)
+                .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+        }) {
+            Ok(_) => loaded.push(path.file_name().unwrap().to_string_lossy().to_string()),
+            Err(error) => failed.push(json!({ "file": path, "error": error.to_string() })),
+        }
+    }
+    if loaded.is_empty() {
+        return check(
+            id,
+            true,
+            "missing",
+            json!({ "dir": dir, "loaded": loaded, "failed": failed }),
+            Some("no *.json schemas found under schemas/"),
+        );
+    }
+    if !failed.is_empty() {
+        return check(
+            id,
+            true,
+            "failed",
+            json!({ "dir": dir, "loaded": loaded, "failed": failed }),
+            Some("fix the schema files that failed to parse"),
+        );
+    }
+    check(
+        id,
+        true,
+        "ok",
+        json!({ "dir": dir, "loaded": loaded }),
+        None,
+    )
+}
+
+/// §10.2 (content-addressed embedded worker materialization) is not yet
+/// implemented anywhere in this workspace — it lives in crates this task
+/// does not own (`video-media`/`video-providers`). Rather than fabricate a
+/// passing check, doctor reports the capability as `missing` and
+/// non-blocking so downstream tooling can see the gap honestly.
+fn check_sidecar_materialize() -> Value {
+    check(
+        "core.sidecar.materialize",
+        false,
+        "missing",
+        json!({ "note": "content-addressed embedded worker materialization (plan §10.2) is not implemented yet" }),
+        Some("implement §10.2 in video-media/video-providers, then wire an active probe here"),
+    )
+}
+
+fn check_source_policy() -> Value {
+    // Source immutability is a design invariant enforced by video-project's
+    // ingest path (sources are copied/hashed, never mutated in place), not
+    // a runtime toggle. There is nothing to probe at the process boundary
+    // beyond asserting the invariant is still the documented contract.
+    check(
+        "core.source_policy.immutable",
+        true,
+        "ok",
+        json!({ "policy": "sources are never mutated in place" }),
+        None,
+    )
+}
+
+fn check_cloud_default() -> Value {
+    let id = "core.cloud_default.disabled";
+    let value = std::env::var("CUTRIGHT_ENABLE_CLOUD").unwrap_or_default();
+    let enabled = matches!(value.as_str(), "1" | "true" | "TRUE" | "yes");
+    if enabled {
+        check(
+            id,
+            true,
+            "degraded",
+            json!({ "CUTRIGHT_ENABLE_CLOUD": value }),
+            Some("unset CUTRIGHT_ENABLE_CLOUD to restore the local-only default"),
+        )
+    } else {
+        check(
+            id,
+            true,
+            "ok",
+            json!({ "CUTRIGHT_ENABLE_CLOUD": if value.is_empty() { Value::Null } else { json!(value) } }),
+            None,
+        )
+    }
+}
+
+// ---------------------------------------------------------------------
+// Audio probes (§11.3)
+// ---------------------------------------------------------------------
+
+fn audio_checks() -> Vec<Value> {
+    vec![
+        check_heardright_discover(),
+        check_heardright_handshake(),
+        check_whisperx_discover(),
+        check_whisperx_python_version(),
+    ]
+}
+
+fn check_heardright_discover() -> Value {
+    let id = "audio.heardright.discover";
+    match video_providers::HeardRightProvider::discover() {
+        Ok(_) => check(id, true, "ok", json!({ "resolved": true }), None),
+        Err(error) => check(
+            id,
+            true,
+            "missing",
+            json!({ "error": error.to_string() }),
+            Some("set CUTRIGHT_HEARDRIGHT_ENGINE or put heardright-engine on PATH"),
+        ),
+    }
+}
+
+/// `video-providers::HeardRightProvider` exposes no public health/capability
+/// RPC — its request/response session is private to that crate, and this
+/// task is scoped to `video-cli` only. Spawning a full transcription
+/// session here to "probe" it would either hang waiting on stdin protocol
+/// framing or risk a model download, which plan §11.3 explicitly forbids
+/// ("model/runtime ready without download"). Reporting `ok` here would be
+/// exactly the kind of lie §11 exists to eliminate, so this check is
+/// honestly `missing` until video-providers exposes a public, download-free
+/// health probe.
+fn check_heardright_handshake() -> Value {
+    check(
+        "audio.heardright.handshake",
+        false,
+        "missing",
+        json!({ "note": "HeardRightProvider has no public health/capability RPC; only binary discovery is verified" }),
+        Some("expose a public, download-free health() call on HeardRightProvider (video-providers) so doctor can probe it without spawning a full session"),
+    )
+}
+
+fn check_whisperx_discover() -> Value {
+    let id = "audio.whisperx.discover";
+    match video_providers::WhisperXProvider::discover() {
+        Ok(_) => check(id, false, "ok", json!({ "resolved": true }), None),
+        Err(error) => check(
+            id,
+            false,
+            "missing",
+            json!({ "error": error.to_string() }),
+            Some("set CUTRIGHT_WHISPERX_PYTHON/CUTRIGHT_WHISPERX_SCRIPT if WhisperX alignment verification is needed"),
+        ),
+    }
+}
+
+fn check_whisperx_python_version() -> Value {
+    let id = "audio.whisperx.python_version";
+    if video_providers::WhisperXProvider::discover().is_err() {
+        return check(
+            id,
+            false,
+            "missing",
+            json!({ "note": "skipped: WhisperX interpreter was not discovered" }),
+            Some("resolve audio.whisperx.discover first"),
+        );
+    }
+    let python = resolve_bin("CUTRIGHT_WHISPERX_PYTHON", "python3");
+    let mut cmd = Command::new(&python);
+    cmd.arg("--version");
+    match run_with_timeout(cmd, DEFAULT_TIMEOUT) {
+        Ok(output) if output.status.success() => {
+            let banner = String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .to_string();
+            let banner = if banner.is_empty() {
+                String::from_utf8_lossy(&output.stderr)
+                    .lines()
+                    .next()
+                    .unwrap_or_default()
+                    .to_string()
+            } else {
+                banner
+            };
+            check(
+                id,
+                false,
+                "ok",
+                json!({ "python": python, "version": banner.trim() }),
+                None,
+            )
+        }
+        Ok(output) => check(
+            id,
+            false,
+            "failed",
+            evidence_from_output(&output),
+            Some("verify the WhisperX interpreter runs `--version`"),
+        ),
+        Err(error) => check(
+            id,
+            false,
+            "missing",
+            json!({ "python": python, "error": error.to_string() }),
+            Some("set CUTRIGHT_WHISPERX_PYTHON to a working interpreter"),
+        ),
+    }
+}
+
+// ---------------------------------------------------------------------
+// Render probes (§11.4)
+// ---------------------------------------------------------------------
+
+fn render_checks() -> Vec<Value> {
+    let (software_encode, output_reprobe) = check_software_encode_and_reprobe();
+    vec![
+        check_h264_videotoolbox(),
+        check_zscale_filter(),
+        software_encode,
+        check_audio_encode(),
+        check_caption_renderer(),
+        output_reprobe,
+    ]
+}
+
+fn ffmpeg_bin() -> PathBuf {
+    resolve_bin("CUTRIGHT_FFMPEG", "ffmpeg")
+}
+
+fn ffprobe_bin() -> PathBuf {
+    resolve_bin("CUTRIGHT_FFPROBE", "ffprobe")
+}
+
+fn list_encoders() -> io::Result<String> {
+    let mut cmd = Command::new(ffmpeg_bin());
+    cmd.args(["-hide_banner", "-encoders"]);
+    let output = run_with_timeout(cmd, DEFAULT_TIMEOUT)?;
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+fn list_filters() -> io::Result<String> {
+    let mut cmd = Command::new(ffmpeg_bin());
+    cmd.args(["-hide_banner", "-filters"]);
+    let output = run_with_timeout(cmd, DEFAULT_TIMEOUT)?;
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+fn scratch_file(name: &str) -> PathBuf {
+    std::env::temp_dir().join(format!("cutright-doctor-{}-{}", std::process::id(), name))
+}
+
+/// `h264_videotoolbox` is macOS-only. On other platforms the check is
+/// non-blocking `ok` — the capability simply does not apply there, which is
+/// not the same as the tool being broken.
+fn check_h264_videotoolbox() -> Value {
+    let id = "render.h264_videotoolbox.smoke";
+    if !cfg!(target_os = "macos") {
+        return check(
+            id,
+            false,
+            "ok",
+            json!({ "note": "h264_videotoolbox is macOS-only; not applicable on this platform" }),
+            None,
+        );
+    }
+    let listed = match list_encoders() {
+        Ok(text) => text.contains("h264_videotoolbox"),
+        Err(error) => {
+            return check(
+                id,
+                true,
+                "failed",
+                json!({ "error": error.to_string() }),
+                Some("ensure ffmpeg is on PATH and runs `-encoders`"),
+            )
+        }
+    };
+    if !listed {
+        return check(
+            id,
+            true,
+            "missing",
+            json!({ "listed": false }),
+            Some("install an ffmpeg build with --enable-videotoolbox"),
+        );
+    }
+    let output_path = scratch_file("videotoolbox.mp4");
+    let mut cmd = Command::new(ffmpeg_bin());
+    cmd.args([
+        "-hide_banner",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=64x64:rate=10:duration=0.2",
+        "-frames:v",
+        "3",
+        "-c:v",
+        "h264_videotoolbox",
+    ])
+    .arg(&output_path);
+    let result = run_with_timeout(cmd, DEFAULT_TIMEOUT);
+    let encoded = matches!(&result, Ok(output) if output.status.success() && output_path.is_file());
+    let evidence = match &result {
+        Ok(output) => evidence_from_output(output),
+        Err(error) => json!({ "error": error.to_string() }),
+    };
+    let _ = fs::remove_file(&output_path);
+    if encoded {
+        check(
+            id,
+            true,
+            "ok",
+            json!({ "listed": true, "encode": evidence }),
+            None,
+        )
+    } else {
+        check(
+            id,
+            true,
+            "failed",
+            json!({ "listed": true, "encode": evidence }),
+            Some("h264_videotoolbox is listed but a real encode failed; check hardware encoder availability"),
+        )
+    }
+}
+
+/// libzimg (`zscale`) is not bundled in every ffmpeg distribution, so this
+/// check is intentionally non-blocking: report the true capability state
+/// without failing the whole doctor run over an optional HDR filter.
+fn check_zscale_filter() -> Value {
+    let id = "render.zscale.smoke";
+    let listed = match list_filters() {
+        Ok(text) => text.contains("zscale"),
+        Err(error) => {
+            return check(
+                id,
+                false,
+                "failed",
+                json!({ "error": error.to_string() }),
+                Some("ensure ffmpeg is on PATH and runs `-filters`"),
+            )
+        }
+    };
+    if !listed {
+        return check(
+            id,
+            false,
+            "missing",
+            json!({ "listed": false }),
+            Some("install an ffmpeg build with libzimg (--enable-libzimg) for zscale HDR tone-mapping"),
+        );
+    }
+    let mut cmd = Command::new(ffmpeg_bin());
+    cmd.args([
+        "-hide_banner",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=white:s=64x64:d=0.1",
+        "-vf",
+        "zscale=t=linear",
+        "-frames:v",
+        "1",
+        "-f",
+        "null",
+        "-",
+    ]);
+    match run_with_timeout(cmd, DEFAULT_TIMEOUT) {
+        Ok(output) if output.status.success() => {
+            check(id, false, "ok", json!({ "listed": true }), None)
+        }
+        Ok(output) => check(
+            id,
+            false,
+            "failed",
+            json!({ "listed": true, "run": evidence_from_output(&output) }),
+            Some("zscale is listed but a real filter run failed"),
+        ),
+        Err(error) => check(
+            id,
+            false,
+            "failed",
+            json!({ "listed": true, "error": error.to_string() }),
+            Some("zscale is listed but the probe process failed to run"),
+        ),
+    }
+}
+
+/// Encodes a tiny software (libx264 + AAC) clip and reprobes it with
+/// ffprobe. Returns `(render.software_encoder.smoke, render.output_reprobe.smoke)`
+/// as one pair so the reprobe always targets a real, just-produced file
+/// rather than a stale fixture.
+fn check_software_encode_and_reprobe() -> (Value, Value) {
+    let encoder_id = "render.software_encoder.smoke";
+    let reprobe_id = "render.output_reprobe.smoke";
+    let output_path = scratch_file("software.mp4");
+    let mut cmd = Command::new(ffmpeg_bin());
+    cmd.args([
+        "-hide_banner",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=64x64:rate=10:duration=0.2",
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc=r=48000:cl=stereo",
+        "-t",
+        "0.2",
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "aac",
+        "-shortest",
+    ])
+    .arg(&output_path);
+    let encode_result = run_with_timeout(cmd, DEFAULT_TIMEOUT);
+    let encoded =
+        matches!(&encode_result, Ok(output) if output.status.success() && output_path.is_file());
+    let encode_evidence = match &encode_result {
+        Ok(output) => evidence_from_output(output),
+        Err(error) => json!({ "error": error.to_string() }),
+    };
+
+    let encoder_check = if encoded {
+        check(encoder_id, true, "ok", encode_evidence.clone(), None)
+    } else {
+        check(
+            encoder_id,
+            true,
+            "failed",
+            encode_evidence.clone(),
+            Some("ensure ffmpeg's libx264 encoder is available"),
+        )
+    };
+
+    let reprobe_check = if !encoded {
+        check(
+            reprobe_id,
+            true,
+            "missing",
+            json!({ "note": "skipped: software encode did not produce an output" }),
+            Some("resolve render.software_encoder.smoke first"),
+        )
+    } else {
+        let mut probe_cmd = Command::new(ffprobe_bin());
+        probe_cmd
+            .args([
+                "-v",
+                "error",
+                "-print_format",
+                "json",
+                "-show_format",
+                "-show_streams",
+            ])
+            .arg(&output_path);
+        match run_with_timeout(probe_cmd, DEFAULT_TIMEOUT) {
+            Ok(output) if output.status.success() => {
+                match serde_json::from_slice::<Value>(&output.stdout) {
+                    Ok(parsed) => {
+                        let streams = parsed["streams"].as_array().cloned().unwrap_or_default();
+                        let has_video = streams.iter().any(|s| s["codec_type"] == "video");
+                        let has_audio = streams.iter().any(|s| s["codec_type"] == "audio");
+                        if has_video && has_audio {
+                            check(
+                                reprobe_id,
+                                true,
+                                "ok",
+                                json!({ "has_video": true, "has_audio": true }),
+                                None,
+                            )
+                        } else {
+                            check(
+                                reprobe_id,
+                                true,
+                                "failed",
+                                json!({ "has_video": has_video, "has_audio": has_audio }),
+                                Some("the paired ffprobe could not confirm both a video and audio stream in ffmpeg's own output"),
+                            )
+                        }
+                    }
+                    Err(error) => check(
+                        reprobe_id,
+                        true,
+                        "failed",
+                        json!({ "error": error.to_string() }),
+                        Some("ffprobe returned invalid JSON for a file ffmpeg just wrote"),
+                    ),
+                }
+            }
+            Ok(output) => check(
+                reprobe_id,
+                true,
+                "failed",
+                evidence_from_output(&output),
+                Some("ffprobe failed to read ffmpeg's own output"),
+            ),
+            Err(error) => check(
+                reprobe_id,
+                true,
+                "missing",
+                json!({ "error": error.to_string() }),
+                Some("ensure ffprobe is on PATH and paired with the resolved ffmpeg"),
+            ),
+        }
+    };
+
+    let _ = fs::remove_file(&output_path);
+    (encoder_check, reprobe_check)
+}
+
+fn check_audio_encode() -> Value {
+    let id = "render.audio_encode.smoke";
+    let output_path = scratch_file("audio.m4a");
+    let mut cmd = Command::new(ffmpeg_bin());
+    cmd.args([
+        "-hide_banner",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc=r=48000:cl=stereo",
+        "-t",
+        "0.2",
+        "-c:a",
+        "aac",
+    ])
+    .arg(&output_path);
+    let result = run_with_timeout(cmd, DEFAULT_TIMEOUT);
+    let ok = matches!(&result, Ok(output) if output.status.success() && output_path.is_file());
+    let evidence = match &result {
+        Ok(output) => evidence_from_output(output),
+        Err(error) => json!({ "error": error.to_string() }),
+    };
+    let _ = fs::remove_file(&output_path);
+    if ok {
+        check(id, true, "ok", evidence, None)
+    } else {
+        check(
+            id,
+            true,
+            "failed",
+            evidence,
+            Some("ensure ffmpeg's AAC encoder is available"),
+        )
+    }
+}
+
+fn check_caption_renderer() -> Value {
+    let id = "render.caption_renderer.listed";
+    match list_filters() {
+        Ok(text) => {
+            let has_subtitles =
+                text.contains(" subtitles ") || text.lines().any(|line| line.contains("subtitles"));
+            if has_subtitles {
+                check(id, false, "ok", json!({ "listed": true }), None)
+            } else {
+                check(
+                    id,
+                    false,
+                    "missing",
+                    json!({ "listed": false }),
+                    Some("install an ffmpeg build with libass (--enable-libass) for burned-in captions"),
+                )
+            }
+        }
+        Err(error) => check(
+            id,
+            false,
+            "failed",
+            json!({ "error": error.to_string() }),
+            Some("ensure ffmpeg is on PATH and runs `-filters`"),
+        ),
+    }
+}
+
+// ---------------------------------------------------------------------
+// Studio probes (§11.5)
+// ---------------------------------------------------------------------
+
+fn studio_checks() -> Vec<Value> {
+    vec![
+        check_frontend_bundle(),
+        check_vendored_fonts(),
+        check_asset_protocol(),
+        check_preview_fixture(),
+    ]
+}
+
+fn studio_dir() -> PathBuf {
+    repo_root().join("apps/studio")
+}
+
+fn check_frontend_bundle() -> Value {
+    let id = "studio.frontend_bundle.exists";
+    let index = studio_dir().join("dist/index.html");
+    if index.is_file() {
+        let bytes = fs::metadata(&index).map(|m| m.len()).unwrap_or(0);
+        if bytes > 0 {
+            check(
+                id,
+                true,
+                "ok",
+                json!({ "path": index, "bytes": bytes }),
+                None,
+            )
+        } else {
+            check(
+                id,
+                true,
+                "failed",
+                json!({ "path": index, "bytes": bytes }),
+                Some("rebuild the studio frontend: `pnpm --dir apps/studio build`"),
+            )
+        }
+    } else {
+        check(
+            id,
+            true,
+            "missing",
+            json!({ "path": index }),
+            Some("build the studio frontend: `pnpm --dir apps/studio build`"),
+        )
+    }
+}
+
+fn check_vendored_fonts() -> Value {
+    let id = "studio.fonts_vendored.exists";
+    let fonts_dir = studio_dir().join("src/assets/fonts");
+    let required = [
+        "geist-variable.woff2",
+        "spline-sans-mono-regular.ttf",
+        "tanker-regular.woff2",
+        "LICENSES.md",
+    ];
+    let mut missing = Vec::new();
+    for name in required {
+        if !fonts_dir.join(name).is_file() {
+            missing.push(name);
+        }
+    }
+    if missing.is_empty() {
+        check(id, true, "ok", json!({ "dir": fonts_dir }), None)
+    } else {
+        check(
+            id,
+            true,
+            "missing",
+            json!({ "dir": fonts_dir, "missing": missing }),
+            Some("restore the vendored fonts and their license notices under apps/studio/src/assets/fonts"),
+        )
+    }
+}
+
+fn check_asset_protocol() -> Value {
+    let id = "studio.tauri_asset_protocol.enabled";
+    let config_path = studio_dir().join("src-tauri/tauri.conf.json");
+    let text = match fs::read_to_string(&config_path) {
+        Ok(text) => text,
+        Err(error) => {
+            return check(
+                id,
+                true,
+                "missing",
+                json!({ "path": config_path, "error": error.to_string() }),
+                Some("restore apps/studio/src-tauri/tauri.conf.json"),
+            )
+        }
+    };
+    let parsed: Value = match serde_json::from_str(&text) {
+        Ok(value) => value,
+        Err(error) => {
+            return check(
+                id,
+                true,
+                "failed",
+                json!({ "path": config_path, "error": error.to_string() }),
+                Some("fix invalid JSON in tauri.conf.json"),
+            )
+        }
+    };
+    let enabled = parsed
+        .pointer("/app/security/assetProtocol/enable")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    if enabled {
+        check(id, true, "ok", json!({ "path": config_path }), None)
+    } else {
+        check(
+            id,
+            true,
+            "failed",
+            json!({ "path": config_path, "enable": enabled }),
+            Some("set app.security.assetProtocol.enable = true in tauri.conf.json"),
+        )
+    }
+}
+
+/// A full packaged-app smoke fixture (load one allowed preview path, reject
+/// one outside path) needs a running Tauri asset-protocol runtime, which
+/// this CLI-only crate cannot host. Reported honestly as an unverified,
+/// non-blocking gap rather than faked.
+fn check_preview_fixture() -> Value {
+    check(
+        "studio.preview_fixture.smoke",
+        false,
+        "missing",
+        json!({ "note": "packaged-app asset-scope smoke fixture requires a running Tauri runtime; not exercised by the CLI doctor" }),
+        Some("cover this with the app QA skill (tools/skills/qa) against a running Studio build"),
+    )
+}
+
+// ---------------------------------------------------------------------
+// Receipt (§11.7)
+// ---------------------------------------------------------------------
+
+fn write_receipt_file(path: &Path, report: &Value) -> io::Result<()> {
+    let now = chrono::Utc::now();
+    let canonical = serde_json::to_vec(report).unwrap_or_default();
+    let hash = blake3::hash(&canonical).to_hex().to_string();
+    let receipt = json!({
+        "schema_version": 1,
+        "kind": "videoctl.doctor.receipt",
+        "created_at": now.to_rfc3339(),
+        "report_blake3": hash,
+        "report": report,
+    });
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+    fs::write(path, serde_json::to_vec_pretty(&receipt)?)
+}

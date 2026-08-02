@@ -2,8 +2,8 @@
 #
 # scripts/gate.sh — CutRight repository gate (hardening plan §7.2).
 #
-# This is the single authoritative local gate. CI (.github/workflows/ci.yml)
-# is only an adapter around it; the repository contract is this script.
+# This is the single authoritative gate. There is no CI service; this script
+# IS the repository contract. Run it locally before every commit.
 #
 # It runs, in order and failing fast:
 #   1. root cargo workspace ....... fmt --check, clippy -D warnings, test

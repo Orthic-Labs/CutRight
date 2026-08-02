@@ -2,12 +2,14 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_dialog::DialogExt;
 
+mod artifact_state;
 mod decision_contract;
+mod project_identity;
 
-use decision_contract::{DecisionIntent, DecisionRecord, DecisionReplay};
+use decision_contract::{DecisionIntent, DecisionRecord, DecisionReplay, RelinkHistoryRecord};
 
 #[derive(Debug, Deserialize)]
 struct SourcesManifest {
@@ -78,20 +80,136 @@ fn write_json_atomic(root: &Path, rel: &str, value: &serde_json::Value) -> Resul
     Ok(())
 }
 
-fn grant_project_assets(app: &AppHandle, root: &Path) -> Result<(), String> {
-    let scope = app.asset_protocol_scope();
-    scope
-        .allow_directory(root, true)
-        .map_err(|error| format!("asset scope for {}: {error}", root.display()))?;
+fn is_regular_file(path: &Path) -> bool {
+    fs::metadata(path)
+        .map(|meta| meta.is_file())
+        .unwrap_or(false)
+}
 
-    for source in read_sources(root)?.sources {
-        let source_path = fs::canonicalize(&source.path)
-            .map_err(|error| format!("source {}: {error}", source.source_id))?;
-        scope
-            .allow_file(&source_path)
-            .map_err(|error| format!("asset scope for {}: {error}", source_path.display()))?;
+fn blake3_of(path: &Path) -> Result<String, String> {
+    let mut file = fs::File::open(path).map_err(|error| format!("{}: {error}", path.display()))?;
+    let mut hasher = blake3::Hasher::new();
+    std::io::copy(&mut file, &mut hasher)
+        .map_err(|error| format!("{}: {error}", path.display()))?;
+    Ok(format!("blake3:{}", hasher.finalize().to_hex()))
+}
+
+/// Outcome of granting scope to one registered source's media file.
+#[derive(Debug, Clone, Serialize)]
+struct SourceGrant {
+    source_id: String,
+    path: String,
+    /// The asset-protocol scope was extended to cover this exact file.
+    granted: bool,
+    /// The file's current BLAKE3 matches the hash it was registered with.
+    /// `false` does not block `granted` — a source can still be played back
+    /// while flagged unverified, per REV2 §12.4 ("manifest hash match or an
+    /// explicit unverified state before playback"); the frontend is
+    /// responsible for surfacing this rather than silently trusting it.
+    verified: bool,
+    error: Option<String>,
+}
+
+/// Grant the asset protocol access to exactly the files the current project
+/// state needs: registered source media, produced rough-cut/final MP4s, and
+/// per-source poster/waveform evidence. Replaces the previous
+/// `allow_directory(root, true)`, which handed a shared/untrusted project
+/// package the ability to grant arbitrary local paths merely by editing
+/// `sources/manifest.json` (REV2 §12.4). Evidence artifacts under the
+/// project root are safe to grant on existence alone (they are only ever
+/// written there by the pipeline); external source media additionally
+/// requires the path to resolve to a regular file and to probe as supported
+/// media before scope is extended to it.
+fn grant_project_assets<R: Runtime>(
+    app: &AppHandle<R>,
+    snapshot: &video_project::ProjectSnapshot,
+) -> Result<Vec<SourceGrant>, String> {
+    let scope = app.asset_protocol_scope();
+
+    let mut evidence_paths: Vec<PathBuf> = Vec::new();
+    for variant in &snapshot.variants {
+        if let Some(mp4) = &variant.mp4 {
+            evidence_paths.push(mp4.clone());
+        }
     }
-    Ok(())
+    for final_snapshot in &snapshot.finals {
+        evidence_paths.push(final_snapshot.mp4.clone());
+    }
+    for entry in &snapshot.sources {
+        if let Some(poster) = &entry.poster_jpg {
+            evidence_paths.push(poster.clone());
+        }
+        if let Some(waveform) = &entry.waveform_png {
+            evidence_paths.push(waveform.clone());
+        }
+    }
+    for path in &evidence_paths {
+        if is_regular_file(path) {
+            scope
+                .allow_file(path)
+                .map_err(|error| format!("asset scope for {}: {error}", path.display()))?;
+        }
+    }
+
+    let mut source_grants = Vec::with_capacity(snapshot.sources.len());
+    for entry in &snapshot.sources {
+        let source = &entry.source;
+        let requested = Path::new(&source.path);
+        let canonical = match fs::canonicalize(requested) {
+            Ok(path) => path,
+            Err(error) => {
+                source_grants.push(SourceGrant {
+                    source_id: source.source_id.clone(),
+                    path: source.path.clone(),
+                    granted: false,
+                    verified: false,
+                    error: Some(error.to_string()),
+                });
+                continue;
+            }
+        };
+        if !is_regular_file(&canonical) {
+            source_grants.push(SourceGrant {
+                source_id: source.source_id.clone(),
+                path: canonical.to_string_lossy().into_owned(),
+                granted: false,
+                verified: false,
+                error: Some("registered source is not a regular file".into()),
+            });
+            continue;
+        }
+        if let Err(error) = video_media::probe(&canonical) {
+            source_grants.push(SourceGrant {
+                source_id: source.source_id.clone(),
+                path: canonical.to_string_lossy().into_owned(),
+                granted: false,
+                verified: false,
+                error: Some(format!("unsupported media: {error}")),
+            });
+            continue;
+        }
+        let verified = blake3_of(&canonical)
+            .map(|actual| actual == source.blake3)
+            .unwrap_or(false);
+        match scope.allow_file(&canonical) {
+            Ok(()) => source_grants.push(SourceGrant {
+                source_id: source.source_id.clone(),
+                path: canonical.to_string_lossy().into_owned(),
+                granted: true,
+                verified,
+                error: None,
+            }),
+            Err(error) => source_grants.push(SourceGrant {
+                source_id: source.source_id.clone(),
+                path: canonical.to_string_lossy().into_owned(),
+                granted: false,
+                verified,
+                error: Some(error.to_string()),
+            }),
+        }
+    }
+
+    Ok(source_grants)
 }
 
 #[tauri::command]
@@ -103,15 +221,197 @@ fn pick_project(app: AppHandle) -> Result<Option<String>, String> {
         .into_path()
         .map_err(|error| named_error("path", error))?;
     let root = canonical_project_root(path.to_string_lossy().as_ref())?;
-    grant_project_assets(&app, &root)?;
+    // Asset scope is granted by `read_snapshot`, which the frontend always
+    // calls immediately after this resolves the picked path — granting here
+    // too would just re-run the same probes and hashing for no benefit.
     Ok(Some(root.to_string_lossy().into_owned()))
 }
 
+/// Best-effort staleness check: a cut plan that was edited after its rough
+/// cut was last rendered no longer describes what is on disk.
+fn stale_cut_plan_reason(plan_path: &Path, mp4_path: &Path) -> Option<String> {
+    let plan_mtime = fs::metadata(plan_path)
+        .and_then(|meta| meta.modified())
+        .ok()?;
+    let mp4_mtime = fs::metadata(mp4_path)
+        .and_then(|meta| meta.modified())
+        .ok()?;
+    (plan_mtime > mp4_mtime)
+        .then(|| "cut plan was modified after the rough cut was last rendered".to_string())
+}
+
+/// Best-effort staleness check: a QA report generated before the newest
+/// final render no longer covers what would ship.
+fn stale_qa_reason(root: &Path, snapshot: &video_project::ProjectSnapshot) -> Option<String> {
+    let qa_mtime = fs::metadata(root.join("qa/report.json"))
+        .and_then(|meta| meta.modified())
+        .ok()?;
+    let newest_final = snapshot
+        .finals
+        .iter()
+        .filter_map(|final_snapshot| {
+            fs::metadata(&final_snapshot.mp4)
+                .and_then(|meta| meta.modified())
+                .ok()
+        })
+        .max()?;
+    (newest_final > qa_mtime)
+        .then(|| "a final was rendered after this QA report was generated".to_string())
+}
+
+fn file_signature(path: &Path) -> Option<String> {
+    let metadata = fs::metadata(path).ok()?;
+    let modified = metadata.modified().ok()?;
+    let since_epoch = modified.duration_since(std::time::UNIX_EPOCH).ok()?;
+    Some(format!("{}:{}", metadata.len(), since_epoch.as_nanos()))
+}
+
+/// A hash over the canonical review inputs and artifact receipts (REV2
+/// §12.3): the project identity plus a cheap size+mtime signature of every
+/// variant, final, and the QA/bench reports that currently exist. This is
+/// deliberately not a full content hash of every rendered MP4 on every
+/// snapshot read — that would make opening a project with large renders
+/// noticeably slower — but it changes whenever an artifact a reviewer would
+/// look at is added, replaced, or removed, which `generated_at` alone (a
+/// timestamp of the read, not of the data) cannot signal.
+fn project_revision(root: &Path, snapshot: &video_project::ProjectSnapshot) -> String {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(snapshot.manifest.project_id.as_bytes());
+    for variant in &snapshot.variants {
+        hasher.update(variant.id.as_bytes());
+        if let Some(mp4) = &variant.mp4 {
+            if let Some(signature) = file_signature(mp4) {
+                hasher.update(signature.as_bytes());
+            }
+        }
+    }
+    for final_snapshot in &snapshot.finals {
+        hasher.update(final_snapshot.preset.as_bytes());
+        if let Some(signature) = file_signature(&final_snapshot.mp4) {
+            hasher.update(signature.as_bytes());
+        }
+    }
+    for path in [
+        root.join("qa/report.json"),
+        root.join("analysis/bench/transcribe/report.json"),
+    ] {
+        if let Some(signature) = file_signature(&path) {
+            hasher.update(signature.as_bytes());
+        }
+    }
+    format!("blake3:{}", hasher.finalize().to_hex())
+}
+
+fn reframe_plan_path(root: &Path) -> PathBuf {
+    let primary = root.join("analysis/reframe-plan.json");
+    if primary.is_file() {
+        primary
+    } else {
+        root.join("analysis/reframe/natural/reframe-plan.json")
+    }
+}
+
+/// Read-only, Studio-facing project snapshot. Wraps
+/// `video_project::project_snapshot` (which this app does not own) to add:
+/// exact-file asset scope grants (§12.4), explicit artifact state for the
+/// optional JSON artifacts that crate silently collapses to `None` on parse
+/// failure (§12.1), a `project_revision` (§12.3), and the project's
+/// immutable Studio-side identity (§12.7). The crate's original `qa`,
+/// `bench`, `reframe_plan`, and per-variant `cut_plan`/`segment_count` fields
+/// are left in place for compatibility; the `*_artifact` and `integrity`
+/// fields alongside them carry the corrected, non-lossy state.
 #[tauri::command]
-fn read_snapshot(app: AppHandle, path: String) -> Result<video_project::ProjectSnapshot, String> {
+fn read_snapshot(app: AppHandle, path: String) -> Result<serde_json::Value, String> {
     let root = canonical_project_root(&path)?;
-    grant_project_assets(&app, &root)?;
-    video_project::project_snapshot(&root).map_err(|error| error.to_string())
+    let snapshot = video_project::project_snapshot(&root).map_err(|error| error.to_string())?;
+    let source_grants = grant_project_assets(&app, &snapshot)?;
+    let identity = project_identity::resolve(&root, Some(&snapshot.manifest.project_id))?;
+    let revision = project_revision(&root, &snapshot);
+
+    let mut value = serde_json::to_value(&snapshot).map_err(|error| error.to_string())?;
+    let object = value
+        .as_object_mut()
+        .ok_or_else(|| "snapshot: unexpected shape".to_string())?;
+
+    object.insert(
+        "qa_artifact".into(),
+        serde_json::to_value(artifact_state::load_json_checked::<serde_json::Value>(
+            &root.join("qa/report.json"),
+            |_| stale_qa_reason(&root, &snapshot),
+        ))
+        .map_err(|error| error.to_string())?,
+    );
+    object.insert(
+        "bench_artifact".into(),
+        serde_json::to_value(artifact_state::load_json_checked::<serde_json::Value>(
+            &root.join("analysis/bench/transcribe/report.json"),
+            |_| None,
+        ))
+        .map_err(|error| error.to_string())?,
+    );
+    object.insert(
+        "reframe_plan_artifact".into(),
+        serde_json::to_value(artifact_state::load_json_checked::<serde_json::Value>(
+            &reframe_plan_path(&root),
+            |_| None,
+        ))
+        .map_err(|error| error.to_string())?,
+    );
+
+    if let Some(variants) = object
+        .get_mut("variants")
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        for variant in variants.iter_mut() {
+            let Some(id) = variant
+                .get("id")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned)
+            else {
+                continue;
+            };
+            let plan_path = root.join(format!("edit/cut-plan-{id}.json"));
+            let mp4_path = root.join(format!("render/rough-cuts/{id}.mp4"));
+            let state = artifact_state::load_json_checked::<serde_json::Value>(&plan_path, |_| {
+                stale_cut_plan_reason(&plan_path, &mp4_path)
+            });
+            if let Some(variant_object) = variant.as_object_mut() {
+                variant_object.insert(
+                    "cut_plan_artifact".into(),
+                    serde_json::to_value(&state).map_err(|error| error.to_string())?,
+                );
+            }
+        }
+    }
+
+    if let Some(sources) = object
+        .get_mut("sources")
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        for source in sources.iter_mut() {
+            let grant = source
+                .get("source_id")
+                .and_then(serde_json::Value::as_str)
+                .and_then(|id| source_grants.iter().find(|grant| grant.source_id == id));
+            if let Some(source_object) = source.as_object_mut() {
+                source_object.insert(
+                    "integrity".into(),
+                    serde_json::to_value(grant).map_err(|error| error.to_string())?,
+                );
+            }
+        }
+    }
+
+    object.insert(
+        "project_instance_id".into(),
+        serde_json::Value::String(identity.project_instance_id),
+    );
+    object.insert(
+        "project_revision".into(),
+        serde_json::Value::String(revision),
+    );
+
+    Ok(value)
 }
 
 #[tauri::command]
@@ -239,6 +539,13 @@ fn read_variant_selection(path: String) -> Result<Option<video_project::Selectio
 /// hash is preserved as the identity. `matches` reports whether the relinked
 /// bytes still match that identity.
 #[tauri::command]
+/// A missing source can only be relinked to a file whose BLAKE3 matches the
+/// hash it was registered with (REV2 §12.6). On a match the manifest path is
+/// updated atomically; on a mismatch the manifest is left untouched and the
+/// mismatch is reported instead — the caller gets the same `SourceCheck`
+/// shape either way and decides what to do next. A relink is never allowed
+/// to register a source id that was not already present: this always edits
+/// an existing entry, never inserts one.
 fn relink_source(path: String, source_id: String, new_path: String) -> Result<SourceCheck, String> {
     let root = canonical_project_root(&path)?;
     let manifest_rel = "sources/manifest.json";
@@ -267,16 +574,33 @@ fn relink_source(path: String, source_id: String, new_path: String) -> Result<So
     if !canonical.is_file() {
         return Err(named_error("new_path", "must be an existing file"));
     }
-    let mut file = fs::File::open(&canonical).map_err(|error| named_error("new_path", error))?;
-    let mut hasher = blake3::Hasher::new();
-    std::io::copy(&mut file, &mut hasher).map_err(|error| named_error("new_path", error))?;
-    let actual_blake3 = format!("blake3:{}", hasher.finalize().to_hex());
+    let actual_blake3 = blake3_of(&canonical)?;
     let matches = actual_blake3 == expected_blake3;
-    entry["path"] = serde_json::Value::String(canonical.to_string_lossy().into_owned());
-    write_json_atomic(&root, manifest_rel, &manifest)?;
+    let canonical_str = canonical.to_string_lossy().into_owned();
+
+    if matches {
+        entry["path"] = serde_json::Value::String(canonical_str.clone());
+        write_json_atomic(&root, manifest_rel, &manifest)?;
+    }
+
+    decision_contract::append_relink_record(
+        &root,
+        &RelinkHistoryRecord {
+            ts: Utc::now().to_rfc3339(),
+            source_id: source_id.clone(),
+            requested_path: new_path,
+            canonical_path: canonical_str.clone(),
+            expected_blake3: expected_blake3.clone(),
+            actual_blake3: Some(actual_blake3.clone()),
+            matches,
+            applied: matches,
+            reason: (!matches).then(|| "content_mismatch".to_string()),
+        },
+    )?;
+
     Ok(SourceCheck {
         source_id,
-        path: canonical.to_string_lossy().into_owned(),
+        path: canonical_str,
         expected_blake3,
         actual_blake3: Some(actual_blake3),
         matches,
@@ -333,7 +657,11 @@ mod tests {
         fs::write(root.join("render/rough-cuts/tight.mp4"), b"tight-bytes").unwrap();
         fs::write(root.join("render/finals/youtube.mp4"), b"youtube-bytes").unwrap();
         fs::write(root.join("qa/report.json"), br#"{"status":"pass"}"#).unwrap();
-        root
+        // Canonicalize so later `starts_with(root)` containment checks agree
+        // with the canonicalized paths those checks compare against (macOS
+        // resolves `$TMPDIR` through a `/var` -> `/private/var` symlink, so
+        // the two would otherwise disagree on this platform).
+        fs::canonicalize(&root).unwrap()
     }
 
     fn variant_intent(variant: &str, request_id: &str) -> DecisionIntent {
@@ -756,7 +1084,7 @@ mod tests {
     }
 
     #[test]
-    fn relink_source_reports_a_content_mismatch() {
+    fn relink_source_reports_a_content_mismatch_without_mutating_the_manifest() {
         let root = project();
         let media = root.join("different.mov");
         fs::write(&media, b"different-bytes").unwrap();
@@ -780,6 +1108,179 @@ mod tests {
         .unwrap();
         assert!(!check.matches);
         assert_eq!(check.expected_blake3, registered);
+
+        // A rejected relink must not touch the manifest: the old (missing)
+        // path stays registered, never silently swapped for unverified bytes.
+        let manifest: serde_json::Value =
+            serde_json::from_slice(&fs::read(root.join("sources/manifest.json")).unwrap()).unwrap();
+        assert_eq!(
+            manifest["sources"][0]["path"].as_str().unwrap(),
+            "/missing/old.mov"
+        );
+
+        // The rejected attempt is still recorded in the append-only history.
+        let history = fs::read_to_string(root.join("feedback/relink-history.jsonl")).unwrap();
+        let record: serde_json::Value =
+            serde_json::from_str(history.lines().next().unwrap()).unwrap();
+        assert_eq!(record["applied"], serde_json::json!(false));
+        assert_eq!(record["matches"], serde_json::json!(false));
+        assert_eq!(record["source_id"], serde_json::json!("source-a"));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn relink_source_records_a_successful_attempt_in_the_history_ledger() {
+        let root = project();
+        let media = root.join("relinked.mov");
+        fs::write(&media, b"source-bytes").unwrap();
+        let hash = format!("blake3:{}", blake3::hash(b"source-bytes").to_hex());
+        fs::create_dir_all(root.join("sources")).unwrap();
+        fs::write(
+            root.join("sources/manifest.json"),
+            serde_json::json!({
+                "schema_version": 1,
+                "sources": [{ "source_id": "source-a", "path": "/missing/old.mov", "blake3": hash }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        relink_source(
+            root.to_string_lossy().into_owned(),
+            "source-a".into(),
+            media.to_string_lossy().into_owned(),
+        )
+        .unwrap();
+
+        let history = fs::read_to_string(root.join("feedback/relink-history.jsonl")).unwrap();
+        let record: serde_json::Value =
+            serde_json::from_str(history.lines().next().unwrap()).unwrap();
+        assert_eq!(record["applied"], serde_json::json!(true));
+        assert_eq!(record["matches"], serde_json::json!(true));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn relink_source_never_creates_a_source_id_that_was_not_already_registered() {
+        let root = project();
+        let media = root.join("relinked.mov");
+        fs::write(&media, b"source-bytes").unwrap();
+        fs::create_dir_all(root.join("sources")).unwrap();
+        fs::write(
+            root.join("sources/manifest.json"),
+            serde_json::json!({ "schema_version": 1, "sources": [] }).to_string(),
+        )
+        .unwrap();
+
+        let error = relink_source(
+            root.to_string_lossy().into_owned(),
+            "never-registered".into(),
+            media.to_string_lossy().into_owned(),
+        )
+        .unwrap_err();
+        assert!(error.starts_with("source_id:"), "got: {error}");
+
+        let manifest: serde_json::Value =
+            serde_json::from_slice(&fs::read(root.join("sources/manifest.json")).unwrap()).unwrap();
+        assert!(manifest["sources"].as_array().unwrap().is_empty());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    /// A full `project.json` that satisfies `video_project::project_snapshot`'s
+    /// strict `ProjectManifest` deserialization, on top of the lighter fixture
+    /// `project()` builds for the decision-contract tests above.
+    fn full_project() -> PathBuf {
+        let root = project();
+        fs::write(
+            root.join("project.json"),
+            serde_json::json!({
+                "schema_version": 1,
+                "project_id": "project-test",
+                "kind": "mixed_creator_content",
+                "created_at": Utc::now().to_rfc3339(),
+                "review_mode": "reviewed",
+                "source_policy": "immutable",
+                "outputs": [{ "id": "youtube", "aspect": "16:9", "width": 1920, "height": 1080 }],
+            })
+            .to_string(),
+        )
+        .unwrap();
+        root
+    }
+
+    fn scratch_sibling(name: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "cutright-studio-sibling-{}-{}-{name}",
+            std::process::id(),
+            NEXT_TEST.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::write(&path, b"not part of any project").unwrap();
+        path
+    }
+
+    /// REV2 §12.5: an allowed project preview loads through the asset
+    /// protocol, and a sibling/outside file is denied. Exercises the real
+    /// `tauri::scope::fs::Scope` the packaged app enforces (via
+    /// `tauri::test`'s mock runtime), not a browser-side QA mock.
+    #[test]
+    fn packaged_asset_scope_allows_project_media_and_denies_a_sibling_file() {
+        let root = full_project();
+        let outside = scratch_sibling("outside.mp4");
+
+        let snapshot = video_project::project_snapshot(&root).unwrap();
+        let app = tauri::test::mock_app();
+        let handle = app.handle();
+        grant_project_assets(handle, &snapshot).unwrap();
+        let scope = handle.asset_protocol_scope();
+
+        let allowed_rough_cut = root.join("render/rough-cuts/natural.mp4");
+        let allowed_final = root.join("render/finals/youtube.mp4");
+        assert!(
+            scope.is_allowed(&allowed_rough_cut),
+            "expected the rough cut to be granted"
+        );
+        assert!(
+            scope.is_allowed(&allowed_final),
+            "expected the final to be granted"
+        );
+        assert!(
+            !scope.is_allowed(&outside),
+            "a file outside the project must never be granted"
+        );
+
+        fs::remove_file(&outside).unwrap();
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn source_grants_require_a_regular_file_and_a_supported_media_probe() {
+        let root = full_project();
+        let bogus = root.join("not-media.txt");
+        fs::write(&bogus, b"plain text, not a video").unwrap();
+        let hash = blake3_of(&bogus).unwrap();
+        fs::create_dir_all(root.join("sources")).unwrap();
+        fs::write(
+            root.join("sources/manifest.json"),
+            serde_json::json!({
+                "schema_version": 1,
+                "sources": [{ "source_id": "source-a", "path": bogus.to_string_lossy(), "blake3": hash }]
+            })
+            .to_string(),
+        )
+        .unwrap();
+
+        let snapshot = video_project::project_snapshot(&root).unwrap();
+        let app = tauri::test::mock_app();
+        let handle = app.handle();
+        let grants = grant_project_assets(handle, &snapshot).unwrap();
+
+        let grant = grants.iter().find(|g| g.source_id == "source-a").unwrap();
+        assert!(
+            !grant.granted,
+            "a non-media file must not be granted playback scope"
+        );
+        assert!(!handle.asset_protocol_scope().is_allowed(&bogus));
         fs::remove_dir_all(root).unwrap();
     }
 }

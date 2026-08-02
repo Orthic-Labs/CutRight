@@ -3,6 +3,7 @@
   "$id": "https://cutright.local/schemas/transcript.schema.json",
   "title": "CutRight word-level transcript",
   "type": "object",
+  "additionalProperties": false,
   "required": ["schema_version", "provider", "source_id", "language", "words", "events"],
   "properties": {
     "schema_version": { "const": 1 },
@@ -13,9 +14,15 @@
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": ["id", "text", "start_ms", "end_ms", "confidence", "kind"],
         "properties": {
           "id": { "type": "string" },
+          "source_word_id": {
+            "type": ["string", "null"],
+            "description": "Compound id binding this word back to its source transcript: '<source_id>:<word_id>'. Optional; namespaced by source_id so it is globally unique across every transcript emitted for a project.",
+            "pattern": "^[^:]+:.+$"
+          },
           "text": { "type": "string" },
           "start_ms": { "type": "integer", "minimum": 0 },
           "end_ms": { "type": "integer", "minimum": 0 },

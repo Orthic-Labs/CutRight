@@ -14,5 +14,7 @@ Implemented:
 The smoke gate uses generated MP4 and WAV fixtures, checks metadata and hashes, reruns both files,
 then mutates one temporary source and proves the manifest remains unchanged.
 
-Remaining Phase 1 work is local speech analysis: audio extraction, Silero VAD, ScrapeRight/Parakeet
-transcription, WhisperX verification, and packed transcript output.
+Local speech analysis has since landed too: audio extraction, VAD regions, HeardRight/Parakeet
+timed transcription, WhisperX verification, and packed transcript output. HeardRight — not
+ScrapeRight — is the local audio engine; CutRight reaches it through the engine capability
+protocol and owns no model paths of its own.

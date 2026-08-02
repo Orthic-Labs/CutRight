@@ -1,0 +1,4 @@
+[toolchain]
+# Pinned so the gate compiles identically on every machine (plan §16.3).
+channel = "1.96.0"
+components = ["rustfmt", "clippy"]

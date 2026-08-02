@@ -141,6 +141,12 @@ pub struct DecisionRecord {
     pub client_request_id: String,
     pub ts: String,
     pub project_id: String,
+    /// Studio-owned immutable identity (REV2 §12.7), distinct from
+    /// `project_id` (which `video_project::init_project` still derives from
+    /// the folder name and can collide). Defaults to empty string when
+    /// deserializing a decision written before this field existed.
+    #[serde(default)]
+    pub project_instance_id: String,
     pub kind: String,
     pub verdict: String,
     pub reason: String,
@@ -415,6 +421,8 @@ pub fn build_record(
     let (subject_blake3, subject_size) = hash_file(&subject_path)?;
 
     let project_id = read_project_id(root)?;
+    let project_instance_id =
+        crate::project_identity::resolve(root, Some(&project_id))?.project_instance_id;
     let (bench_resolved, bench_report_blake3) = bench_state(root);
 
     let mut revision = blake3::Hasher::new();
@@ -431,6 +439,7 @@ pub fn build_record(
         client_request_id: intent.client_request_id.trim().to_owned(),
         ts: now.to_rfc3339(),
         project_id,
+        project_instance_id,
         kind: resolved.kind,
         verdict: intent.verdict.as_str().into(),
         reason: intent.reason.as_str().into(),
@@ -452,6 +461,36 @@ pub fn build_record(
 }
 
 pub fn decisions_path(root: &Path, create_parent: bool) -> Result<PathBuf, String> {
+    feedback_ledger_path(root, "decisions.jsonl", create_parent)
+}
+
+/// One append-only entry recording a `relink_source` attempt (REV2 §12.6).
+/// Written whether or not the relink was applied, so a rejected (hash
+/// mismatch) attempt is still auditable — it is not silently dropped just
+/// because the manifest was not mutated.
+#[derive(Debug, Clone, Serialize)]
+pub struct RelinkHistoryRecord {
+    pub ts: String,
+    pub source_id: String,
+    pub requested_path: String,
+    pub canonical_path: String,
+    pub expected_blake3: String,
+    pub actual_blake3: Option<String>,
+    pub matches: bool,
+    pub applied: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+pub fn relink_history_path(root: &Path, create_parent: bool) -> Result<PathBuf, String> {
+    feedback_ledger_path(root, "relink-history.jsonl", create_parent)
+}
+
+fn feedback_ledger_path(
+    root: &Path,
+    file_name: &str,
+    create_parent: bool,
+) -> Result<PathBuf, String> {
     let feedback = root.join("feedback");
     if create_parent && !feedback.exists() {
         fs::create_dir(&feedback).map_err(|e| format!("{}: {e}", feedback.display()))?;
@@ -463,16 +502,33 @@ pub fn decisions_path(root: &Path, create_parent: bool) -> Result<PathBuf, Strin
             return Err(err("path", "feedback directory escapes the project"));
         }
     }
-    let target = feedback.join("decisions.jsonl");
+    let target = feedback.join(file_name);
     if target.exists() {
         let canonical =
             fs::canonicalize(&target).map_err(|e| format!("{}: {e}", target.display()))?;
         if !canonical.starts_with(root) {
-            return Err(err("path", "decisions file escapes the project"));
+            return Err(err("path", "ledger file escapes the project"));
         }
         return Ok(canonical);
     }
     Ok(target)
+}
+
+/// Append one relink attempt to `feedback/relink-history.jsonl`, next to the
+/// decision ledger. Uses the same single-O_APPEND-write-then-sync pattern as
+/// [`append_record`] so concurrent appends cannot interleave.
+pub fn append_relink_record(root: &Path, record: &RelinkHistoryRecord) -> Result<(), String> {
+    let path = relink_history_path(root, true)?;
+    let mut line = serde_json::to_string(record).map_err(|e| e.to_string())?;
+    line.push('\n');
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| format!("{}: {e}", path.display()))?;
+    file.write_all(line.as_bytes())
+        .and_then(|_| file.sync_data())
+        .map_err(|e| format!("{}: {e}", path.display()))
 }
 
 /// Append one record as a single buffer to an O_APPEND file, then sync. A

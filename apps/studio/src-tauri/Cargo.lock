@@ -518,6 +518,8 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-window-state",
+ "uuid",
+ "video-media",
  "video-project",
 ]
 
@@ -3816,6 +3818,7 @@ name = "video-providers"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "libc",
  "serde",
  "serde_json",
  "thiserror 2.0.19",

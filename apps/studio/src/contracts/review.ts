@@ -53,6 +53,10 @@ export type DecisionRecord = {
   client_request_id: string;
   ts: string;
   project_id: string;
+  // Studio-owned immutable identity (REV2 §12.7), distinct from project_id
+  // (still folder-name-derived). Empty string on decisions written before
+  // this field existed.
+  project_instance_id?: string;
   kind: string;
   verdict: string;
   reason: string;
@@ -244,6 +248,7 @@ export function buildMockRecord(
     client_request_id: intent.client_request_id,
     ts: new Date().toISOString(),
     project_id: projectId,
+    project_instance_id: "pin_mock",
     kind: resolved.kind,
     verdict: intent.verdict,
     reason: intent.reason,

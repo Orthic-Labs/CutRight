@@ -3,9 +3,20 @@
 
 **Date:** 2026-07-26
 **Author:** Claude (Fable 5), elevating `solcontent-video-engine-implementation-plan-2026-07-25.md` (Saul)
-**Status:** Plan for hand-off to an implementation agent. Nothing here is built yet.
+**Status:** HISTORICAL — the original hand-off plan, kept because later specs cite its section
+numbers. It is **not** the as-built description. For current state read [`STATUS.md`](STATUS.md);
+for the active campaign read `CUTRIGHT-FINAL-CONSOLIDATED-IMPLEMENTATION-PLAN-2026-07-30-REV2.md`.
 **Target machine:** Adrian's Mac (Apple Silicon), macOS 15+
-**Executes tomorrow:** §3 Bridge Workflow (no build required). The engine itself follows §14 phases.
+
+> **Two corrections before you read further.**
+>
+> 1. **The transcription provider is HeardRight, not ScrapeRight.** Every
+>    `scraperight` / `scraperight-engine` reference below — including the §3 bridge commands and
+>    the §14 Phase 1 description — is superseded by the HeardRight engine boundary
+>    (`CUTRIGHT_HEARDRIGHT_ENGINE`, capability handshake, no model-directory knowledge).
+> 2. **Much of this is built.** Phases 1–2 and the Phase 3 review surface exist; the §3 bridge
+>    workflow is a pre-build path, not the current product path. Do not treat any section here as
+>    a statement about what does or does not exist today.
 
 ---
 

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "provider": "heardright-parakeet-tdt",
+  "source_id": "cam-a-001",
+  "language": "en",
+  "words": [
+    {
+      "id": "w_000001",
+      "source_word_id": "cam-a-001:w_000001",
+      "text": "Today",
+      "start_ms": 812,
+      "end_ms": 1084,
+      "confidence": 0.98,
+      "speaker": "S0",
+      "kind": "word"
+    },
+    {
+      "id": "w_000002",
+      "text": "we",
+      "start_ms": 1084,
+      "end_ms": 1200,
+      "confidence": 0.95,
+      "speaker": "S0",
+      "kind": "word"
+    }
+  ],
+  "events": []
+}

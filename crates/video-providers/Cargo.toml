@@ -12,3 +12,10 @@ serde_json.workspace = true
 thiserror.workspace = true
 video-core = { path = "../video-core" }
 video-media = { path = "../video-media" }
+
+[target.'cfg(unix)'.dependencies]
+# Already resolved transitively (0.2.189) elsewhere in the workspace lock.
+# Used only for setsid/killpg true kill-tree teardown in process_runner
+# (hardening plan §10.1) — std::process::Child cannot signal a whole process
+# group.
+libc = "0.2"

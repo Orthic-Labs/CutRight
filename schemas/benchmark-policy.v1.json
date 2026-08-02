@@ -1,0 +1,7 @@
+{
+  "policy_version": 1,
+  "description": "Transcription benchmark acceptance thresholds (REV2 plan §8.1/§8.2). HeardRight is always the transcript authority; WhisperX is always the verifier. Thresholds are calibrated against the real fixture set, not scattered magic numbers in code.",
+  "min_alignment_coverage": 0.9,
+  "max_unmatched_content_rate": 0.05,
+  "requested_padding_ms_default": 40
+}

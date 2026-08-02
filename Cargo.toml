@@ -12,7 +12,7 @@ members = [
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-authors = ["Damned Designs Studio"]
+authors = ["Orthic Labs"]
 
 [workspace.dependencies]
 blake3 = "1.8"

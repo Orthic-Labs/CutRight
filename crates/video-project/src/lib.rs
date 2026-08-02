@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
 use thiserror::Error;
 use video_core::{
     models::{ProviderCost, ProviderResponseEnvelope, SourceEntry, SCHEMA_VERSION},
-    providers::{TranscriptionProvider, TranscriptionRequest, VadProvider, VadRequest},
+    providers::{TranscriptionProvider, TranscriptionRequest, VadRequest},
     Candidate, CandidateManifest, CutPlan, CutSegment, DropReason, FillerPolicy, OutputPreset,
     ProjectManifest, ReviewMode, SourceManifest, SourcePolicy, Timebase, Timeline, TimelineSegment,
     Track, Transcript, VadSignal, Word,
@@ -478,9 +478,15 @@ pub fn init_project(path: &Path, dry_run: bool) -> Result<InitResult, ProjectErr
     if manifest_path.exists() {
         read_project_manifest(&manifest_path)?;
     } else {
+        // §12.7: identity is random, not folder-derived — two projects named
+        // "reel" used to share a project_id and therefore a decision ledger
+        // identity. The folder name is kept as the human title instead.
+        let instance_id = fresh_instance_id();
         let manifest = ProjectManifest {
             schema_version: SCHEMA_VERSION,
-            project_id: format!("project-{}", blake3::hash(project_name.as_bytes()).to_hex()),
+            project_id: instance_id.clone(),
+            project_instance_id: instance_id,
+            title: project_name.clone(),
             kind: "mixed_creator_content".into(),
             created_at: Utc::now(),
             review_mode: ReviewMode::Reviewed,
@@ -670,6 +676,13 @@ pub fn transcribe_project(
                         language_hint: Some("en".into()),
                     })
                     .map_err(|error| ProjectError::InvalidState(error.to_string()))?;
+                output.transcript.validate().map_err(|error| {
+                    ProjectError::InvalidState(format!(
+                        "provider {} returned an invalid transcript for {}: {error}",
+                        provider.id(),
+                        source.source_id
+                    ))
+                })?;
                 write_json_atomic(&transcript_path, &output.transcript)?;
                 write_transcription_provenance(
                     project_path,
@@ -706,9 +719,9 @@ pub fn transcribe_project(
             .map(|word| format!("- `{}–{}` {}", word.start_ms, word.end_ms, word.text))
             .collect::<Vec<_>>()
             .join("\n");
-        fs::write(
-            project_path.join("analysis/transcript-packed.md"),
-            packed + "\n",
+        write_bytes_atomic(
+            &project_path.join("analysis/transcript-packed.md"),
+            (packed + "\n").as_bytes(),
         )?;
     }
     let path = project_path.join("analysis/transcripts");
@@ -822,6 +835,173 @@ fn relative_artifact_path(project_path: &Path, path: &Path) -> String {
         .to_string()
 }
 
+/// True when `name` names the HeardRight engine (any accepted spelling).
+fn is_heardright_provider(name: &str) -> bool {
+    matches!(name, "heardright" | "heardright-parakeet-tdt")
+}
+
+/// True when `name` names the WhisperX verifier (any accepted spelling).
+fn is_whisperx_provider(name: &str) -> bool {
+    matches!(name, "whisperx" | "whisperx-alignment")
+}
+
+/// HeardRight is always the transcript authority and WhisperX is always the
+/// verifier (REV2 plan §8.1), regardless of which CLI flag (`--primary` or
+/// `--verifier`) named which engine — the roles are fixed by product
+/// architecture, not by argument order. Returns `(heardright_name,
+/// whisperx_name)` using whichever of the two input strings actually named
+/// each engine, preserving the caller's exact spelling.
+fn benchmark_provider_roles<'a>(
+    primary: &'a str,
+    verifier: &'a str,
+) -> Result<(&'a str, &'a str), ProjectError> {
+    if is_heardright_provider(primary) && is_whisperx_provider(verifier) {
+        return Ok((primary, verifier));
+    }
+    if is_heardright_provider(verifier) && is_whisperx_provider(primary) {
+        return Ok((verifier, primary));
+    }
+    Err(ProjectError::InvalidState(
+        "transcription benchmark requires exactly one heardright provider and one whisperx \
+         provider (as --primary/--verifier, in either order); HeardRight is always the \
+         transcript authority and WhisperX is always the verifier"
+            .into(),
+    ))
+}
+
+/// Classifies why a word failed to align to its counterpart, distinguishing
+/// framing noise that normalization cannot fully absorb (punctuation-only
+/// tokens, contractions, split tokens) from genuine ASR content disagreement
+/// (REV2 plan §8.2). `token_key` already strips punctuation before matching,
+/// so most punctuation-only differences never reach this classifier; it
+/// exists for the residue that does.
+fn classify_word_disagreement(text: &str) -> &'static str {
+    let trimmed = text.trim();
+    let alnum: String = trimmed.chars().filter(|c| c.is_alphanumeric()).collect();
+    if alnum.is_empty() {
+        "punctuation"
+    } else if trimmed.contains('\'') {
+        "contraction"
+    } else if alnum.chars().count() <= 2 {
+        "token_split"
+    } else {
+        "content"
+    }
+}
+
+/// Summary statistics over a set of boundary-check `delta_ms` values, used
+/// to record start/end delta distributions in the benchmark report (REV2
+/// plan §8.2) instead of only pass/fail counts.
+fn delta_stats(checks: &[serde_json::Value]) -> serde_json::Value {
+    let deltas: Vec<f64> = checks
+        .iter()
+        .filter_map(|check| check.get("delta_ms").and_then(serde_json::Value::as_i64))
+        .map(|delta| delta as f64)
+        .collect();
+    if deltas.is_empty() {
+        return serde_json::json!({"count": 0, "min_ms": null, "max_ms": null, "mean_ms": null});
+    }
+    let min = deltas.iter().cloned().fold(f64::INFINITY, f64::min);
+    let max = deltas.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let mean = deltas.iter().sum::<f64>() / deltas.len() as f64;
+    serde_json::json!({"count": deltas.len(), "min_ms": min, "max_ms": max, "mean_ms": mean})
+}
+
+/// Best-effort protocol/engine identity extracted from a provider's raw
+/// response envelope (REV2 plan §8.3). Fields that the provider did not echo
+/// back are recorded as `null` rather than guessed.
+fn extract_protocol_identity(raw_response: &serde_json::Value) -> serde_json::Value {
+    serde_json::json!({
+        "schema_name": raw_response.get("schema_name").cloned().unwrap_or(serde_json::Value::Null),
+        "schema_version": raw_response.get("schema_version").cloned().unwrap_or(serde_json::Value::Null),
+        "protocol_major": raw_response.get("protocol_major").cloned().unwrap_or(serde_json::Value::Null),
+        "protocol_minor": raw_response.get("protocol_minor").cloned().unwrap_or(serde_json::Value::Null),
+        "engine_version": raw_response.get("engine_version").cloned().unwrap_or(serde_json::Value::Null),
+    })
+}
+
+/// Binding provenance for one engine's contribution to one clip (REV2 plan
+/// §8.3): the normalized transcript hash, the raw response/envelope hashes,
+/// and the engine/model/protocol identity. Any input change invalidates the
+/// decision because every one of these hashes is recomputed from disk, not
+/// cached.
+fn engine_binding(
+    project_path: &Path,
+    source_id: &str,
+    provider_label: &str,
+    transcript_path: &Path,
+) -> Result<serde_json::Value, ProjectError> {
+    let envelope_path = project_path.join(format!(
+        "analysis/transcripts/{source_id}.{provider_label}.envelope.json"
+    ));
+    let raw_path = project_path.join(format!(
+        "cache/provider-responses/{source_id}.{provider_label}.raw.json"
+    ));
+    let envelope: ProviderResponseEnvelope = read_json(&envelope_path)?;
+    let raw_response: serde_json::Value = read_json(&raw_path)?;
+    Ok(serde_json::json!({
+        "provider": envelope.provider,
+        "provider_model": envelope.provider_model,
+        "protocol": extract_protocol_identity(&raw_response),
+        "transcript_hash": hash_file(transcript_path)?,
+        "raw_response_hash": hash_file(&raw_path)?,
+        "envelope_hash": hash_file(&envelope_path)?,
+        "request_hash": envelope.request_hash,
+    }))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct BenchmarkDecision {
+    status: &'static str,
+    transcript_authority: &'static str,
+    timestamp_authority: &'static str,
+}
+
+/// The HeardRight-primary validation policy (REV2 plan §8.1). This replaces
+/// the old symmetric "whichever provider is eligible wins, both eligible is
+/// unresolved" election: HeardRight is the transcript authority whenever its
+/// own content and coverage are acceptable, even when WhisperX is also
+/// clean. The product transcript engine never changes merely because the
+/// verifier happened to produce one cleaner sample.
+fn benchmark_decision(
+    verifier_unavailable: bool,
+    verifier_coverage_sufficient: bool,
+    heardright_content_clean: bool,
+    heardright_edges_clean: bool,
+    whisperx_edges_clean: bool,
+) -> BenchmarkDecision {
+    if verifier_unavailable {
+        return BenchmarkDecision {
+            status: "verifier_unavailable",
+            transcript_authority: "heardright",
+            timestamp_authority: "heardright",
+        };
+    }
+    if heardright_content_clean && heardright_edges_clean && verifier_coverage_sufficient {
+        return BenchmarkDecision {
+            status: "primary_accepted",
+            transcript_authority: "heardright",
+            timestamp_authority: "heardright",
+        };
+    }
+    if heardright_content_clean
+        && verifier_coverage_sufficient
+        && !heardright_edges_clean
+        && whisperx_edges_clean
+    {
+        return BenchmarkDecision {
+            status: "verifier_edges_required",
+            transcript_authority: "heardright",
+            timestamp_authority: "whisperx",
+        };
+    }
+    BenchmarkDecision {
+        status: "manual_review_required",
+        transcript_authority: "heardright",
+        timestamp_authority: "unresolved",
+    }
+}
+
 pub fn bench_transcribe(
     project_path: &Path,
     primary: &str,
@@ -835,6 +1015,7 @@ pub fn bench_transcribe(
             "benchmark boundaries must be positive and padding must be nonnegative".into(),
         ));
     }
+    let (heardright_name, whisperx_name) = benchmark_provider_roles(primary, verifier)?;
     let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
     if sources.sources.len() < 3 {
         return Err(ProjectError::InvalidState(
@@ -848,137 +1029,282 @@ pub fn bench_transcribe(
             count: sources.sources.len(),
         });
     }
-    transcribe_project(project_path, primary, false)?;
-    transcribe_project(project_path, verifier, false)?;
-    let mut total_primary_non_clean = 0_usize;
-    let mut total_verifier_non_clean = 0_usize;
-    let mut total_primary_unmatched = 0_usize;
-    let mut total_verifier_unmatched = 0_usize;
+    let policy = video_core::BenchmarkPolicy::v1();
+
+    // HeardRight is the transcript authority: it must run cleanly or the
+    // benchmark cannot proceed at all. There is no fallback to WhisperX as
+    // the product engine (REV2 §8.1).
+    transcribe_project(project_path, heardright_name, false)?;
+
+    // WhisperX is a verifier, not a co-equal engine: its failure degrades
+    // the decision to `verifier_unavailable` rather than aborting the whole
+    // benchmark (REV2 §8.1 case 4 — the HeardRight transcript stays
+    // viewable even when verification could not run).
+    let verifier_unavailable_reason = match transcribe_project(project_path, whisperx_name, false) {
+        Ok(_) => None,
+        Err(error) => Some(error.to_string()),
+    };
+
+    let mut total_heardright_words = 0_usize;
+    let mut total_matched_words = 0_usize;
+    let mut total_content_unmatched_words = 0_usize;
+    let mut total_heardright_non_clean = 0_usize;
+    let mut total_whisperx_non_clean = 0_usize;
+    let mut all_heardright_checks: Vec<serde_json::Value> = Vec::new();
+    let mut all_whisperx_checks: Vec<serde_json::Value> = Vec::new();
     let mut clips = Vec::new();
+
     for source in &sources.sources {
-        let primary_path =
+        let heardright_path =
             project_path.join(format!("analysis/transcripts/{}.json", source.source_id));
-        let verifier_path = project_path.join(format!(
+        let whisperx_path = project_path.join(format!(
             "analysis/transcripts/{}.whisperx.json",
             source.source_id
         ));
-        let primary_transcript: Transcript = read_json(&primary_path)?;
-        let verifier_transcript: Transcript = read_json(&verifier_path)?;
-        let alignment = align_words(&primary_transcript.words, &verifier_transcript.words);
-        let mut primary_checks = aligned_boundary_checks(
-            &primary_transcript.words,
-            &verifier_transcript.words,
-            &alignment.matches,
-            true,
-            boundaries,
-            padding_ms,
-        );
-        let verifier_checks = aligned_boundary_checks(
-            &verifier_transcript.words,
-            &primary_transcript.words,
-            &alignment.matches,
-            false,
-            boundaries,
-            padding_ms,
-        );
-        let primary_non_clean = primary_checks
-            .iter()
-            .filter(|check| check["status"] != "clean")
-            .count();
-        let verifier_non_clean = verifier_checks
-            .iter()
-            .filter(|check| check["status"] != "clean")
-            .count();
-        total_primary_non_clean += primary_non_clean;
-        total_verifier_non_clean += verifier_non_clean;
-        total_primary_unmatched += alignment.unmatched_primary.len();
-        total_verifier_unmatched += alignment.unmatched_verifier.len();
-        for (index, check) in primary_checks.iter_mut().enumerate() {
-            let boundary_ms = check
-                .get("boundary_ms")
-                .and_then(serde_json::Value::as_i64)
-                .ok_or_else(|| {
-                    ProjectError::InvalidState("benchmark check has no boundary".into())
-                })?;
-            let probe = project_path.join(format!(
-                "analysis/bench/transcribe/probes/{}/{index:03}-{}.mp4",
-                source.source_id,
-                check["side"].as_str().unwrap_or("boundary")
-            ));
-            render_boundary_probe(Path::new(&source.path), boundary_ms, &probe)?;
-            check
-                .as_object_mut()
-                .expect("benchmark check is an object")
-                .insert(
-                    "render_probe".into(),
-                    serde_json::Value::String(relative_artifact_path(project_path, &probe)),
+        let heardright_transcript: Transcript = read_json(&heardright_path)?;
+        heardright_transcript.validate().map_err(|error| {
+            ProjectError::InvalidState(format!(
+                "heardright transcript for {} failed semantic validation: {error}",
+                source.source_id
+            ))
+        })?;
+        total_heardright_words += heardright_transcript.words.len();
+
+        let whisperx_transcript: Option<Transcript> = if whisperx_path.is_file() {
+            let transcript: Transcript = read_json(&whisperx_path)?;
+            transcript.validate().map_err(|error| {
+                ProjectError::InvalidState(format!(
+                    "whisperx transcript for {} failed semantic validation: {error}",
+                    source.source_id
+                ))
+            })?;
+            Some(transcript)
+        } else {
+            None
+        };
+
+        let (
+            heardright_checks,
+            whisperx_checks,
+            unmatched_words,
+            whisperx_unmatched_words,
+            matched_count,
+        ) = match &whisperx_transcript {
+            Some(whisperx_transcript) => {
+                let alignment =
+                    align_words(&heardright_transcript.words, &whisperx_transcript.words);
+                let mut heardright_checks = aligned_boundary_checks(
+                    &heardright_transcript.words,
+                    &whisperx_transcript.words,
+                    &alignment.matches,
+                    true,
+                    boundaries,
+                    padding_ms,
                 );
-        }
+                let whisperx_checks = aligned_boundary_checks(
+                    &whisperx_transcript.words,
+                    &heardright_transcript.words,
+                    &alignment.matches,
+                    false,
+                    boundaries,
+                    padding_ms,
+                );
+                for (index, check) in heardright_checks.iter_mut().enumerate() {
+                    let boundary_ms = check
+                        .get("boundary_ms")
+                        .and_then(serde_json::Value::as_i64)
+                        .ok_or_else(|| {
+                            ProjectError::InvalidState("benchmark check has no boundary".into())
+                        })?;
+                    let probe = project_path.join(format!(
+                        "analysis/bench/transcribe/probes/{}/{index:03}-{}.mp4",
+                        source.source_id,
+                        check["side"].as_str().unwrap_or("boundary")
+                    ));
+                    render_boundary_probe(Path::new(&source.path), boundary_ms, &probe)?;
+                    check
+                        .as_object_mut()
+                        .expect("benchmark check is an object")
+                        .insert(
+                            "render_probe".into(),
+                            serde_json::Value::String(relative_artifact_path(project_path, &probe)),
+                        );
+                }
+                let unmatched_words: Vec<serde_json::Value> = alignment
+                    .unmatched_primary
+                    .iter()
+                    .map(|&index| {
+                        let word = &heardright_transcript.words[index];
+                        serde_json::json!({
+                            "word_id": word.id,
+                            "text": word.text,
+                            "class": classify_word_disagreement(&word.text)
+                        })
+                    })
+                    .collect();
+                let whisperx_unmatched_words: Vec<serde_json::Value> = alignment
+                    .unmatched_verifier
+                    .iter()
+                    .map(|&index| {
+                        let word = &whisperx_transcript.words[index];
+                        serde_json::json!({
+                            "word_id": word.id,
+                            "text": word.text,
+                            "class": classify_word_disagreement(&word.text)
+                        })
+                    })
+                    .collect();
+                (
+                    heardright_checks,
+                    whisperx_checks,
+                    unmatched_words,
+                    whisperx_unmatched_words,
+                    alignment.matches.len(),
+                )
+            }
+            None => (Vec::new(), Vec::new(), Vec::new(), Vec::new(), 0),
+        };
+
+        let heardright_non_clean = heardright_checks
+            .iter()
+            .filter(|check| check["status"] != "clean")
+            .count();
+        let whisperx_non_clean = whisperx_checks
+            .iter()
+            .filter(|check| check["status"] != "clean")
+            .count();
+        let content_unmatched = unmatched_words
+            .iter()
+            .filter(|word| word["class"] == "content")
+            .count();
+
+        total_matched_words += matched_count;
+        total_content_unmatched_words += content_unmatched;
+        total_heardright_non_clean += heardright_non_clean;
+        total_whisperx_non_clean += whisperx_non_clean;
+        all_heardright_checks.extend(heardright_checks.iter().cloned());
+        all_whisperx_checks.extend(whisperx_checks.iter().cloned());
+
+        let heardright_binding = engine_binding(
+            project_path,
+            &source.source_id,
+            "heardright",
+            &heardright_path,
+        )?;
+        let whisperx_binding = if whisperx_transcript.is_some() {
+            Some(engine_binding(
+                project_path,
+                &source.source_id,
+                "whisperx",
+                &whisperx_path,
+            )?)
+        } else {
+            None
+        };
+
         clips.push(serde_json::json!({
             "source_id": source.source_id,
             "source_path": source.path,
             "source_blake3": source.blake3,
-            "primary_transcript": primary_path.strip_prefix(project_path).unwrap_or(&primary_path),
-            "verifier_transcript": verifier_path.strip_prefix(project_path).unwrap_or(&verifier_path),
-            "primary_checks": primary_checks,
-            "verifier_checks": verifier_checks,
+            "heardright_transcript": heardright_path.strip_prefix(project_path).unwrap_or(&heardright_path),
+            "whisperx_transcript": if whisperx_transcript.is_some() {
+                serde_json::Value::String(
+                    relative_artifact_path(project_path, &whisperx_path),
+                )
+            } else {
+                serde_json::Value::Null
+            },
+            "heardright_checks": heardright_checks,
+            "whisperx_checks": whisperx_checks,
+            "unmatched_words": unmatched_words,
+            "whisperx_unmatched_words": whisperx_unmatched_words,
             "counts": {
-                "primary_non_clean": primary_non_clean,
-                "verifier_non_clean": verifier_non_clean,
-                "primary_unmatched_words": alignment.unmatched_primary.len(),
-                "verifier_unmatched_words": alignment.unmatched_verifier.len()
+                "heardright_non_clean": heardright_non_clean,
+                "whisperx_non_clean": whisperx_non_clean,
+                "matched_words": matched_count,
+                "unmatched_words": unmatched_words.len(),
+                "content_unmatched_words": content_unmatched,
+                "whisperx_unmatched_words": whisperx_unmatched_words.len()
+            },
+            "binding": {
+                "heardright": heardright_binding,
+                "whisperx": whisperx_binding
             }
         }));
     }
-    let primary_eligible = total_primary_non_clean == 0 && total_primary_unmatched == 0;
-    let verifier_eligible = total_verifier_non_clean == 0 && total_verifier_unmatched == 0;
-    let decision = benchmark_decision(primary, verifier, primary_eligible, verifier_eligible);
+
+    let alignment_coverage = if total_heardright_words == 0 {
+        0.0
+    } else {
+        total_matched_words as f64 / total_heardright_words as f64
+    };
+    let unmatched_content_rate = if total_heardright_words == 0 {
+        0.0
+    } else {
+        total_content_unmatched_words as f64 / total_heardright_words as f64
+    };
+    let verifier_unavailable = verifier_unavailable_reason.is_some();
+    let verifier_coverage_sufficient = alignment_coverage >= policy.min_alignment_coverage;
+    let heardright_content_clean = unmatched_content_rate <= policy.max_unmatched_content_rate;
+    let heardright_edges_clean = total_heardright_non_clean == 0;
+    let whisperx_edges_clean = total_whisperx_non_clean == 0;
+
+    let decision = benchmark_decision(
+        verifier_unavailable,
+        verifier_coverage_sufficient,
+        heardright_content_clean,
+        heardright_edges_clean,
+        whisperx_edges_clean,
+    );
+
     let path = project_path.join("analysis/bench/transcribe/report.json");
     write_json_atomic(
         &path,
         &serde_json::json!({
             "schema_version": SCHEMA_VERSION,
             "kind": "transcription_benchmark",
-            "primary": primary,
-            "verifier": verifier,
+            "policy_version": policy.policy_version,
+            "heardright_provider": heardright_name,
+            "whisperx_provider": whisperx_name,
             "boundaries_requested": boundaries,
             "padding_ms": padding_ms,
+            "verifier_unavailable_reason": verifier_unavailable_reason,
             "clips": clips,
             "summary": {
-                "primary_non_clean": total_primary_non_clean,
-                "verifier_non_clean": total_verifier_non_clean,
-                "primary_unmatched_words": total_primary_unmatched,
-                "verifier_unmatched_words": total_verifier_unmatched,
-                "primary_eligible": primary_eligible,
-                "verifier_eligible": verifier_eligible
+                "heardright_words": total_heardright_words,
+                "matched_words": total_matched_words,
+                "content_unmatched_words": total_content_unmatched_words,
+                "alignment_coverage": alignment_coverage,
+                "unmatched_content_rate": unmatched_content_rate,
+                "heardright_non_clean": total_heardright_non_clean,
+                "whisperx_non_clean": total_whisperx_non_clean,
+                "heardright_start_end_delta_ms": delta_stats(&all_heardright_checks),
+                "whisperx_start_end_delta_ms": delta_stats(&all_whisperx_checks)
             },
-            "decision": decision
+            "decision": {
+                "transcript_authority": decision.transcript_authority,
+                "timestamp_authority": decision.timestamp_authority,
+                "verifier": "whisperx",
+                "status": decision.status
+            }
         }),
     )?;
-    if decision == "unresolved" {
+
+    if decision.status == "manual_review_required" {
         return Err(ProjectError::InvalidState(format!(
-            "transcription benchmark is unresolved; inspect {}",
+            "transcription benchmark requires manual review; destructive word-edge cuts are \
+             blocked until a human resolves it; inspect {}",
             path.display()
         )));
     }
     Ok(PipelineArtifact {
-        status: "created",
+        status: match decision.status {
+            "verifier_unavailable" => "verifier_unavailable",
+            _ => "created",
+        },
         path,
         count: sources.sources.len(),
     })
-}
-
-fn benchmark_decision<'a>(
-    primary: &'a str,
-    verifier: &'a str,
-    primary_eligible: bool,
-    verifier_eligible: bool,
-) -> &'a str {
-    match (primary_eligible, verifier_eligible) {
-        (true, false) => primary,
-        (false, true) => verifier,
-        (true, true) | (false, false) => "unresolved",
-    }
 }
 
 #[derive(Debug)]
@@ -1361,8 +1687,8 @@ pub fn analyze_local(project_path: &Path, dry_run: bool) -> Result<PipelineArtif
     for source in &sources.sources {
         let audio_path = project_path.join(format!("cache/audio/{}-16k.f32", source.source_id));
         extract_audio_f32(Path::new(&source.path), &audio_path, 16_000)?;
-        let signal = provider
-            .analyze(&VadRequest {
+        let (signal, provenance) = provider
+            .analyze_file_vad_with_provenance(&VadRequest {
                 source_id: source.source_id.clone(),
                 audio_path,
                 sample_rate: 16_000,
@@ -1373,6 +1699,29 @@ pub fn analyze_local(project_path: &Path, dry_run: bool) -> Result<PipelineArtif
         write_json_atomic(
             &project_path.join(format!("analysis/vad-{}.json", source.source_id)),
             &signal,
+        )?;
+        // §10.7: VAD carries the same provenance ASR already does — which
+        // model, which runtime, which thresholds, and against exactly which
+        // decoded audio. Stored beside the signal rather than inside it so the
+        // VadSignal artifact shape stays schema-stable.
+        write_json_atomic(
+            &project_path.join(format!("analysis/vad-{}.provenance.json", source.source_id)),
+            &serde_json::json!({
+                "schema_version": SCHEMA_VERSION,
+                "source_id": source.source_id,
+                "source_blake3": source.blake3,
+                "provider": signal.provider,
+                "decoded_audio_blake3": provenance.decoded_audio_blake3,
+                "model_revision": provenance.model_revision,
+                "runtime_backend": provenance.runtime_backend,
+                "threshold": provenance.threshold,
+                "min_speech_ms": provenance.min_speech_ms,
+                "min_silence_ms": provenance.min_silence_ms,
+                "sample_rate": provenance.sample_rate,
+                "decode_policy": provenance.decode_policy,
+                "request_blake3": provenance.request_blake3,
+                "warnings": provenance.warnings,
+            }),
         )?;
     }
     Ok(PipelineArtifact {
@@ -2143,7 +2492,22 @@ const MIGRATION_TARGETS: &[(&str, &str)] = &[
 /// generic artifacts are gone there is nothing left to move.
 pub fn migrate_project(project_path: &Path) -> Result<MigrationReport, ProjectError> {
     let project_path = project_path.canonicalize()?;
-    read_project_manifest(&project_path.join("project.json"))?;
+    let manifest_path = project_path.join("project.json");
+    let mut manifest = read_project_manifest(&manifest_path)?;
+    // §12.7: a pre-migration manifest keeps its original project_id for
+    // backward compatibility and gains an immutable instance id. Never
+    // regenerated once present — not on rename, not on relink.
+    if manifest.project_instance_id.is_empty() {
+        manifest.project_instance_id = fresh_instance_id();
+        if manifest.title.is_empty() {
+            manifest.title = project_path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_default()
+                .to_string();
+        }
+        write_json_atomic(&manifest_path, &manifest)?;
+    }
     let mut migrated = Vec::new();
     let mut skipped = Vec::new();
     let mut backup_dir: Option<PathBuf> = None;
@@ -2820,7 +3184,7 @@ fn write_srt(path: &Path, words: &[Word]) -> Result<(), ProjectError> {
                 .join(" ")
         ));
     }
-    fs::write(path, body)?;
+    write_bytes_atomic(path, body.as_bytes())?;
     Ok(())
 }
 
@@ -2865,17 +3229,87 @@ fn read_project_manifest(path: &Path) -> Result<ProjectManifest, ProjectError> {
     serde_json::from_value(value).map_err(|error| ProjectError::InvalidManifest(error.to_string()))
 }
 
+/// Monotonic counter combined with pid, thread id, and a nanosecond
+/// timestamp to build a temp file name that is unique even when several
+/// writers race to the same destination directory concurrently (REV2 plan
+/// §10.6: PID-only temp names collide under concurrency).
+static TEMP_FILE_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// A fresh, immutable project instance id (§12.7). Derived the same way the
+/// atomic temp names are — pid, thread id, nanosecond clock, and a monotonic
+/// counter — so two projects created in the same second, on the same machine,
+/// with the same folder name still get distinct identities. Generated exactly
+/// once per project and never regenerated.
+fn fresh_instance_id() -> String {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or(0);
+    let sequence = TEMP_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let seed = format!(
+        "{}-{:?}-{nanos}-{sequence}",
+        std::process::id(),
+        std::thread::current().id()
+    );
+    format!("pin_{}", &blake3::hash(seed.as_bytes()).to_hex()[..32])
+}
+
 fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> Result<(), ProjectError> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
+    let mut bytes = serde_json::to_vec_pretty(value)?;
+    bytes.push(b'\n');
+    write_bytes_atomic(path, &bytes)
+}
+
+/// Atomic, concurrency-safe file write (REV2 plan §10.6): a uniquely named
+/// temp file is created in the destination directory with `create_new` (so
+/// two writers can never silently clobber each other's temp file), the
+/// file's contents and metadata are fsynced, the temp file is atomically
+/// renamed onto the destination, and the parent directory is fsynced where
+/// the platform supports it so the rename itself is durable.
+fn write_bytes_atomic(path: &Path, bytes: &[u8]) -> Result<(), ProjectError> {
+    let parent = path.parent().ok_or_else(|| {
+        ProjectError::InvalidState(format!("{} has no parent directory", path.display()))
+    })?;
+    fs::create_dir_all(parent)?;
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| {
+            ProjectError::InvalidState(format!("{} has no file name", path.display()))
+        })?;
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or(0);
+    let sequence = TEMP_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let temporary = parent.join(format!(
+        ".{file_name}.tmp-{}-{:?}-{nanos}-{sequence}",
+        std::process::id(),
+        std::thread::current().id()
+    ));
+    let write_result = (|| -> Result<(), ProjectError> {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temporary)?;
+        file.write_all(bytes)?;
+        file.sync_all()?;
+        Ok(())
+    })();
+    if let Err(error) = write_result {
+        let _ = fs::remove_file(&temporary);
+        return Err(error);
     }
-    let bytes = serde_json::to_vec_pretty(value)?;
-    let temporary = path.with_extension(format!("json.tmp-{}", std::process::id()));
-    let mut file = fs::File::create(&temporary)?;
-    file.write_all(&bytes)?;
-    file.write_all(b"\n")?;
-    file.sync_all()?;
-    fs::rename(temporary, path)?;
+    let rename_result = fs::rename(&temporary, path);
+    if rename_result.is_err() {
+        let _ = fs::remove_file(&temporary);
+    }
+    rename_result?;
+    // Parent-directory fsync is not supported on every platform (notably
+    // Windows); a best-effort sync is still worth attempting where it is.
+    if let Ok(dir) = fs::File::open(parent) {
+        let _ = dir.sync_all();
+    }
     Ok(())
 }
 
@@ -2918,6 +3352,51 @@ mod tests {
         assert_eq!(second.status, "existing");
         assert_eq!(manifest_before, manifest_after);
         assert!(temp.path().join("analysis/bench/transcribe").is_dir());
+    }
+
+    #[test]
+    fn identically_named_projects_get_distinct_immutable_identities() {
+        // §12.7: the old folder-name-derived project_id made these collide,
+        // so two unrelated projects shared one decision-ledger identity.
+        let first_root = tempfile::tempdir().unwrap();
+        let second_root = tempfile::tempdir().unwrap();
+        let first = first_root.path().join("reel");
+        let second = second_root.path().join("reel");
+        init_project(&first, false).unwrap();
+        init_project(&second, false).unwrap();
+
+        let first: ProjectManifest = read_json(&first.join("project.json")).unwrap();
+        let second: ProjectManifest = read_json(&second.join("project.json")).unwrap();
+
+        assert_ne!(first.project_instance_id, second.project_instance_id);
+        assert_ne!(first.project_id, second.project_id);
+        assert!(first.project_instance_id.starts_with("pin_"));
+        // The folder name survives as the human title, not as identity.
+        assert_eq!(first.title, "reel");
+        assert_eq!(second.title, "reel");
+    }
+
+    #[test]
+    fn migration_backfills_an_instance_id_once_and_never_regenerates_it() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        let manifest_path = temp.path().join("project.json");
+
+        // Simulate a pre-§12.7 manifest: legacy folder-derived id, no instance id.
+        let mut legacy: ProjectManifest = read_json(&manifest_path).unwrap();
+        legacy.project_id = "project-legacy".into();
+        legacy.project_instance_id = String::new();
+        legacy.title = String::new();
+        write_json_atomic(&manifest_path, &legacy).unwrap();
+
+        migrate_project(temp.path()).unwrap();
+        let migrated: ProjectManifest = read_json(&manifest_path).unwrap();
+        assert_eq!(migrated.project_id, "project-legacy");
+        assert!(migrated.project_instance_id.starts_with("pin_"));
+
+        migrate_project(temp.path()).unwrap();
+        let again: ProjectManifest = read_json(&manifest_path).unwrap();
+        assert_eq!(again.project_instance_id, migrated.project_instance_id);
     }
 
     #[test]
@@ -3290,23 +3769,81 @@ mod tests {
     }
 
     #[test]
-    fn transcription_benchmark_requires_a_decisive_provider() {
+    fn benchmark_decision_accepts_heardright_even_when_whisperx_is_also_clean() {
+        // REV2 §8.1 case 1: this is the exact bug the old symmetric election
+        // had — both providers eligible used to mean "unresolved". Now
+        // HeardRight wins outright, because switching engines because the
+        // verifier also looked clean is exactly what §8.1 forbids.
+        let decision = benchmark_decision(false, true, true, true, true);
+        assert_eq!(decision.status, "primary_accepted");
+        assert_eq!(decision.transcript_authority, "heardright");
+        assert_eq!(decision.timestamp_authority, "heardright");
+    }
+
+    #[test]
+    fn benchmark_decision_accepts_heardright_when_whisperx_is_unclean() {
+        let decision = benchmark_decision(false, true, true, true, false);
+        assert_eq!(decision.status, "primary_accepted");
+    }
+
+    #[test]
+    fn benchmark_decision_requires_verifier_edges_when_heardright_edges_fail() {
+        // REV2 §8.1 case 2: keep HeardRight's text, borrow WhisperX's clean
+        // edge timings.
+        let decision = benchmark_decision(false, true, true, false, true);
+        assert_eq!(decision.status, "verifier_edges_required");
+        assert_eq!(decision.transcript_authority, "heardright");
+        assert_eq!(decision.timestamp_authority, "whisperx");
+    }
+
+    #[test]
+    fn benchmark_decision_requires_manual_review_on_material_disagreement() {
+        // REV2 §8.1 case 3: content is unclean and WhisperX's own edges are
+        // also unclean, so nobody's timestamps can be trusted automatically.
+        let unclean_content = benchmark_decision(false, true, false, false, false);
+        assert_eq!(unclean_content.status, "manual_review_required");
+        assert_eq!(unclean_content.timestamp_authority, "unresolved");
+
+        let insufficient_coverage = benchmark_decision(false, false, true, true, true);
+        assert_eq!(insufficient_coverage.status, "manual_review_required");
+    }
+
+    #[test]
+    fn benchmark_decision_marks_verifier_unavailable_without_blocking_the_transcript() {
+        // REV2 §8.1 case 4: HeardRight stays the transcript authority and
+        // its own timestamps stay usable for viewing, but the status flags
+        // that destructive automation is unverified.
+        let decision = benchmark_decision(true, false, false, false, false);
+        assert_eq!(decision.status, "verifier_unavailable");
+        assert_eq!(decision.transcript_authority, "heardright");
+        assert_eq!(decision.timestamp_authority, "heardright");
+    }
+
+    #[test]
+    fn benchmark_provider_roles_resolves_heardright_and_whisperx_in_either_argument_order() {
         assert_eq!(
-            benchmark_decision("heardright", "whisperx", true, false),
-            "heardright"
+            benchmark_provider_roles("heardright", "whisperx").unwrap(),
+            ("heardright", "whisperx")
         );
         assert_eq!(
-            benchmark_decision("heardright", "whisperx", false, true),
-            "whisperx"
+            benchmark_provider_roles("whisperx-alignment", "heardright-parakeet-tdt").unwrap(),
+            ("heardright-parakeet-tdt", "whisperx-alignment")
         );
-        assert_eq!(
-            benchmark_decision("heardright", "whisperx", true, true),
-            "unresolved"
-        );
-        assert_eq!(
-            benchmark_decision("heardright", "whisperx", false, false),
-            "unresolved"
-        );
+    }
+
+    #[test]
+    fn benchmark_provider_roles_rejects_two_of_the_same_engine() {
+        assert!(benchmark_provider_roles("heardright", "heardright-parakeet-tdt").is_err());
+        assert!(benchmark_provider_roles("whisperx", "whisperx-alignment").is_err());
+        assert!(benchmark_provider_roles("heardright", "unknown-provider").is_err());
+    }
+
+    #[test]
+    fn classify_word_disagreement_distinguishes_trivial_from_content_disagreement() {
+        assert_eq!(classify_word_disagreement("--"), "punctuation");
+        assert_eq!(classify_word_disagreement("don't"), "contraction");
+        assert_eq!(classify_word_disagreement("re"), "token_split");
+        assert_eq!(classify_word_disagreement("mountain"), "content");
     }
 
     fn word(start_ms: i64, end_ms: i64) -> Word {

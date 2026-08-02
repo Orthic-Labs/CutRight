@@ -12,12 +12,34 @@ pub enum ModelError {
     InvalidTimeRange(String),
     #[error("timeline segment {0} refers to a missing source")]
     MissingSource(String),
+    #[error("word {0} has an invalid time range (end_ms must be greater than start_ms)")]
+    InvalidWordTimeRange(String),
+    #[error("word timeline is not sorted/non-overlapping at word {0}")]
+    UnsortedWordTimeline(String),
+    #[error("duplicate word id {0}")]
+    DuplicateWordId(String),
+    #[error("source_word_id {0} does not match the compound <source_id>:<word_id> pattern")]
+    InvalidSourceWordId(String),
+    #[error("duplicate source_word_id {0}")]
+    DuplicateSourceWordId(String),
+    #[error("timebase {0}/{1} is not rational (fps_num and fps_den must both be nonzero)")]
+    InvalidTimebase(u32, u32),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProjectManifest {
     pub schema_version: u32,
     pub project_id: String,
+    /// Immutable per-project identity (§12.7). `project_id` used to be derived
+    /// from the folder name, so two projects called "reel" collided; decision
+    /// and receipt identity therefore binds to this instead. Empty on a
+    /// pre-migration manifest — `migrate_project` fills it in and nothing ever
+    /// regenerates it, including on folder rename or source relink.
+    #[serde(default)]
+    pub project_instance_id: String,
+    /// The human-facing name. Renaming the folder changes this and nothing else.
+    #[serde(default)]
+    pub title: String,
     pub kind: String,
     pub created_at: DateTime<Utc>,
     pub review_mode: ReviewMode,
@@ -72,7 +94,23 @@ pub struct Timebase {
     pub fps_den: u32,
 }
 
+impl Timebase {
+    /// A timebase is only meaningful as a rational number: both the
+    /// numerator and denominator must be nonzero.
+    pub fn validate(&self) -> Result<(), ModelError> {
+        if self.fps_num == 0 || self.fps_den == 0 {
+            return Err(ModelError::InvalidTimebase(self.fps_num, self.fps_den));
+        }
+        Ok(())
+    }
+}
+
+/// Canonical word-level transcript artifact. `deny_unknown_fields` enforces
+/// the strict unknown-field handling required for canonical artifacts under
+/// a fixed schema version (REV2 plan §8.4): any field this build does not
+/// know about is a contract violation, not silently ignored data.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct Transcript {
     pub schema_version: u32,
     pub provider: String,
@@ -81,6 +119,40 @@ pub struct Transcript {
     pub words: Vec<Word>,
     #[serde(default)]
     pub events: Vec<TranscriptEvent>,
+}
+
+impl Transcript {
+    /// Semantic validation beyond JSON Schema (REV2 plan §8.5): every word
+    /// has a sane time range, the word timeline is sorted and
+    /// non-overlapping, word ids are unique, and any `source_word_id` is
+    /// both pattern-valid and unique within this transcript. Because
+    /// `source_word_id` is namespaced by `source_id` (see
+    /// [`Word::validate`]), per-transcript uniqueness combined with the
+    /// pattern check is sufficient to keep the compound id globally unique
+    /// across every transcript emitted for a project.
+    pub fn validate(&self) -> Result<(), ModelError> {
+        let mut seen_word_ids = std::collections::HashSet::new();
+        let mut seen_source_word_ids = std::collections::HashSet::new();
+        let mut previous_end_ms: Option<i64> = None;
+        for word in &self.words {
+            word.validate()?;
+            if !seen_word_ids.insert(word.id.as_str()) {
+                return Err(ModelError::DuplicateWordId(word.id.clone()));
+            }
+            if let Some(source_word_id) = &word.source_word_id {
+                if !seen_source_word_ids.insert(source_word_id.as_str()) {
+                    return Err(ModelError::DuplicateSourceWordId(source_word_id.clone()));
+                }
+            }
+            if let Some(previous_end_ms) = previous_end_ms {
+                if word.start_ms < previous_end_ms {
+                    return Err(ModelError::UnsortedWordTimeline(word.id.clone()));
+                }
+            }
+            previous_end_ms = Some(word.end_ms);
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -151,8 +223,13 @@ pub struct CutSegment {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct Word {
     pub id: String,
+    /// Optional compound id binding this word back to its source transcript:
+    /// `"<source_id>:<word_id>"`. Namespacing by `source_id` is what keeps
+    /// the id globally unique across every transcript in a project, not
+    /// just within one. See [`is_valid_source_word_id`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_word_id: Option<String>,
     pub text: String,
@@ -161,6 +238,33 @@ pub struct Word {
     pub confidence: f32,
     pub speaker: Option<String>,
     pub kind: String,
+}
+
+/// Compound id pattern for [`Word::source_word_id`]: a nonempty source id, a
+/// literal `:` separator, and a nonempty word id. Mirrors the `pattern`
+/// constraint in `schemas/transcript.schema.json`.
+pub fn is_valid_source_word_id(value: &str) -> bool {
+    match value.split_once(':') {
+        Some((source_id, word_id)) => !source_id.is_empty() && !word_id.is_empty(),
+        None => false,
+    }
+}
+
+impl Word {
+    /// Semantic validation beyond JSON Schema (REV2 plan §8.5): `end_ms`
+    /// must be strictly after `start_ms`, and any `source_word_id` must
+    /// match the compound id pattern.
+    pub fn validate(&self) -> Result<(), ModelError> {
+        if self.start_ms < 0 || self.end_ms <= self.start_ms {
+            return Err(ModelError::InvalidWordTimeRange(self.id.clone()));
+        }
+        if let Some(source_word_id) = &self.source_word_id {
+            if !is_valid_source_word_id(source_word_id) {
+                return Err(ModelError::InvalidSourceWordId(source_word_id.clone()));
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -412,6 +516,171 @@ mod tests {
         assert_eq!(
             serde_json::from_value::<CutPlan>(cut_plan_json).unwrap(),
             cut_plan
+        );
+    }
+
+    // --- transcript.schema.json v1 fixture guard (REV2 plan §8.4/§8.5) ---
+    // Fixtures documented in fixtures/schemas/transcript/v1/README.md.
+
+    const VALID_BASIC: &str =
+        include_str!("../../../fixtures/schemas/transcript/v1/valid/basic.json");
+    const INVALID_MISSING_REQUIRED_FIELD: &str =
+        include_str!("../../../fixtures/schemas/transcript/v1/invalid/missing_required_field.json");
+    const INVALID_UNKNOWN_FIELD: &str =
+        include_str!("../../../fixtures/schemas/transcript/v1/invalid/unknown_field.json");
+    const INVALID_BAD_SOURCE_WORD_ID_PATTERN: &str = include_str!(
+        "../../../fixtures/schemas/transcript/v1/invalid/bad_source_word_id_pattern.json"
+    );
+    const INVALID_UNSORTED_WORD_TIMELINE: &str =
+        include_str!("../../../fixtures/schemas/transcript/v1/invalid/unsorted_word_timeline.json");
+
+    #[test]
+    fn transcript_schema_v1_valid_fixture_round_trips_and_validates() {
+        let transcript: Transcript = serde_json::from_str(VALID_BASIC)
+            .expect("valid/basic.json must deserialize as a Transcript");
+        transcript
+            .validate()
+            .expect("valid/basic.json must pass semantic validation");
+        let reserialized = serde_json::to_value(&transcript).unwrap();
+        let round_tripped: Transcript = serde_json::from_value(reserialized).unwrap();
+        assert_eq!(round_tripped, transcript);
+        assert_eq!(
+            transcript.words[0].source_word_id.as_deref(),
+            Some("cam-a-001:w_000001")
+        );
+        assert_eq!(transcript.words[1].source_word_id, None);
+    }
+
+    #[test]
+    fn transcript_schema_v1_invalid_fixtures_are_rejected() {
+        serde_json::from_str::<Transcript>(INVALID_MISSING_REQUIRED_FIELD)
+            .expect_err("missing_required_field.json must fail to deserialize");
+        serde_json::from_str::<Transcript>(INVALID_UNKNOWN_FIELD)
+            .expect_err("unknown_field.json must fail deny_unknown_fields deserialization");
+
+        let bad_source_word_id: Transcript =
+            serde_json::from_str(INVALID_BAD_SOURCE_WORD_ID_PATTERN)
+                .expect("bad_source_word_id_pattern.json is shape-valid JSON");
+        assert_eq!(
+            bad_source_word_id.validate(),
+            Err(ModelError::InvalidSourceWordId("cam-a-001_w_000001".into()))
+        );
+
+        let unsorted: Transcript = serde_json::from_str(INVALID_UNSORTED_WORD_TIMELINE)
+            .expect("unsorted_word_timeline.json is shape-valid JSON");
+        assert_eq!(
+            unsorted.validate(),
+            Err(ModelError::UnsortedWordTimeline("w_000002".into()))
+        );
+    }
+
+    #[test]
+    fn word_validate_rejects_inverted_and_negative_time_ranges() {
+        let base = Word {
+            id: "w_000001".into(),
+            source_word_id: None,
+            text: "hi".into(),
+            start_ms: 0,
+            end_ms: 100,
+            confidence: 1.0,
+            speaker: None,
+            kind: "word".into(),
+        };
+        assert!(base.validate().is_ok());
+        assert_eq!(
+            Word {
+                end_ms: 0,
+                ..base.clone()
+            }
+            .validate(),
+            Err(ModelError::InvalidWordTimeRange("w_000001".into()))
+        );
+        assert_eq!(
+            Word {
+                start_ms: -1,
+                ..base
+            }
+            .validate(),
+            Err(ModelError::InvalidWordTimeRange("w_000001".into()))
+        );
+    }
+
+    #[test]
+    fn transcript_validate_rejects_duplicate_word_and_source_word_ids() {
+        let word = Word {
+            id: "w_000001".into(),
+            source_word_id: Some("cam-a-001:w_000001".into()),
+            text: "hi".into(),
+            start_ms: 0,
+            end_ms: 100,
+            confidence: 1.0,
+            speaker: None,
+            kind: "word".into(),
+        };
+        let duplicate_ids = Transcript {
+            schema_version: SCHEMA_VERSION,
+            provider: "fixture".into(),
+            source_id: "cam-a-001".into(),
+            language: "en".into(),
+            words: vec![
+                word.clone(),
+                Word {
+                    start_ms: 100,
+                    end_ms: 200,
+                    source_word_id: None,
+                    ..word.clone()
+                },
+            ],
+            events: Vec::new(),
+        };
+        assert_eq!(
+            duplicate_ids.validate(),
+            Err(ModelError::DuplicateWordId("w_000001".into()))
+        );
+
+        let duplicate_source_word_ids = Transcript {
+            words: vec![
+                word.clone(),
+                Word {
+                    id: "w_000002".into(),
+                    start_ms: 100,
+                    end_ms: 200,
+                    ..word
+                },
+            ],
+            ..duplicate_ids
+        };
+        assert_eq!(
+            duplicate_source_word_ids.validate(),
+            Err(ModelError::DuplicateSourceWordId(
+                "cam-a-001:w_000001".into()
+            ))
+        );
+    }
+
+    #[test]
+    fn timebase_validate_rejects_zero_numerator_or_denominator() {
+        assert!(Timebase {
+            fps_num: 30_000,
+            fps_den: 1_001
+        }
+        .validate()
+        .is_ok());
+        assert_eq!(
+            Timebase {
+                fps_num: 0,
+                fps_den: 1
+            }
+            .validate(),
+            Err(ModelError::InvalidTimebase(0, 1))
+        );
+        assert_eq!(
+            Timebase {
+                fps_num: 30,
+                fps_den: 0
+            }
+            .validate(),
+            Err(ModelError::InvalidTimebase(30, 0))
         );
     }
 }
