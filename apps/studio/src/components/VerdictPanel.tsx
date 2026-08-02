@@ -50,9 +50,23 @@ export function VerdictPanel({
             onCancel={onCancelFlag}
           />
         ) : latest ? (
-          <span className={`badge ${latest.verdict}`}>
-            {latest.verdict === "approved" ? "✓" : "✕"} {latest.verdict}{" "}
-            · {latest.reason}
+          <span
+            className={`receipt receipt-${latest.verdict}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="receipt-verdict">
+              {latest.verdict === "approved" ? "✓" : "✕"} {latest.verdict}
+            </span>
+            <span className="receipt-reason">{latest.reason}</span>
+            {latest.subject_blake3 && (
+              <code
+                className="receipt-hash"
+                title={`bound to ${latest.subject_blake3}`}
+              >
+                {latest.subject_blake3.replace(/^blake3:/, "").slice(0, 10)}…
+              </code>
+            )}
           </span>
         ) : reasonKind ? (
           <Reason

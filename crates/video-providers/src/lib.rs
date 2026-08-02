@@ -70,6 +70,17 @@ impl HeardRightProvider {
         "parakeet-tdt-v3-coreml"
     }
 
+    /// Public, download-free health/capability probe (§11.3). Performs only
+    /// the protocol handshake — no transcription and no VAD request is
+    /// sent, and no model download or network fallback occurs beyond what
+    /// the handshake itself requires — and returns the negotiated engine
+    /// identity. Callers (e.g. `videoctl doctor`) can use this to verify
+    /// the engine is reachable and protocol-compatible without risking a
+    /// model download or a full transcription session.
+    pub fn health(&self) -> Result<EngineIdentity, ProviderError> {
+        self.client.health()
+    }
+
     pub fn transcribe(
         &self,
         source_id: &str,

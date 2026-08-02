@@ -10,6 +10,9 @@ use crate::project_scope::{
     canonical_project_root, grant_project_assets, named_error, project_revision, reframe_plan_path,
     stale_cut_plan_reason, stale_qa_reason,
 };
+// Aliased (not `self`) because `write_cloud_settings` below takes a
+// parameter named `settings`, which would otherwise shadow the module.
+use crate::settings::{self as cloud_settings, CloudSettings, EngineStatus};
 use chrono::Utc;
 use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
@@ -195,4 +198,47 @@ pub(crate) fn read_variant_selection(
 ) -> Result<Option<video_project::SelectionRecord>, String> {
     let root = canonical_project_root(&path)?;
     video_project::read_variant_selection(&root).map_err(|error| error.to_string())
+}
+
+/// Read this project's cloud-analysis settings (REV2 §15.6), or the
+/// consent-off defaults if none have been saved yet.
+#[tauri::command]
+pub(crate) fn read_cloud_settings(path: String) -> Result<CloudSettings, String> {
+    let root = canonical_project_root(&path)?;
+    cloud_settings::read(&root)
+}
+
+/// Validate and persist this project's cloud-analysis settings. Returns the
+/// persisted record (with `updated_at` stamped) so the frontend stores
+/// exactly what was written, matching `append_decision`'s pattern.
+#[tauri::command]
+pub(crate) fn write_cloud_settings(
+    path: String,
+    settings: CloudSettings,
+) -> Result<CloudSettings, String> {
+    let root = canonical_project_root(&path)?;
+    cloud_settings::write(&root, settings)
+}
+
+/// The REV2 §15.6 retention/deletion action: reset this project's cloud
+/// settings to defaults (consent off) and remove any cloud analysis cache.
+#[tauri::command]
+pub(crate) fn delete_cloud_data(path: String) -> Result<CloudSettings, String> {
+    let root = canonical_project_root(&path)?;
+    cloud_settings::delete(&root)
+}
+
+/// Whether `name` is currently set in the engine's own process environment
+/// — presence only, never the value. See `settings.rs` module docs.
+#[tauri::command]
+pub(crate) fn credential_env_var_present(name: String) -> Result<bool, String> {
+    cloud_settings::env_var_present(&name)
+}
+
+/// Cheap, read-only engine identity facts (resolved FFmpeg/FFprobe
+/// toolchain) for the Settings surface. Takes no project path — this is
+/// machine/engine state, not per-project state.
+#[tauri::command]
+pub(crate) fn read_engine_status() -> EngineStatus {
+    cloud_settings::engine_status()
 }

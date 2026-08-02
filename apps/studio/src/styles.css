@@ -15,34 +15,118 @@
   font-weight: 400;
   font-display: swap;
 }
+
+/* ==========================================================================
+   Design tokens — shared, then three register themes over one structure
+   (redesign spec Phase 2). `data-register` on <html> selects the theme;
+   `data-theme` (existing) selects dark/light within it. Dark is the
+   product's primary mode (task truth: "dark room next to an editing
+   monitor... low-luminance base, no pure white, accent reserved for
+   state"); light shares one cream base across all three registers (the
+   same convention every other Right Suite app uses) and only the accent
+   varies per register in light mode.
+
+   Registers differ on base, accent, density, and type (spec's ≥2-axis
+   requirement, met on all four): R1 Cutting Room is the default until
+   Adrian locks one into brands.md via the QA-only RegisterSwitch.
+
+   Type note (deviation, documented once here): the R2/R3 stacks reference
+   "General Sans" and "JetBrains Mono" by name per the spec table. This repo
+   ships three webfonts only (Tanker, Geist, Spline Sans Mono) — fetching
+   new binary font assets from the network is outside what this pass can do
+   without Adrian's explicit sign-off on a source and license, so these
+   names sit at the front of their stacks and fall back to Geist / the
+   shipped Spline Sans Mono (or the OS default) wherever they aren't
+   installed locally. Every register still renders correctly today; a
+   register pick that needs the exact named face just needs those two font
+   files added once Adrian licenses them. ========================== */
 :root {
   --viewer-bg: #000;
-  --bg: #0b0b0c;
-  --surface: #141416;
-  --elevated: #1d1d20;
-  --border: #2a2a2e;
-  --border-strong: #3a3a40;
-  --text: #f2f1ef;
-  --muted: #9a9a9e;
-  --faint: #6a6a70;
-  --accent: #ff4fb8;
-  --accent-ink: #12000a;
   --approved: #34d399;
   --rejected: #f87171;
   --warn: #fbbf24;
-  --focus: #ff4fb8;
   --dur-micro: 120ms;
   --dur-state: 180ms;
-  --dur-swap: 220ms;
+  --dur-swap: 140ms; /* variant crossfade + settle (motion table) */
+  --dur-cursor: 130ms; /* word-cursor slide (motion table) */
+  --dur-verdict: 120ms; /* receipt stamp (motion table) */
+  --dur-mode: 100ms; /* mode switch opacity (motion table) */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  font-family:
-    Geist,
-    ui-sans-serif,
-    -apple-system,
-    sans-serif;
+  --font-display: "Tanker", Impact, sans-serif;
+  font-family: var(--font-ui);
+  font-size: var(--text-scale);
   color: var(--text);
   background: var(--bg);
 }
+
+/* --- R1 · Cutting Room (technical/console) — default register --------- */
+:root,
+:root[data-register="cutting-room"] {
+  --bg: #101012;
+  --surface: #17171a;
+  --elevated: #1e1e22;
+  --border: #2a2a2f;
+  --border-strong: #3a3a42;
+  --text: #ececee;
+  --muted: #a7a7ac;
+  --faint: #84848a;
+  --accent: #3fd8c7;
+  --accent-ink: #04211d;
+  --focus: #3fd8c7;
+  --font-ui: "Hanken Grotesk", ui-sans-serif, -apple-system, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, monospace;
+  --text-scale: 12px;
+  --leading-base: 1.35;
+  --row-h: 52px;
+  --pad-unit: 6px;
+  --transcript-measure: 34ch;
+}
+
+/* --- R2 · Bench (operational/dense) — editor-grade, densest ----------- */
+:root[data-register="bench"] {
+  --bg: #131720;
+  --surface: #191c24;
+  --elevated: #212632;
+  --border: #2c3242;
+  --border-strong: #3c4356;
+  --text: #eef1f6;
+  --muted: #a9afbd;
+  --faint: #828a9a;
+  --accent: #4dc8f0;
+  --accent-ink: #031621;
+  --focus: #4dc8f0;
+  --font-ui: "General Sans", ui-sans-serif, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Spline Sans Mono", ui-monospace, monospace;
+  --text-scale: 12px;
+  --leading-base: 1.25;
+  --row-h: 46px;
+  --pad-unit: 5px;
+  --transcript-measure: 32ch;
+}
+
+/* --- R3 · Screening Room (calm/editorial) — roomy -------------------- */
+:root[data-register="screening-room"] {
+  --bg: #17161a;
+  --surface: #1e1c21;
+  --elevated: #26232a;
+  --border: #332f38;
+  --border-strong: #45404a;
+  --text: #f1eeec;
+  --muted: #b2aca6;
+  --faint: #928c86;
+  --accent: #57c79a;
+  --accent-ink: #052c1f;
+  --focus: #57c79a;
+  --font-ui: "Hanken Grotesk", ui-sans-serif, -apple-system, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, monospace;
+  --text-scale: 14px;
+  --leading-base: 1.55;
+  --row-h: 60px;
+  --pad-unit: 8px;
+  --transcript-measure: 42ch;
+}
+
+/* --- Light theme: shared cream base, per-register accent -------------- */
 :root[data-theme="light"] {
   --bg: #f7f3ec;
   --surface: #fffdf8;
@@ -50,14 +134,29 @@
   --border: #e2dad1;
   --border-strong: #cfc5b9;
   --text: #1a1a1c;
-  --muted: #64646a;
-  --faint: #8a8a90;
-  --accent: #b4007c;
-  --accent-ink: #fff;
+  --muted: #5b5b61;
+  --faint: #7a746e;
   --approved: #047857;
   --rejected: #b91c1c;
   --warn: #92400e;
 }
+:root[data-register="cutting-room"][data-theme="light"],
+:root:not([data-register])[data-theme="light"] {
+  --accent: #0e7e72;
+  --accent-ink: #fff;
+  --focus: #0e7e72;
+}
+:root[data-register="bench"][data-theme="light"] {
+  --accent: #0a6e9e;
+  --accent-ink: #fff;
+  --focus: #0a6e9e;
+}
+:root[data-register="screening-room"][data-theme="light"] {
+  --accent: #177452;
+  --accent-ink: #fff;
+  --focus: #177452;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -93,22 +192,20 @@ input:focus-visible {
 .studio {
   min-height: 100vh;
   display: grid;
-  grid-template-rows: 38px 1fr 30px;
+  grid-template-rows: 38px 1fr 34px;
 }
 .titlebar {
   height: 38px;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
+  gap: 14px;
   border-bottom: 1px solid var(--border);
   padding: 0 12px 0 78px;
   background: var(--surface);
 }
 .wordmark {
-  font:
-    20px/1 Tanker,
-    Impact,
-    sans-serif;
+  font: 20px/1 var(--font-display);
 }
 .wordmark span {
   color: var(--accent);
@@ -116,10 +213,34 @@ input:focus-visible {
 .project-title {
   font-weight: 500;
   font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .project-title small {
   color: var(--faint);
   margin-left: 4px;
+}
+.register-switch {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+.register-switch button {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.register-switch button.active {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 .title-actions {
   justify-self: end;
@@ -134,11 +255,78 @@ input:focus-visible {
 .title-actions button:hover {
   background: var(--elevated);
 }
+
+/* ==========================================================================
+   Shell — mode rail, sources rail, viewer, inspector
+   ========================================================================== */
 .shell {
   min-height: 0;
   display: grid;
-  grid-template-columns: 240px minmax(360px, 1fr) 320px;
+  grid-template-columns: 72px 240px minmax(360px, 1fr) 320px;
 }
+.mode-rail {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 8px 6px;
+  gap: 4px;
+}
+.mode-rail-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 2px 8px;
+  border-radius: 8px;
+  color: var(--muted);
+  transition:
+    background-color var(--dur-micro),
+    color var(--dur-micro),
+    box-shadow var(--dur-micro);
+}
+.mode-rail-item:hover:not(:disabled) {
+  background: var(--elevated);
+  color: var(--text);
+}
+.mode-rail-item.active {
+  background: var(--elevated);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.mode-rail-item.active svg {
+  color: var(--accent);
+}
+.mode-rail-item:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.mode-rail-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.mode-rail-key {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 12px;
+  padding: 0 2px;
+  border-radius: 3px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--faint);
+  font: 600 8px/13px var(--font-mono);
+  text-align: center;
+}
+.mode-rail-item.active .mode-rail-key {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .ledger,
 .inspector {
   background: var(--surface);
@@ -160,7 +348,7 @@ input:focus-visible {
   justify-content: space-between;
   padding: 0 12px;
   color: var(--faint);
-  font: 600 10px/1 ui-sans-serif;
+  font: 600 10px/1 var(--font-ui);
   letter-spacing: 0.08em;
 }
 .source-row {
@@ -168,8 +356,8 @@ input:focus-visible {
   display: flex;
   text-align: left;
   gap: 8px;
-  min-height: 56px;
-  padding: 8px 10px;
+  min-height: var(--row-h);
+  padding: var(--pad-unit) calc(var(--pad-unit) * 1.6);
   border-top: 1px solid var(--border);
   transition:
     background-color var(--dur-micro),
@@ -192,12 +380,25 @@ input:focus-visible {
   background: var(--rejected);
 }
 .poster {
-  width: 40px;
-  height: 24px;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 28px;
+  border-radius: 3px;
+  overflow: hidden;
   background: var(--border-strong);
-  color: var(--faint);
   display: grid;
   place-items: center;
+}
+.poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.poster-placeholder {
+  font: 600 9px/1 var(--font-mono);
+  color: var(--faint);
+  letter-spacing: 0.02em;
 }
 .source-copy {
   min-width: 0;
@@ -213,7 +414,7 @@ input:focus-visible {
 .source-copy small,
 code,
 .status-strip {
-  font-family: "Spline Sans Mono", ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 .source-copy small {
@@ -236,17 +437,25 @@ code,
   background: var(--accent);
 }
 mark {
-  font: 600 9px/1 ui-sans-serif;
+  font: 600 9px/1 var(--font-ui);
   color: var(--warn);
   background: none;
   margin-left: 4px;
 }
 .ledger footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   padding: 12px;
   margin-top: auto;
   border-top: 1px solid var(--border);
-  font: 11px ui-monospace;
+  font: 11px var(--font-mono);
   color: var(--muted);
+}
+.ledger footer b {
+  font: 600 9px/1 var(--font-ui);
+  letter-spacing: 0.08em;
+  color: var(--faint);
 }
 .viewer {
   min-width: 0;
@@ -255,31 +464,25 @@ mark {
   display: flex;
   flex-direction: column;
 }
-.modes {
-  height: 44px;
+
+/* Mode-switch motion: "100ms opacity, no slide — modes are places, not
+   slides." One shared class on the remounted (key={mode}) content panel. */
+.mode-panel {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  animation: mode-in var(--dur-mode) var(--ease-out);
 }
-.modes button {
-  min-width: 70px;
-  padding: 6px 10px;
-  border-radius: 5px;
-  color: var(--muted);
-  font-size: 13px;
+@keyframes mode-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
-.modes button.active {
-  background: var(--elevated);
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-.modes button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+
 .video-frame {
   position: relative;
   flex: 1;
@@ -297,58 +500,138 @@ mark {
 .video-placeholder {
   color: #444;
   text-align: center;
-  font: 11px "Spline Sans Mono";
+  font: 11px var(--font-mono);
   letter-spacing: 0.15em;
 }
+
+/* ==========================================================================
+   The Word-Locked Bench (compare mode) — spec Phase 1 signature
+   ========================================================================== */
 .compare-head {
-  height: 46px;
+  min-height: 46px;
   background: var(--bg);
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
+  gap: 10px;
+  padding: 7px 12px;
+  flex-wrap: wrap;
 }
-.variant-chip {
-  width: 92px;
-  height: 27px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
+.bench-tag {
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-size: 11px;
+  color: var(--faint);
 }
-.variant-chip.live {
+/* The bench switch: the largest interactive control after the video —
+   a two-pane pill with a sliding lit "handle" behind the active variant,
+   plus the word-cut delta right at the lock point. */
+.bench-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.bench-switch-track {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  flex: 1 1 auto;
+  max-width: 360px;
+  height: 34px;
+  padding: 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.bench-switch-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  border-radius: 6px;
   background: var(--accent);
-  color: var(--accent-ink);
-  border-color: var(--accent);
+  transition: transform var(--dur-swap) var(--ease-out);
 }
-.variant-chip i {
+.bench-switch-thumb[data-pos="1"] {
+  transform: translateX(100%);
+}
+.bench-switch-thumb[data-pos="2"] {
+  transform: translateX(200%);
+}
+.bench-switch-pane {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-transform: uppercase;
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  transition: color var(--dur-swap) var(--ease-out);
+}
+.bench-switch-pane.active {
+  color: var(--accent-ink);
+}
+.bench-switch-warn {
   display: inline-block;
   width: 5px;
   height: 5px;
   border-radius: 50%;
   background: var(--warn);
-  vertical-align: top;
-  margin: 3px;
 }
-.compare-head span {
+.bench-swap-btn {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  transition:
+    border-color var(--dur-micro),
+    color var(--dur-micro);
+}
+.bench-swap-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.delta-badge {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 5px;
+  font: 11px var(--font-mono);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  white-space: nowrap;
+}
+.compare-head > .flag-badge {
   margin-left: auto;
-  color: var(--muted);
-  font: 11px ui-monospace;
-}
-.compare-head button[aria-label="Swap variants"] {
-  font-size: 13px;
 }
 .compare-videos video {
   position: absolute;
   inset: 0;
-  transition: opacity var(--dur-swap) var(--ease-out);
 }
 .compare-videos video.inactive {
   opacity: 0;
   pointer-events: none;
+  transition: opacity var(--dur-swap) var(--ease-out);
 }
 .compare-videos video.visible {
   opacity: 1;
+  animation: bench-settle var(--dur-swap) var(--ease-out);
+}
+@keyframes bench-settle {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 .segments {
   display: flex;
@@ -407,6 +690,12 @@ mark {
   width: 1px;
   background: var(--accent);
 }
+
+/* ==========================================================================
+   Verdict receipts — spec Phase 1: "verdicts read as receipts... show the
+   bound hash fragment, because that is literally what the backend
+   persists."
+   ========================================================================== */
 .verdict {
   background: var(--bg);
   padding: 10px 12px;
@@ -446,9 +735,54 @@ mark {
   color: var(--rejected);
   background: color-mix(in srgb, var(--rejected) 13%, transparent);
 }
+.receipt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  border: 1px dashed var(--border-strong);
+  animation: verdict-stamp var(--dur-verdict) var(--ease-out);
+}
+.receipt-approved {
+  color: var(--approved);
+  background: color-mix(in srgb, var(--approved) 10%, transparent);
+  border-color: color-mix(in srgb, var(--approved) 45%, transparent);
+}
+.receipt-rejected {
+  color: var(--rejected);
+  background: color-mix(in srgb, var(--rejected) 10%, transparent);
+  border-color: color-mix(in srgb, var(--rejected) 45%, transparent);
+}
+.receipt-verdict {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.receipt-reason {
+  color: var(--muted);
+}
+.receipt-hash {
+  padding-left: 8px;
+  border-left: 1px solid var(--border-strong);
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
 @keyframes commit {
   from {
     transform: scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes verdict-stamp {
+  from {
+    transform: scale(0.95);
     opacity: 0;
   }
   to {
@@ -546,25 +880,51 @@ mark {
 }
 /* Windowed word list (REV2 perf fix): a bounded, independently-scrollable
    region so hooks/useWindowedChunks.ts has a real scrollTop/clientHeight to
-   window against, instead of the whole `.inspector` aside. */
+   window against, instead of the whole `.inspector` aside. `position:
+   relative` also anchors the word-cursor overlay below. */
 .transcript .word-list,
 .source-facts .word-list {
+  position: relative;
   max-height: 55vh;
   overflow-y: auto;
 }
 .transcript .word-list,
 .source-facts .word-list {
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: max(13px, var(--text-scale));
+  line-height: var(--leading-base);
+  max-width: var(--transcript-measure);
 }
 .word-chunk button {
   display: inline;
   padding: 0;
+  margin-right: 4px;
   color: var(--text);
   font-size: inherit;
 }
 .word-chunk button.current {
-  border-bottom: 2px solid var(--accent);
+  color: var(--text);
+  font-weight: 600;
+}
+/* The word cursor (spec motion table): "transform-only underline slide
+   between words." One persistent absolutely-positioned element, moved by
+   JS-computed `transform: translate(...) scaleX(...)` — see Transcript.tsx.
+   `transform-origin: left top` + a 1px base width means the scaleX term
+   IS the width, so the only property this element's position/size ever
+   needs is `transform` (reduced-motion zeroes the transition globally). */
+.word-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  transform-origin: left top;
+  transition:
+    transform var(--dur-cursor) var(--ease-out),
+    opacity var(--dur-micro) linear;
+  opacity: 0;
+  pointer-events: none;
 }
 .transcript code,
 .source-facts code {
@@ -583,23 +943,42 @@ mark {
   letter-spacing: 0.08em;
   color: var(--faint);
 }
+
+/* ==========================================================================
+   Status strip — two-zone (spec Phase 3): pipeline/bench/QA left,
+   decisions/session right. 13px minimum, AA contrast, labeled values only.
+   ========================================================================== */
 .status-strip {
   background: var(--surface);
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
   padding: 0 12px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   white-space: nowrap;
+  overflow: auto;
+}
+.status-zone {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.status-label {
+  font: 600 10px/1 var(--font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-right: 2px;
 }
 .status-strip button {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--accent);
 }
 .strip-toggle {
-  margin-left: auto;
   color: var(--muted);
   border-bottom: 1px dotted var(--border-strong);
   padding: 0 0 1px;
@@ -685,17 +1064,17 @@ mark {
   flex: 1;
   color: var(--muted);
 }
-@media (max-width: 900px) {
+@media (max-width: 980px) {
   .shell {
-    grid-template-columns: 200px minmax(300px, 1fr);
+    grid-template-columns: 60px 200px minmax(300px, 1fr);
   }
   .inspector {
     display: none;
   }
 }
-@media (max-width: 620px) {
+@media (max-width: 680px) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: 56px 1fr;
   }
   .ledger {
     display: none;
@@ -709,10 +1088,6 @@ mark {
   .status-strip {
     overflow: auto;
   }
-  .modes {
-    justify-content: flex-start;
-    overflow: auto;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -721,9 +1096,6 @@ mark {
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;
   }
-}
-.word-chunk button {
-  margin-right: 4px;
 }
 
 /* Phase 3 close-out UI */
@@ -734,22 +1106,17 @@ mark {
   padding: 7px 12px;
   background: color-mix(in srgb, var(--warn) 13%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
-  animation: drop-in var(--dur-state) var(--ease-out);
+  /* Motion table: "Banner (provisional review) — none, static presence.
+     Warnings do not dance." No animation/transition on entrance. */
 }
 .bench-banner b {
-  font: 700 10px/1 ui-sans-serif, sans-serif;
+  font: 700 10px/1 var(--font-ui);
   letter-spacing: 0.1em;
   color: var(--warn);
 }
 .bench-banner span {
   font-size: 11px;
   color: var(--muted);
-}
-@keyframes drop-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
 }
 .scrub {
   position: relative;
@@ -802,7 +1169,7 @@ mark {
   background: color-mix(in srgb, var(--warn) 12%, transparent);
 }
 .flag-badge {
-  font: 11px "Spline Sans Mono", ui-monospace, monospace;
+  font: 11px var(--font-mono);
   color: var(--warn);
   background: color-mix(in srgb, var(--warn) 12%, transparent);
   border-radius: 5px;
@@ -910,7 +1277,7 @@ mark {
 }
 .relink-note {
   flex-basis: 100%;
-  font: 10px "Spline Sans Mono", ui-monospace, monospace;
+  font: 10px var(--font-mono);
   color: var(--approved);
   animation: commit var(--dur-state) var(--ease-out);
 }
@@ -974,7 +1341,7 @@ mark {
   margin-bottom: 8px;
 }
 .panel-head b {
-  font: 600 10px/1 ui-sans-serif, sans-serif;
+  font: 600 10px/1 var(--font-ui);
   letter-spacing: 0.08em;
   color: var(--faint);
 }
@@ -1021,7 +1388,7 @@ mark {
   align-self: start;
   padding: 3px 5px;
   border-radius: 3px;
-  font: 600 9px/1 ui-monospace, monospace;
+  font: 600 9px/1 var(--font-mono);
   letter-spacing: 0.04em;
 }
 .status-chip.stale_artifact {
@@ -1038,6 +1405,183 @@ mark {
 }
 .decisions-panel .malformed {
   margin: 8px 0 0;
-  font: 10px "Spline Sans Mono", ui-monospace, monospace;
+  font: 10px var(--font-mono);
   color: var(--rejected);
+}
+
+/* Settings mode (REV2 §15.6 cloud-analysis config surface) */
+.settings-mode {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--surface);
+  padding: 24px 28px 40px;
+  display: grid;
+  gap: 28px;
+  max-width: 760px;
+}
+.settings-section {
+  display: grid;
+  gap: 14px;
+}
+.settings-section h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.settings-hint {
+  margin: -6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.settings-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr;
+  gap: 18px;
+  align-items: start;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+.settings-row-copy label,
+.settings-row-copy b {
+  font-size: 13px;
+  font-weight: 600;
+}
+.settings-row-copy p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.settings-row-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.settings-row-control select,
+.settings-row-control input[type="text"] {
+  min-width: 220px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 7px 9px;
+  color: var(--text);
+  font-size: 13px;
+}
+.settings-row-control small {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--faint);
+}
+.credential-field input[type="text"] {
+  min-width: 260px;
+  font-family: var(--font-mono);
+}
+.budget-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0 9px;
+  background: var(--bg);
+}
+.budget-input-wrap span[aria-hidden] {
+  color: var(--faint);
+  font-size: 13px;
+}
+.budget-input-wrap input {
+  border: 0;
+  background: none;
+  padding: 7px 0;
+  width: 110px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+.budget-input-wrap input:focus-visible {
+  outline: none;
+}
+.consent-toggle {
+  min-width: 100px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  transition:
+    color var(--dur-micro),
+    border-color var(--dur-micro),
+    background-color var(--dur-micro);
+}
+.consent-toggle.on {
+  color: var(--approved);
+  border-color: var(--approved);
+  background: color-mix(in srgb, var(--approved) 13%, transparent);
+}
+.confirm-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: -4px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  border-radius: 6px;
+  /* Same "warnings do not dance" rule as .bench-banner: static presence. */
+}
+.confirm-strip span {
+  flex: 1 1 260px;
+  font-size: 12px;
+  color: var(--text);
+}
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.settings-error {
+  font-size: 12px;
+}
+.facts-grid {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 8px 14px;
+  margin: 0;
+  font-size: 12px;
+}
+.facts-grid dt {
+  color: var(--faint);
+  font-weight: 600;
+}
+.facts-grid dd {
+  margin: 0;
+  color: var(--text);
+  word-break: break-all;
+}
+.capability-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.capability-pill {
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--elevated);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.capability-pill.none {
+  color: var(--faint);
+}
+@media (max-width: 620px) {
+  .settings-row {
+    grid-template-columns: 1fr;
+  }
 }

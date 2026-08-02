@@ -27,6 +27,7 @@ function WordChunk({
         <button
           className={word.id === cursorId ? "current" : ""}
           aria-current={word.id === cursorId ? "true" : undefined}
+          data-word-id={word.id}
           key={word.id}
           onClick={() => onSeek(word.start_ms)}
         >
@@ -59,6 +60,31 @@ export function Transcript({
     useWindowedChunks(listRef, chunks.length);
   const visible = chunks.slice(start, end);
 
+  // The word cursor (redesign spec Phase 1 + motion table): "transform-only
+  // underline slide between words" — a single persistent element, moved by
+  // `transform` alone, rather than a CSS class toggling per-button border.
+  // `.word-list` is `position: relative` (styles.css) so `offsetLeft` /
+  // `offsetTop` on the current word's button are already in this overlay's
+  // coordinate space, independent of scroll position. Runs after layout so
+  // it sees the word chunk `useWindowedChunks` just mounted; when the
+  // cursor word isn't currently mounted (windowed out of range) the
+  // underline just hides rather than jumping to a stale position.
+  const underlineRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const underline = underlineRef.current;
+    if (!list || !underline) return;
+    const target = cursor?.id
+      ? list.querySelector<HTMLElement>(`button[data-word-id="${cursor.id}"]`)
+      : null;
+    if (!target) {
+      underline.style.opacity = "0";
+      return;
+    }
+    underline.style.opacity = "1";
+    underline.style.transform = `translate(${target.offsetLeft}px, ${target.offsetTop + target.offsetHeight - 2}px) scaleX(${Math.max(1, target.offsetWidth)})`;
+  }, [cursor?.id, visible]);
+
   return (
     <div className="transcript">
       <div className="rail-head">
@@ -74,6 +100,7 @@ export function Transcript({
         {cursor?.text ?? ""}
       </p>
       <div className="word-list" ref={listRef}>
+        <i className="word-cursor" ref={underlineRef} aria-hidden="true" />
         {offsetTop > 0 && (
           <div aria-hidden="true" style={{ height: offsetTop }} />
         )}

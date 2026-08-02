@@ -44,6 +44,10 @@ export function useProject(ledger: {
     ),
     finals: Boolean(snapshot?.finals.length),
     qa: Boolean(snapshot?.qa),
+    // Settings is project config, not project content — it never depends
+    // on what has been generated yet, so it's always reachable once a
+    // project is open (same gate every other mode is already behind).
+    settings: true,
   };
 
   const load = useCallback(async (path?: string) => {

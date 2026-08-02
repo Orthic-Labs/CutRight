@@ -11,11 +11,14 @@ import {
 import {
   fixture,
   fixtureWords,
+  memoryCloudSettings,
   memoryDecisions,
   memoryMalformed,
   memorySelection,
+  setMemoryCloudSettings,
   setMemorySelection,
 } from "../fixtures/qa";
+import { DEFAULT_CLOUD_SETTINGS, type CloudSettings } from "../types";
 
 export const qa =
   new URLSearchParams(location.search).has("qa") ||
@@ -88,6 +91,39 @@ export async function call<T>(
     return next as T;
   }
   if (command === "read_variant_selection") return memorySelection as T;
+  if (command === "read_cloud_settings") return memoryCloudSettings as T;
+  if (command === "write_cloud_settings") {
+    const next = {
+      ...(args.settings as CloudSettings),
+      updated_at: new Date().toISOString(),
+    };
+    if (next.hard_budget_usd < 0 || !Number.isFinite(next.hard_budget_usd))
+      throw new Error("hard_budget_usd: must be zero or a positive number");
+    setMemoryCloudSettings(next);
+    return next as T;
+  }
+  if (command === "delete_cloud_data") {
+    setMemoryCloudSettings(DEFAULT_CLOUD_SETTINGS);
+    return DEFAULT_CLOUD_SETTINGS as T;
+  }
+  if (command === "credential_env_var_present") return false as T;
+  if (command === "read_engine_status")
+    return {
+      resolved: true,
+      toolchain_identity: "8.1.2:blake3:qa-mock",
+      ffmpeg_version: "8.1.2",
+      ffmpeg_path: "/QA/ffmpeg",
+      ffprobe_path: "/QA/ffprobe",
+      capabilities: {
+        has_zscale: true,
+        has_h264_videotoolbox: true,
+        has_prores_ks: true,
+        has_lut3d: true,
+        has_colortemperature: true,
+      },
+      error: null,
+      note: "QA mock — not a real toolchain resolution",
+    } as T;
   throw new Error(`QA mock has no ${command}`);
 }
 export const tc = (value = 0) => {

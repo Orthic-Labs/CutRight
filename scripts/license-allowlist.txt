@@ -21,3 +21,22 @@ apps/studio/src-tauri/icons/icon.png
 docs/artifacts/motion-swap-before.png
 docs/artifacts/motion-swap-after.png
 docs/artifacts/reduced-variant.png
+
+# Register-redesign review screenshots captured from our own app by the QA
+# harness (first-party; Adrian's taste-gate evidence for the register pick).
+apps/studio/design/shots/cutting-room-sources.png
+apps/studio/design/shots/cutting-room-compare.png
+apps/studio/design/shots/cutting-room-finals.png
+apps/studio/design/shots/cutting-room-qa.png
+apps/studio/design/shots/cutting-room-settings.png
+apps/studio/design/shots/bench-sources.png
+apps/studio/design/shots/bench-compare.png
+apps/studio/design/shots/bench-finals.png
+apps/studio/design/shots/bench-qa.png
+apps/studio/design/shots/bench-settings.png
+apps/studio/design/shots/screening-room-sources.png
+apps/studio/design/shots/screening-room-compare.png
+apps/studio/design/shots/screening-room-finals.png
+apps/studio/design/shots/screening-room-qa.png
+apps/studio/design/shots/screening-room-settings.png
+apps/studio/design/shots/reduced-motion.png

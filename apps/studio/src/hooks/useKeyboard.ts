@@ -1,5 +1,5 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
-import type { Mode } from "../types";
+import { MODE_ORDER, type Mode } from "../types";
 
 // The global keydown handler: mode switches, transport controls,
 // word/segment stepping, approve/reject/flag shortcuts, and the command
@@ -72,13 +72,11 @@ export function useKeyboard({
       }
       if (
         (event.metaKey || event.ctrlKey) &&
-        ["1", "2", "3", "4"].includes(event.key)
+        /^[1-5]$/.test(event.key)
       ) {
         event.preventDefault();
-        const next = ["sources", "compare", "finals", "qa"][
-          Number(event.key) - 1
-        ] as Mode;
-        if (available[next]) setMode(next);
+        const next = MODE_ORDER[Number(event.key) - 1];
+        if (next && available[next]) setMode(next);
         return;
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -99,7 +97,7 @@ export function useKeyboard({
         setFlagging(false);
         setLedgerOpen(false);
       }
-      if (event.key === " " && mode !== "qa") {
+      if (event.key === " " && mode !== "qa" && mode !== "settings") {
         event.preventDefault();
         togglePlayback();
       }

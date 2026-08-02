@@ -41,7 +41,7 @@
       ],
       "properties": {
         "effect_id": { "type": "string" },
-        "renderer": { "enum": ["ffmpeg", "remotion"] },
+        "renderer": { "enum": ["ffmpeg", "ass", "remotion", "hyperframes"] },
         "schema_version": { "type": "integer", "minimum": 1 },
         "props_schema": { "type": "object" },
         "safe_zones": {

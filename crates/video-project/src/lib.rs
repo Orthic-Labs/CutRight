@@ -7,6 +7,8 @@ mod audio_profile;
 mod benchmark;
 mod candidates;
 pub mod caption_profile;
+pub mod cloud;
+pub mod cloud_policy;
 mod color_profile;
 mod cut_plan;
 pub mod effects;
@@ -38,6 +40,16 @@ pub use candidates::{build_candidates, build_candidates_with_policy, count_fille
 pub use caption_profile::{
     build_default_caption_document, default_fallback_chain, default_primary_font, default_profile,
     CaptionDocument, CaptionProfile, CAPTION_MODEL_SCHEMA_VERSION,
+};
+pub use cloud::{
+    analyze_cloud, delete_cloud_retention, resolve_default_target, resolve_provider,
+    CloudAnalysisOutcome, CloudCapability, CloudDeletionOutcome, CloudProvider,
+    CloudSemanticEvidence, ProviderIdentity,
+};
+pub use cloud_policy::{
+    load_cloud_config, load_cloud_ledger, load_cloud_retention, set_cloud_budget,
+    set_cloud_consent, set_cloud_provider, CloudEnvelopePolicy, ProjectCloudConfig, UploadPolicy,
+    CLOUD_SCHEMA_VERSION,
 };
 pub use color_profile::{
     export_preset_settings, ColorProfile, ExportPresetSettings, ARCHIVE_EXPORT_PRESET,

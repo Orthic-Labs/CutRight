@@ -6,6 +6,7 @@ mod decision_store;
 mod project_identity;
 mod project_scope;
 mod relink_history;
+mod settings;
 mod source_integrity;
 
 #[cfg(test)]
@@ -24,7 +25,12 @@ fn main() {
             source_integrity::verify_sources,
             commands::select_variant,
             commands::read_variant_selection,
-            source_integrity::relink_source
+            source_integrity::relink_source,
+            commands::read_cloud_settings,
+            commands::write_cloud_settings,
+            commands::delete_cloud_data,
+            commands::credential_env_var_present,
+            commands::read_engine_status
         ])
         .run(tauri::generate_context!())
         .expect("CutRight Studio failed to start");

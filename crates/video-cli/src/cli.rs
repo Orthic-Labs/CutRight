@@ -93,6 +93,10 @@ pub enum Command {
         #[command(subcommand)]
         command: PreferencesCommand,
     },
+    Cloud {
+        #[command(subcommand)]
+        command: CloudCommand,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -160,11 +164,36 @@ pub enum BenchCommand {
 #[derive(Debug, Subcommand)]
 pub enum AnalyzeCommand {
     Local(PathCommand),
-    Cloud {
-        project: PathBuf,
-        #[arg(long)]
-        provider: String,
-    },
+    Cloud(CloudAnalyzeArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct CloudAnalyzeArgs {
+    pub project: PathBuf,
+    #[arg(
+        long,
+        help = "'fake' (test-fixture adapter) or any other name, which resolves to the \
+                default disabled provider — no real vendor ships yet"
+    )]
+    pub provider: String,
+    #[arg(
+        long,
+        default_value = "frame-semantics",
+        help = "frame-semantics|segment-semantics|video-index"
+    )]
+    pub capability: String,
+    #[arg(
+        long,
+        help = "Asset to analyze, relative to the project; defaults to the first entry under \
+                cache/proxies (the safe default)"
+    )]
+    pub target: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Upload the registered source instead of a proxy; still refused unless the \
+                project's cloud-config.json has upload_policy=source"
+    )]
+    pub use_source: bool,
 }
 
 #[derive(Debug, Subcommand)]
@@ -286,4 +315,27 @@ pub enum PreferencesCommand {
         )]
         out: Option<PathBuf>,
     },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum CloudCommand {
+    /// Set or clear a project's explicit consent to run cloud analysis.
+    /// Consent is `false` by default and there is no global switch — this
+    /// is the only way it ever becomes `true` (REV2 plan §15.6).
+    Consent {
+        project: PathBuf,
+        #[arg(long, help = "Omit to disable; pass to enable")]
+        enable: bool,
+    },
+    /// Set a project's hard cloud-spend ceiling in USD. `0.0` (the default)
+    /// blocks every cloud request outright.
+    Budget {
+        project: PathBuf,
+        #[arg(long)]
+        usd: f64,
+    },
+    /// Remove every currently-retained cloud upload/response for a project.
+    /// Tombstones retention records and deletes their files; never touches
+    /// the spend ledger.
+    Delete(PathCommand),
 }

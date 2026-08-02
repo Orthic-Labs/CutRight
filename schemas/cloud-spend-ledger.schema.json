@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/cloud-spend-ledger.schema.json",
+  "title": "CutRight cloud-analysis spend ledger",
+  "description": "Persisted at <project>/analysis/cloud-analysis/spend-ledger.json. Append-only: every successful cloud request adds one record; the total is the hard budget accounting boundary (REV2 plan §15.6). Never pruned by the retention-deletion action.",
+  "type": "object",
+  "required": ["schema_version", "records"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["content_hash", "capability", "provider", "model", "cost_usd", "at"],
+        "properties": {
+          "content_hash": { "type": "string" },
+          "capability": { "type": "string" },
+          "provider": { "type": "string" },
+          "model": { "type": "string" },
+          "cost_usd": { "type": "number", "minimum": 0 },
+          "at": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

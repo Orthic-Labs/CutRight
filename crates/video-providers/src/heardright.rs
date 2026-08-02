@@ -483,6 +483,31 @@ impl HeardRightClient {
             .and_then(|guard| guard.as_ref().map(|s| s.identity.clone()))
     }
 
+    /// Public, download-free health/capability probe (§11.3): ensures a
+    /// session exists — spawning one performs only the protocol handshake
+    /// (§9.2), never a transcription or VAD request — and returns the
+    /// negotiated engine identity. Reuses an already-live session instead
+    /// of spawning a redundant one.
+    pub fn health(&self) -> Result<EngineIdentity, ProviderError> {
+        let mut guard = self
+            .session
+            .lock()
+            .map_err(|_| ProviderError::Engine("HeardRight session lock poisoned".into()))?;
+        if guard.is_none() {
+            *guard = Some(Session::spawn(&self.engine)?);
+        } else if guard.as_mut().expect("checked above").is_dead() {
+            if let Some(mut dead) = guard.take() {
+                dead.process.kill_tree();
+            }
+            *guard = Some(Session::spawn(&self.engine)?);
+        }
+        Ok(guard
+            .as_ref()
+            .expect("session initialized above")
+            .identity
+            .clone())
+    }
+
     /// Send one request and wait for the correlated result frame, applying
     /// the restart-once policy: if the current session is dead or the
     /// request fails because the engine exited unexpectedly, start exactly

@@ -38,41 +38,47 @@ export function StatusStrip({
 }) {
   return (
     <footer className="status-strip">
-      <span>
-        pipeline {Object.values(stages).filter(Boolean).length}/
-        {Object.keys(stages).length}
-      </span>
-      <span className={benchProvisional ? "warn" : "good"}>
-        ● bench: {bench?.decision ?? "unavailable"}
-      </span>
-      <span className={qa?.status === "pass" ? "good" : "warn"}>
-        ● QA: {qa?.status ?? "pending"}
-      </span>
-      {artifactIssue(qaArtifact) && (
-        <span className="warn" title={artifactIssue(qaArtifact) ?? ""}>
-          ⚠ QA report {artifactIssue(qaArtifact)}
+      <div className="status-zone status-zone-pipeline">
+        <span>
+          <b className="status-label">pipeline</b>{" "}
+          {Object.values(stages).filter(Boolean).length}/
+          {Object.keys(stages).length}
         </span>
-      )}
-      {artifactIssue(benchArtifact) && (
-        <span className="warn" title={artifactIssue(benchArtifact) ?? ""}>
-          ⚠ bench report {artifactIssue(benchArtifact)}
+        <span className={benchProvisional ? "warn" : "good"}>
+          ● <b className="status-label">bench</b> {bench?.decision ?? "unavailable"}
         </span>
-      )}
-      {artifactIssue(cutPlanArtifact) && (
-        <span className="warn" title={artifactIssue(cutPlanArtifact) ?? ""}>
-          ⚠ cut plan {artifactIssue(cutPlanArtifact)}
+        <span className={qa?.status === "pass" ? "good" : "warn"}>
+          ● <b className="status-label">QA</b> {qa?.status ?? "pending"}
         </span>
-      )}
-      <button
-        className="strip-toggle"
-        aria-expanded={ledgerOpen}
-        onClick={onToggleLedger}
-      >
-        decisions: session {sessionCount} · total {totalDecisions}
-        {staleCount > 0 && ` · ${staleCount} stale`}
-        {malformedCount > 0 && ` · ${malformedCount} malformed`}
-      </button>
-      <button onClick={onRefresh}>Refresh</button>
+        {artifactIssue(qaArtifact) && (
+          <span className="warn" title={artifactIssue(qaArtifact) ?? ""}>
+            ⚠ QA report {artifactIssue(qaArtifact)}
+          </span>
+        )}
+        {artifactIssue(benchArtifact) && (
+          <span className="warn" title={artifactIssue(benchArtifact) ?? ""}>
+            ⚠ bench report {artifactIssue(benchArtifact)}
+          </span>
+        )}
+        {artifactIssue(cutPlanArtifact) && (
+          <span className="warn" title={artifactIssue(cutPlanArtifact) ?? ""}>
+            ⚠ cut plan {artifactIssue(cutPlanArtifact)}
+          </span>
+        )}
+      </div>
+      <div className="status-zone status-zone-decisions">
+        <button
+          className="strip-toggle"
+          aria-expanded={ledgerOpen}
+          onClick={onToggleLedger}
+        >
+          <b className="status-label">decisions</b> session {sessionCount} · total{" "}
+          {totalDecisions}
+          {staleCount > 0 && ` · ${staleCount} stale`}
+          {malformedCount > 0 && ` · ${malformedCount} malformed`}
+        </button>
+        <button onClick={onRefresh}>Refresh</button>
+      </div>
     </footer>
   );
 }

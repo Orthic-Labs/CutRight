@@ -21,7 +21,7 @@ export function Help({ close }: { close: () => void }) {
         <p>
           Space play/pause · J/K/L seek, pause, play/rate · A swap variant · ← → words · ⇧← → segments · ,/. frames
         </p>
-        <p>⌘1–4 modes · ⌘K commands/sources · ⌘R refresh · 1–9 sources · Esc close</p>
+        <p>⌘1–5 modes · ⌘K commands/sources · ⌘R refresh · 1–9 sources · Esc close</p>
       </div>
     </div>
   );

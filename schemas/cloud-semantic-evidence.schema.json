@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/cloud-semantic-evidence.schema.json",
+  "title": "CutRight advisory cloud semantic evidence",
+  "description": "Advisory-only output from an optional cloud provider (REV2 plan §15.6). Deliberately carries no time-position field of any kind — no start_ms/end_ms, no frame or sample index, no word/segment id — so it structurally cannot serve as cut-boundary or word-timing authority. A caller that wants to place this evidence on the timeline must derive timing independently from local, hash-bound signals (VAD, transcript words).",
+  "type": "object",
+  "required": ["labels", "summary", "confidence"],
+  "properties": {
+    "labels": { "type": "array", "items": { "type": "string" } },
+    "summary": { "type": "string" },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "extra": { "type": "object" }
+  },
+  "additionalProperties": false
+}

@@ -11,8 +11,12 @@
 #      (Studio is intentionally a SEPARATE cargo workspace, gated by manifest
 #       path so its Tauri dependency graph and lockfile stay isolated — §7.3)
 #   3. Studio frontend ............ pnpm install, typecheck, test, build
-#   4. license/asset resolution ... scripts/resolve-license.sh
-#   5. (optional, --with-qa) ...... headless browser QA lane
+#   4. Effects frontend ........... pnpm install, typecheck, test, build
+#      (apps/effects: the Remotion render backend for EffectRenderer::Remotion
+#       — REV2 §15.3 Phase 5; a separate pnpm project from apps/studio, same
+#       pattern as the Studio cargo workspace being separate from root)
+#   5. license/asset resolution ... scripts/resolve-license.sh
+#   6. (optional, --with-qa) ...... headless browser QA lane
 #
 # Usage:
 #   bash scripts/gate.sh             # fast default gate
@@ -151,11 +155,21 @@ run "frontend: pnpm --dir apps/studio test" \
 run "frontend: pnpm --dir apps/studio build" \
   pnpm --dir apps/studio build
 
-# --- 4. license/asset resolution --------------------------------------------
+# --- 4. Effects frontend (apps/effects — Remotion render backend) -----------
+run "effects: pnpm --dir apps/effects install --frozen-lockfile" \
+  pnpm --dir apps/effects install --frozen-lockfile
+run "effects: pnpm --dir apps/effects typecheck" \
+  pnpm --dir apps/effects typecheck
+run "effects: pnpm --dir apps/effects test" \
+  pnpm --dir apps/effects test
+run "effects: pnpm --dir apps/effects build" \
+  pnpm --dir apps/effects build
+
+# --- 5. license/asset resolution --------------------------------------------
 run "license/asset resolution (scripts/resolve-license.sh)" \
   bash scripts/resolve-license.sh
 
-# --- 5. optional headless QA lane -------------------------------------------
+# --- 6. optional headless QA lane -------------------------------------------
 if [ "$WITH_QA" -eq 1 ]; then
   log "QA: starting headless browser dev server (qa:browser)"
   pnpm --dir apps/studio qa:browser

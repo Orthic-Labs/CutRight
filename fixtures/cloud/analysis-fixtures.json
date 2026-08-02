@@ -1,0 +1,21 @@
+{
+  "analyze": {
+    "fixture-content-hash-a": {
+      "labels": ["hook", "product-reveal"],
+      "summary": "Fixture-only advisory evidence for local/dev testing; no real cloud provider was called.",
+      "confidence": 0.5,
+      "extra": {}
+    }
+  },
+  "index": {
+    "fixture-content-hash-a": "fixture-index-a"
+  },
+  "query": {
+    "fixture-index-a::best hook moment": {
+      "labels": ["hook"],
+      "summary": "Fixture query response for the two-phase index/query lifecycle.",
+      "confidence": 0.5,
+      "extra": {}
+    }
+  }
+}

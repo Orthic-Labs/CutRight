@@ -18,12 +18,22 @@
 //! `CaptionProfile::youtube_lower_third()` /
 //! `CaptionProfile::vertical_bottom()`).
 //!
-//! The `renderer` field is typed (`ffmpeg` today, `remotion` reserved) so a
-//! later Remotion-backed renderer for animated profiles is a new enum
-//! variant and a new `render_effect_preview` match arm, not a schema break.
-//! Per the plan, that later addition still needs its exact version pinned
-//! and its commercial license terms re-verified before promotion — neither
-//! is done here; no Remotion dependency exists in this workspace.
+//! The `renderer` field is typed ([`EffectRenderer`]) across four values:
+//! `ffmpeg` (the fast drawbox path, unchanged), `ass` (real libass karaoke
+//! text — `caption.bold-karaoke.v1`), `remotion` (real Node/React branded
+//! kinetic motion — the other four starter effects), and `hyperframes`
+//! (reserved: bespoke type, per
+//! `skills/content-video-editor/workflows/finish.md`; no implementation or
+//! dependency exists anywhere in this workspace, so it fails loudly rather
+//! than being folded into `remotion`). Remotion's license was re-verified
+//! for this pass (free tier: individuals and teams of 3 or fewer; see
+//! `apps/effects/README.md`'s Licensing section for the upgrade trigger) —
+//! it is now a real dependency (`apps/effects/`), not a reserved variant.
+//!
+//! Only 5 of the plan's 15 starter effects are implemented
+//! (`skills/content-video-editor/workflows/finish.md`'s "15 starter
+//! effects" line names the full target library); the remaining 10 are not
+//! built in this pass.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -32,8 +42,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use video_core::StageReceipt;
 use video_media::{
-    effect_render_toolchain_identity, render_effect_motion, render_effect_still, CaptionProfile,
-    CaptionSafeZone, EffectCard,
+    effect_render_toolchain_identity, render_effect_ass_preview, render_effect_motion,
+    render_effect_remotion_preview, render_effect_still, CaptionProfile, CaptionSafeZone,
+    EffectCard,
 };
 
 use crate::io::write_json_atomic;
@@ -86,14 +97,31 @@ pub enum EffectRegistryError {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum EffectRenderer {
-    /// The renderer implemented in this pass (`video_media::effects`).
+    /// The generic drawbox lavfi card path (`video_media::effects`'s
+    /// `render_effect_still`/`render_effect_motion`) — the fast path, no
+    /// registry entry uses it today but it stays fully implemented and
+    /// tested (see `ffmpeg_renderer_still_and_motion_render_via_registry`
+    /// below) for any future effect that just needs a labeled box.
     Ffmpeg,
-    /// Reserved for a later animated-profile renderer (plan §15.3). No
-    /// Remotion dependency exists in this workspace yet; this variant only
-    /// keeps the schema stable for when one is added, after its exact
-    /// version is pinned and its commercial license terms are
-    /// re-verified — neither of which this pass does.
+    /// Real libass-rendered text via ffmpeg's `subtitles` filter
+    /// (`video_media::effects::render_effect_ass_preview`) — the fast,
+    /// deterministic renderer for fixed karaoke/phrase captions per
+    /// `skills/content-video-editor/workflows/finish.md`. Requires a
+    /// libass-enabled ffmpeg build; fails loudly (never silently falling
+    /// back to `Ffmpeg`) when that build isn't present.
+    Ass,
+    /// Real Node/React render through the `apps/effects` Remotion package
+    /// (`video_media::effects::render_effect_remotion_preview`) — branded
+    /// kinetic motion. Remotion's license was re-verified for this pass
+    /// (see `apps/effects/README.md`); pinned exact version, no `^`/`~`
+    /// ranges.
     Remotion,
+    /// Reserved for bespoke type (`skills/content-video-editor/workflows/
+    /// finish.md`: "HyperFrames for bespoke type"). No HyperFrames
+    /// implementation or dependency exists anywhere in this workspace;
+    /// this variant exists only to keep the schema stable and fails loudly
+    /// at render time rather than being silently folded into `Remotion`.
+    HyperFrames,
 }
 
 /// How "energetic" an effect's motion is meant to read, per the plan's
@@ -461,6 +489,7 @@ fn type_name(value: &Value) -> &'static str {
 
 /// A rendered preview outcome: where the still/motion files landed and the
 /// [`StageReceipt`] binding them to the props/toolchain that produced them.
+#[derive(Debug)]
 pub struct EffectPreviewOutcome {
     pub still_path: PathBuf,
     pub motion_path: Option<PathBuf>,
@@ -483,35 +512,72 @@ pub fn render_effect_preview(
     validate_entry(entry)?;
     registry.validate_props(effect_id, props)?;
 
-    match entry.renderer {
-        EffectRenderer::Ffmpeg => {}
+    std::fs::create_dir_all(output_dir)?;
+    let needs_motion = entry.motion_profile != MotionProfile::Static;
+    // Preview motion length: unchanged at 1.5s across every renderer so
+    // switching an entry's `renderer` never changes its preview duration
+    // (the ffmpeg-era value `apps/effects`' compositions were built to
+    // match — see `apps/effects/src/layout.ts::DURATION_IN_FRAMES`).
+    const PREVIEW_MOTION_SECS: f64 = 1.5;
+
+    let (still_path, motion_path, tool_name, tool_identity): (
+        PathBuf,
+        Option<(PathBuf, PathBuf)>,
+        String,
+        String,
+    ) = match entry.renderer {
+        EffectRenderer::Ffmpeg => {
+            let card = card_from_entry(entry, props);
+            let still_path = output_dir.join("still.png");
+            render_effect_still(&card, &still_path)?;
+            let motion_path = if needs_motion {
+                let reduced_path = output_dir.join("motion-reduced.mp4");
+                render_effect_motion(&card, PREVIEW_MOTION_SECS, true, &reduced_path)?;
+                let motion_path = output_dir.join("motion.mp4");
+                render_effect_motion(&card, PREVIEW_MOTION_SECS, false, &motion_path)?;
+                Some((motion_path, reduced_path))
+            } else {
+                None
+            };
+            let (tool_name, tool_identity) = effect_render_toolchain_identity()?;
+            (still_path, motion_path, tool_name, tool_identity)
+        }
+        EffectRenderer::Ass => {
+            let outcome =
+                render_effect_ass_preview(props, needs_motion, PREVIEW_MOTION_SECS, output_dir)?;
+            (
+                outcome.still_path,
+                outcome.motion_paths,
+                "ffmpeg+libass".to_string(),
+                outcome.tool_identity,
+            )
+        }
         EffectRenderer::Remotion => {
+            let outcome = render_effect_remotion_preview(
+                effect_id,
+                props,
+                needs_motion,
+                PREVIEW_MOTION_SECS,
+                output_dir,
+            )?;
+            (
+                outcome.still_path,
+                outcome.motion_paths,
+                "remotion".to_string(),
+                outcome.tool_identity,
+            )
+        }
+        EffectRenderer::HyperFrames => {
             return Err(EffectRegistryError::Invalid {
                 effect_id: entry.effect_id.clone(),
-                message: "remotion renderer is reserved for a later phase; no Remotion \
-                          dependency exists in this workspace yet"
+                message: "hyperframes renderer is reserved for bespoke type \
+                          (skills/content-video-editor/workflows/finish.md); no HyperFrames \
+                          implementation or dependency exists in this workspace"
                     .into(),
             });
         }
-    }
-
-    std::fs::create_dir_all(output_dir)?;
-    let card = card_from_entry(entry, props);
-
-    let still_path = output_dir.join("still.png");
-    render_effect_still(&card, &still_path)?;
-
-    let motion_path = if entry.motion_profile != MotionProfile::Static {
-        let reduced_path = output_dir.join("motion-reduced.mp4");
-        render_effect_motion(&card, 1.5, true, &reduced_path)?;
-        let motion_path = output_dir.join("motion.mp4");
-        render_effect_motion(&card, 1.5, false, &motion_path)?;
-        Some((motion_path, reduced_path))
-    } else {
-        None
     };
 
-    let (tool_name, tool_identity) = effect_render_toolchain_identity()?;
     let mut toolchains = BTreeMap::new();
     toolchains.insert(tool_name, tool_identity);
 
@@ -731,6 +797,19 @@ mod tests {
         assert!(matches!(error, EffectRegistryError::Invalid { .. }));
     }
 
+    /// Every planned starter effect renders its real preview fixture through
+    /// its actual registry renderer (`ass` for `caption.bold-karaoke.v1`,
+    /// `remotion` for the other four) — real typography and real motion,
+    /// not the retired drawbox placeholder. The `ass` branch degrades
+    /// honestly instead of unconditionally requiring success: this
+    /// workspace's own local ffmpeg build has no libass
+    /// (`ass_renderer_reports_a_clear_missing_toolchain_error_when_libass_is_absent`
+    /// below asserts that directly), and the contract this test exists to
+    /// prove is "never silently falls back to `ffmpeg` and claims success"
+    /// — which a hard failure on a libass-less machine would satisfy just
+    /// as well as a render would. `remotion` effects have no such
+    /// environment excuse (`apps/effects`'s `node_modules` is a checked-in
+    /// prerequisite of this pass) and must always succeed.
     #[test]
     fn each_of_the_five_effects_renders_its_preview_fixture() {
         let registry = EffectRegistry::load_builtin().expect("load registry");
@@ -741,10 +820,27 @@ mod tests {
         for entry in registry.entries() {
             let props = &effects[entry.effect_id.as_str()]["valid"];
             let output_dir = dir.join(&entry.effect_id);
-            let outcome = render_effect_preview(&registry, &entry.effect_id, props, &output_dir)
-                .unwrap_or_else(|error| {
+            let result = render_effect_preview(&registry, &entry.effect_id, props, &output_dir);
+
+            let outcome = match (entry.renderer, result) {
+                (EffectRenderer::Ass, Err(error)) => {
+                    let message = error.to_string();
+                    assert!(
+                        message.to_lowercase().contains("libass"),
+                        "expected an honest libass-unavailable error for {}, got: {message}",
+                        entry.effect_id
+                    );
+                    eprintln!(
+                        "skipping full render assertions for {}: ass renderer unavailable \
+                         on this machine ({message})",
+                        entry.effect_id
+                    );
+                    continue;
+                }
+                (_, result) => result.unwrap_or_else(|error| {
                     panic!("expected {} preview to render: {error}", entry.effect_id)
-                });
+                }),
+            };
 
             assert!(outcome.still_path.is_file());
             assert!(fs::metadata(&outcome.still_path).unwrap().len() > 0);
@@ -766,6 +862,139 @@ mod tests {
             }
         }
 
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    /// The registry's `ass` renderer must fail loudly, naming exactly what
+    /// is missing, when the resolved ffmpeg has no libass — never fall back
+    /// to `ffmpeg`/drawbox and claim success. This workspace's own local
+    /// ffmpeg build (verified separately: `ffmpeg -filters` lists no
+    /// `subtitles` filter) exercises this path for real rather than via a
+    /// mock, so this test's meaningfulness depends on that being true; if a
+    /// future dev machine's ffmpeg does ship libass, the assertion below
+    /// requires the render to *succeed* instead, which is an equally valid
+    /// proof that the toolchain check is accurate rather than a stale
+    /// failure being rubber-stamped.
+    #[test]
+    fn ass_renderer_reports_a_clear_missing_toolchain_error_when_libass_is_absent() {
+        let registry = EffectRegistry::load_builtin().expect("load registry");
+        let fixtures = props_fixtures();
+        let props = &fixtures["effects"]["caption.bold-karaoke.v1"]["valid"];
+        let dir = unique_dir("ass-toolchain");
+
+        match render_effect_preview(&registry, "caption.bold-karaoke.v1", props, &dir) {
+            Ok(outcome) => {
+                assert!(outcome.still_path.is_file());
+            }
+            Err(error) => {
+                let message = error.to_string();
+                assert!(
+                    message.to_lowercase().contains("libass"),
+                    "error must name libass as the missing capability, got: {message}"
+                );
+                assert!(
+                    matches!(error, EffectRegistryError::Render(_)),
+                    "expected a Render-wrapped RendererUnavailable error, got: {error:?}"
+                );
+            }
+        }
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    /// `hyperframes` is reserved and must fail loudly at render time —
+    /// never silently rendered through `remotion` or any other renderer.
+    #[test]
+    fn hyperframes_renderer_is_reserved_and_fails_loudly() {
+        let entry = EffectRegistryEntry {
+            effect_id: "test.bespoke-type.v1".into(),
+            renderer: EffectRenderer::HyperFrames,
+            schema_version: 1,
+            props_schema: serde_json::json!({"type": "object"}),
+            safe_zones: vec![],
+            motion_profile: MotionProfile::Static,
+            preview_fixture: EffectPreviewFixture {
+                still: "fixtures/effects/test.bespoke-type.v1/still.png".into(),
+                motion: None,
+            },
+            footprint: None,
+            reduced_motion: ReducedMotionBehavior::NotMeaningful,
+        };
+        let mut document: Value =
+            serde_json::from_str(REGISTRY_JSON).expect("parse embedded registry for test");
+        document["effects"]
+            .as_array_mut()
+            .expect("effects array")
+            .push(serde_json::to_value(&entry).expect("serialize synthetic entry"));
+        let registry = EffectRegistry {
+            entries: serde_json::from_value::<RegistryDocument>(document)
+                .expect("parse synthetic registry document")
+                .effects,
+        };
+
+        let dir = unique_dir("hyperframes-reserved");
+        let error = render_effect_preview(
+            &registry,
+            "test.bespoke-type.v1",
+            &serde_json::json!({}),
+            &dir,
+        )
+        .expect_err("hyperframes must fail loudly, never silently render");
+        let message = error.to_string();
+        assert!(message.to_lowercase().contains("hyperframes"));
+        assert!(message.contains("finish.md"));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    /// `EffectRenderer::Ffmpeg` stays fully working end-to-end through
+    /// `render_effect_preview` as "the fast path" even though no shipped
+    /// registry entry uses it today — proven with a synthetic ad-hoc entry
+    /// the same way `safe_zone_collision_is_detected` constructs one.
+    #[test]
+    fn ffmpeg_renderer_still_renders_via_render_effect_preview() {
+        let entry = EffectRegistryEntry {
+            effect_id: "test.ffmpeg-fast-path.v1".into(),
+            renderer: EffectRenderer::Ffmpeg,
+            schema_version: 1,
+            props_schema: serde_json::json!({
+                "type": "object",
+                "additionalProperties": false,
+                "properties": { "label": { "type": "string" } }
+            }),
+            safe_zones: vec![],
+            motion_profile: MotionProfile::Restrained,
+            preview_fixture: EffectPreviewFixture {
+                still: "fixtures/effects/test.ffmpeg-fast-path.v1/still.png".into(),
+                motion: Some("fixtures/effects/test.ffmpeg-fast-path.v1/motion.mp4".into()),
+            },
+            footprint: None,
+            reduced_motion: ReducedMotionBehavior::StaticFallback {
+                description: "renders at full opacity from frame zero".into(),
+            },
+        };
+        let mut document: Value =
+            serde_json::from_str(REGISTRY_JSON).expect("parse embedded registry for test");
+        document["effects"]
+            .as_array_mut()
+            .expect("effects array")
+            .push(serde_json::to_value(&entry).expect("serialize synthetic entry"));
+        let registry = EffectRegistry {
+            entries: serde_json::from_value::<RegistryDocument>(document)
+                .expect("parse synthetic registry document")
+                .effects,
+        };
+
+        let dir = unique_dir("ffmpeg-fast-path");
+        let outcome = render_effect_preview(
+            &registry,
+            "test.ffmpeg-fast-path.v1",
+            &serde_json::json!({"label": "fast path"}),
+            &dir,
+        )
+        .expect("ffmpeg renderer must still render end-to-end");
+        assert!(outcome.still_path.is_file());
+        assert!(fs::metadata(&outcome.still_path).unwrap().len() > 0);
+        let motion_path = outcome.motion_path.expect("motion preview expected");
+        assert!(motion_path.is_file());
         fs::remove_dir_all(&dir).ok();
     }
 

@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
-import type { Mode, Source } from "../types";
+import { MODE_LABEL, MODE_ORDER, type Mode, type Source } from "../types";
 
 export function CommandPalette({
   modes,
@@ -34,8 +34,8 @@ export function CommandPalette({
         <button aria-label="Close commands" onClick={close}>×</button>
         <h2>Commands</h2>
         <div className="command-list">
-          {(["sources", "compare", "finals", "qa"] as Mode[]).map((mode) => (
-            <button key={mode} disabled={!modes[mode]} onClick={() => { selectMode(mode); close(); }}>Switch to {mode === "qa" ? "QA" : mode}</button>
+          {MODE_ORDER.map((mode) => (
+            <button key={mode} disabled={!modes[mode]} onClick={() => { selectMode(mode); close(); }}>Switch to {MODE_LABEL[mode]}</button>
           ))}
           <button onClick={() => { approve(); close(); }}>Approve current review</button>
           <button onClick={() => { reject(); close(); }}>Reject current review</button>

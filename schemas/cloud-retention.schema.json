@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/cloud-retention.schema.json",
+  "title": "CutRight cloud-analysis retention log",
+  "description": "Persisted at <project>/analysis/cloud-analysis/retention.json. Records what was uploaded, when, and (once deleted) when it stopped being retained. `videoctl cloud delete` tombstones records here and removes their files; it never touches the spend ledger (REV2 plan §15.6).",
+  "type": "object",
+  "required": ["schema_version", "records"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "content_hash",
+          "bytes_kind",
+          "capability",
+          "provider",
+          "uploaded_at",
+          "raw_response_path",
+          "normalised_output_path"
+        ],
+        "properties": {
+          "content_hash": { "type": "string" },
+          "bytes_kind": { "type": "string", "enum": ["proxy", "source"] },
+          "capability": { "type": "string" },
+          "provider": { "type": "string" },
+          "uploaded_at": { "type": "string", "format": "date-time" },
+          "raw_response_path": { "type": "string" },
+          "normalised_output_path": { "type": "string" },
+          "deleted_at": { "type": ["string", "null"], "format": "date-time" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,9 @@
+{
+  "policy_version": 1,
+  "description": "Cloud-analysis safety envelope (REV2 plan §15.6 Phase 8). Cloud is off by default everywhere: a project only ever reaches a provider when its own analysis/cloud-analysis/cloud-config.json sets consent=true AND a positive budget_usd_limit, both explicit per-project choices. This file is a hard ceiling no per-project config can exceed, never a switch that enables anything by itself.",
+  "default_consent": false,
+  "default_budget_usd_limit": 0.0,
+  "default_upload_policy": "proxy",
+  "max_budget_usd_limit_ceiling": 50.0,
+  "allowed_upload_policies": ["proxy", "source"]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "cutright-effects",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.18.0",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/render.mjs bundle",
+    "test": "vitest run",
+    "studio": "remotion studio src/index.ts"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "remotion": "4.0.503",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "4.0.503",
+    "@remotion/cli": "4.0.503",
+    "@remotion/renderer": "4.0.503",
+    "@types/node": "26.1.2",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

@@ -10,7 +10,7 @@ import {
   type DecisionReplay,
   type VariantSelection,
 } from "../contracts/review";
-import type { Snapshot } from "../types";
+import { DEFAULT_CLOUD_SETTINGS, type CloudSettings, type Snapshot } from "../types";
 
 export const fixtureWords: Record<string, Word[]> = {
   natural: [
@@ -54,6 +54,14 @@ export const fixture: Snapshot = {
       height: 2160,
       is_hdr: true,
       file_present: true,
+      // Exercises the SourcesRail real-thumbnail path (redesign spec: "real
+      // thumbnails if an evidence frame exists"); source-b below has none,
+      // exercising the duration-labeled placeholder-tile fallback path.
+      poster_jpg:
+        "data:image/svg+xml;utf8," +
+        encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="88" height="56"><rect width="88" height="56" fill="#2a2a2f"/><path d="M30 18l28 10-28 10z" fill="#84848a"/></svg>',
+        ),
       transcript: "analysis/transcripts/source-a.json",
       stages: {
         ingested: true,
@@ -188,4 +196,8 @@ export const memoryMalformed: DecisionReplay["malformed_lines"] = [
 export let memorySelection: VariantSelection | null = null;
 export function setMemorySelection(value: VariantSelection | null) {
   memorySelection = value;
+}
+export let memoryCloudSettings: CloudSettings = { ...DEFAULT_CLOUD_SETTINGS };
+export function setMemoryCloudSettings(value: CloudSettings) {
+  memoryCloudSettings = value;
 }

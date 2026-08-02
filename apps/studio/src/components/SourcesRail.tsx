@@ -1,4 +1,4 @@
-import { tc } from "../lib/api";
+import { asset, tc } from "../lib/api";
 import type { Source } from "../types";
 
 // Stage badges shown per source row, in pipeline order.
@@ -35,7 +35,15 @@ export function SourcesRail({
           aria-selected={i === sourceIndex}
           onClick={() => onSelect(i)}
         >
-          <span className="poster">▣</span>
+          <span className="poster">
+            {source.poster_jpg ? (
+              <img src={asset(source.poster_jpg)} alt="" loading="lazy" />
+            ) : (
+              <span className="poster-placeholder" aria-hidden="true">
+                {tc(source.duration_ms)}
+              </span>
+            )}
+          </span>
           <span className="source-copy">
             <strong>{source.display_name ?? source.source_id}</strong>
             <small>
@@ -72,7 +80,10 @@ export function SourcesRail({
         </button>
       ))}
       <footer>
-        {tc(sources.reduce((sum, item) => sum + (item.duration_ms ?? 0), 0))}
+        <b>TOTAL</b>
+        <span>
+          {tc(sources.reduce((sum, item) => sum + (item.duration_ms ?? 0), 0))}
+        </span>
       </footer>
     </aside>
   );

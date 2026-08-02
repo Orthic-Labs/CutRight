@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/cloud-config.schema.json",
+  "title": "CutRight per-project cloud-analysis config",
+  "description": "Persisted at <project>/analysis/cloud-analysis/cloud-config.json. A project with no such file behaves exactly as if it had one with consent=false, budget_usd_limit=0, upload_policy=proxy — cloud analysis is off by default (REV2 plan §15.6).",
+  "type": "object",
+  "required": ["schema_version", "consent", "budget_usd_limit", "upload_policy"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "consent": { "type": "boolean", "default": false },
+    "budget_usd_limit": { "type": "number", "minimum": 0, "default": 0 },
+    "upload_policy": { "type": "string", "enum": ["proxy", "source"], "default": "proxy" },
+    "provider": { "type": ["string", "null"] },
+    "credential_env_var": {
+      "type": ["string", "null"],
+      "description": "Name of an environment variable an eventual real provider adapter reads a credential from at call time. Never a credential value."
+    }
+  },
+  "additionalProperties": false
+}

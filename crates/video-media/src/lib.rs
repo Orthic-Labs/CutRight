@@ -36,7 +36,9 @@ pub use color::{
     ExpectedColorMetadata, ShotMatchTarget, SourceColorTags, REC709_SDR_METADATA,
 };
 pub use effects::{
-    effect_render_toolchain_identity, render_effect_motion, render_effect_still, EffectCard,
+    ass_subtitles_toolchain_status, effect_render_toolchain_identity, remotion_toolchain_status,
+    render_effect_ass_preview, render_effect_motion, render_effect_remotion_preview,
+    render_effect_still, EffectCard, ExternalEffectPreviewOutcome,
 };
 pub use evidence::{compose_decision_evidence, extract_frame};
 pub use final_render::{
@@ -79,6 +81,20 @@ pub enum RenderError {
     WorkerMaterialize(#[from] video_core::ContentStoreError),
     #[error("ffmpeg process error: {0}")]
     Process(#[from] ProcessRunError),
+    /// An external effect-render toolchain (libass-enabled ffmpeg for the
+    /// `ass` renderer, or the Node/Remotion package for the `remotion`
+    /// renderer) is not available on this machine. Distinct from `Failed`
+    /// (the toolchain ran and produced an error) and `CapabilityMissing`
+    /// (an ffmpeg *filter/encoder* is absent) — this is "the whole
+    /// renderer's dependency chain could not even be resolved", named
+    /// explicitly so a caller never mistakes it for the toolchain having
+    /// run and rejected the input.
+    #[error("external renderer toolchain unavailable: {0}")]
+    RendererUnavailable(String),
+    #[error("effect renderer I/O error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("effect renderer prop serialization error: {0}")]
+    Json(#[from] serde_json::Error),
 }
 
 /// Build a [`video_core::StageReceipt`] for a completed ffmpeg render/probe

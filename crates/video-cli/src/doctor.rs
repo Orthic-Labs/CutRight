@@ -383,18 +383,127 @@ fn check_schemas_load() -> Value {
     )
 }
 
-/// §10.2 (content-addressed embedded worker materialization) is not yet
-/// implemented anywhere in this workspace — it lives in crates this task
-/// does not own (`video-media`/`video-providers`). Rather than fabricate a
-/// passing check, doctor reports the capability as `missing` and
-/// non-blocking so downstream tooling can see the gap honestly.
+/// §10.2 content-addressed embedded worker materialization now lives in
+/// `video_core::content_store::materialize_worker` and is exercised by the
+/// Vision anchor and caption-card sidecar workers. This probe drives the
+/// real public API against a small known payload: materialize it, verify
+/// the bytes on disk match, verify re-materializing identical bytes reuses
+/// the same content-addressed path, and verify tampered bytes at that path
+/// are rejected rather than silently trusted or overwritten.
 fn check_sidecar_materialize() -> Value {
+    let id = "core.sidecar.materialize";
+    let marker = format!(
+        "cutright-doctor-sidecar-probe-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or_default()
+    );
+    let payload = marker.as_bytes();
+    let name = "doctor-sidecar-probe-worker";
+
+    let path = match video_core::content_store::materialize_worker(payload, name) {
+        Ok(path) => path,
+        Err(error) => {
+            return check(
+                id,
+                false,
+                "missing",
+                json!({ "error": error.to_string() }),
+                Some("check write permissions on the system temp directory"),
+            );
+        }
+    };
+    let cleanup = |path: &Path| {
+        let _ = fs::remove_dir_all(path.parent().unwrap_or(path));
+    };
+
+    let on_disk = match fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            cleanup(&path);
+            return check(
+                id,
+                false,
+                "failed",
+                json!({ "error": error.to_string(), "path": path }),
+                Some("investigate video_core::content_store::materialize_worker"),
+            );
+        }
+    };
+    if on_disk != payload {
+        cleanup(&path);
+        return check(
+            id,
+            false,
+            "failed",
+            json!({ "path": path, "note": "materialized bytes did not match the embedded payload" }),
+            Some("investigate video_core::content_store::materialize_worker"),
+        );
+    }
+
+    // Re-materializing identical bytes must reuse the same content-addressed
+    // path, not rewrite a new one.
+    let reused = match video_core::content_store::materialize_worker(payload, name) {
+        Ok(path) => path,
+        Err(error) => {
+            cleanup(&path);
+            return check(
+                id,
+                false,
+                "failed",
+                json!({ "error": error.to_string() }),
+                Some("investigate video_core::content_store::materialize_worker reuse path"),
+            );
+        }
+    };
+    if reused != path {
+        cleanup(&path);
+        return check(
+            id,
+            false,
+            "failed",
+            json!({ "first": path, "second": reused, "note": "identical bytes did not reuse the same content-addressed path" }),
+            Some("investigate video_core::content_store::materialize_worker"),
+        );
+    }
+
+    // Tampering the on-disk bytes must be rejected, never silently trusted
+    // or overwritten.
+    if let Err(error) = fs::write(&path, b"tampered-by-doctor-probe") {
+        cleanup(&path);
+        return check(
+            id,
+            false,
+            "missing",
+            json!({ "error": error.to_string() }),
+            Some("check write permissions on the system temp directory"),
+        );
+    }
+    let tamper_result = video_core::content_store::materialize_worker(payload, name);
+    let tamper_rejected = matches!(
+        tamper_result,
+        Err(video_core::content_store::ContentStoreError::Tampered { .. })
+    );
+    cleanup(&path);
+
+    if !tamper_rejected {
+        return check(
+            id,
+            false,
+            "failed",
+            json!({ "note": "tampered sidecar bytes at the content-addressed path were not rejected" }),
+            Some("investigate video_core::content_store::materialize_worker tamper detection"),
+        );
+    }
+
     check(
-        "core.sidecar.materialize",
+        id,
         false,
-        "missing",
-        json!({ "note": "content-addressed embedded worker materialization (plan §10.2) is not implemented yet" }),
-        Some("implement §10.2 in video-media/video-providers, then wire an active probe here"),
+        "ok",
+        json!({ "verified": ["materialize", "reuse-on-identical-bytes", "reject-tampered-bytes"] }),
+        None,
     )
 }
 
@@ -462,23 +571,48 @@ fn check_heardright_discover() -> Value {
     }
 }
 
-/// `video-providers::HeardRightProvider` exposes no public health/capability
-/// RPC — its request/response session is private to that crate, and this
-/// task is scoped to `video-cli` only. Spawning a full transcription
-/// session here to "probe" it would either hang waiting on stdin protocol
-/// framing or risk a model download, which plan §11.3 explicitly forbids
-/// ("model/runtime ready without download"). Reporting `ok` here would be
-/// exactly the kind of lie §11 exists to eliminate, so this check is
-/// honestly `missing` until video-providers exposes a public, download-free
-/// health probe.
+/// `video_providers::HeardRightProvider::health()` performs only the
+/// protocol handshake (§9.2) — no transcription or VAD request is sent, and
+/// no model download or network fallback occurs beyond what the handshake
+/// itself requires. If the engine is genuinely absent or unreachable, this
+/// honestly reports `missing` with remediation rather than fabricating
+/// `ok`.
 fn check_heardright_handshake() -> Value {
-    check(
-        "audio.heardright.handshake",
-        false,
-        "missing",
-        json!({ "note": "HeardRightProvider has no public health/capability RPC; only binary discovery is verified" }),
-        Some("expose a public, download-free health() call on HeardRightProvider (video-providers) so doctor can probe it without spawning a full session"),
-    )
+    let id = "audio.heardright.handshake";
+    let provider = match video_providers::HeardRightProvider::discover() {
+        Ok(provider) => provider,
+        Err(error) => {
+            return check(
+                id,
+                false,
+                "missing",
+                json!({ "error": error.to_string() }),
+                Some("set CUTRIGHT_HEARDRIGHT_ENGINE or put heardright-engine on PATH"),
+            );
+        }
+    };
+    match provider.health() {
+        Ok(identity) => check(
+            id,
+            false,
+            "ok",
+            json!({
+                "engine_version": identity.engine_version,
+                "protocol_major": identity.protocol_major,
+                "protocol_minor": identity.protocol_minor,
+                "negotiated_minor": identity.negotiated_minor,
+                "capabilities": identity.capabilities,
+            }),
+            None,
+        ),
+        Err(error) => check(
+            id,
+            false,
+            "missing",
+            json!({ "error": error.to_string() }),
+            Some("verify the HeardRight engine starts cleanly and speaks protocol major 1"),
+        ),
+    }
 }
 
 fn check_whisperx_discover() -> Value {
@@ -563,6 +697,7 @@ fn render_checks() -> Vec<Value> {
         check_audio_encode(),
         check_caption_renderer(),
         output_reprobe,
+        check_remotion_toolchain(),
     ]
 }
 
@@ -920,6 +1055,82 @@ fn check_caption_renderer() -> Value {
     }
 }
 
+/// Honest missing/remediation probe for the Remotion toolchain
+/// (`EffectRenderer::Remotion` in `crates/video-project/src/effects.rs`,
+/// backed by `crates/video-media/src/effects.rs::render_effect_remotion_
+/// preview`): an active `node --version` spawn (proves Node actually
+/// executes, matching `version_check`'s pattern for ffmpeg/ffprobe), plus a
+/// structural check that `apps/effects`'s dependencies are installed and
+/// its render CLI script exists. Deliberately does not run a full Remotion
+/// bundle/render here — that is a much larger and slower probe than every
+/// other `render_checks()` entry, and the real render path already has its
+/// own dedicated test coverage
+/// (`crates/video-media/src/effects.rs::render_effect_remotion_preview_
+/// renders_all_four_effects_and_is_deterministic`). Non-blocking
+/// (`required: false`), same as `render.zscale.smoke` and
+/// `render.caption_renderer.listed`: an optional Node toolchain not yet
+/// installed on a given machine is not the same as the renderer being
+/// broken.
+fn check_remotion_toolchain() -> Value {
+    let id = "render.remotion_toolchain.probe";
+    let node = resolve_bin("CUTRIGHT_NODE", "node");
+    let mut cmd = Command::new(&node);
+    cmd.arg("--version");
+    let version = match run_with_timeout(cmd, DEFAULT_TIMEOUT) {
+        Ok(output) if output.status.success() => {
+            String::from_utf8_lossy(&output.stdout).trim().to_string()
+        }
+        Ok(output) => {
+            return check(
+                id,
+                false,
+                "failed",
+                evidence_from_output(&output),
+                Some("ensure `node --version` runs cleanly"),
+            )
+        }
+        Err(error) => {
+            return check(
+                id,
+                false,
+                "missing",
+                json!({ "node": node, "error": error.to_string() }),
+                Some("install Node (matching the repo root .node-version) or set CUTRIGHT_NODE"),
+            )
+        }
+    };
+
+    let package_root = repo_root().join("apps/effects");
+    let node_modules = package_root.join("node_modules");
+    let render_script = package_root.join("scripts/render.mjs");
+    if !render_script.is_file() {
+        return check(
+            id,
+            false,
+            "missing",
+            json!({ "node_version": version, "render_script": render_script }),
+            Some("apps/effects/scripts/render.mjs is missing from this checkout"),
+        );
+    }
+    if !node_modules.is_dir() {
+        return check(
+            id,
+            false,
+            "missing",
+            json!({ "node_version": version, "node_modules": node_modules }),
+            Some("run `pnpm --dir apps/effects install`"),
+        );
+    }
+
+    check(
+        id,
+        false,
+        "ok",
+        json!({ "node_version": version, "package_root": package_root }),
+        None,
+    )
+}
+
 // ---------------------------------------------------------------------
 // Studio probes (§11.5)
 // ---------------------------------------------------------------------
@@ -1045,14 +1256,15 @@ fn check_asset_protocol() -> Value {
 /// A full packaged-app smoke fixture (load one allowed preview path, reject
 /// one outside path) needs a running Tauri asset-protocol runtime, which
 /// this CLI-only crate cannot host. Reported honestly as an unverified,
-/// non-blocking gap rather than faked.
+/// non-blocking gap rather than faked; the remediation names the real
+/// coverage instead of reading as an untested one.
 fn check_preview_fixture() -> Value {
     check(
         "studio.preview_fixture.smoke",
         false,
         "missing",
-        json!({ "note": "packaged-app asset-scope smoke fixture requires a running Tauri runtime; not exercised by the CLI doctor" }),
-        Some("cover this with the app QA skill (tools/skills/qa) against a running Studio build"),
+        json!({ "note": "packaged-app asset-scope smoke fixture requires a running Tauri runtime; the CLI doctor cannot host one, so this probe cannot independently verify it" }),
+        Some("already covered by apps/studio/src-tauri/src/tests.rs::packaged_asset_scope_allows_project_media_and_denies_a_sibling_file (run `cargo test -p cutright-studio`, or the app QA skill at tools/skills/qa against a running Studio build) — this doctor probe is only reporting that it cannot re-run that coverage from the CLI"),
     )
 }
 

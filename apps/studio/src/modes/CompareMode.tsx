@@ -1,5 +1,6 @@
 import type React from "react";
 import { asset } from "../lib/api";
+import { BenchSwitch } from "../components/BenchSwitch";
 import { SegmentStrip } from "../components/SegmentStrip";
 import { Transport } from "../components/Transport";
 import type { CutMarker } from "../cut-markers";
@@ -7,8 +8,9 @@ import type { DecisionReason } from "../contracts/review";
 import type { Word } from "../word-lock";
 import type { Variant } from "../types";
 
-// Renders the COMPARE viewer. Named `CompareMode` (was `Compare` in
-// main.tsx) per REV2 §14.4's `modes/CompareMode.tsx` — pure move.
+// Renders the COMPARE viewer — the Word-Locked Bench (redesign spec Phase
+// 1). Named `CompareMode` (was `Compare` in main.tsx) per REV2 §14.4's
+// `modes/CompareMode.tsx` — pure move, then extended with the bench switch.
 export function CompareMode({
   variants,
   variant,
@@ -20,6 +22,7 @@ export function CompareMode({
   onSwap,
   onSeek,
   bench,
+  delta,
   markers,
   flagging,
   lastFlag,
@@ -35,6 +38,7 @@ export function CompareMode({
   onSwap: () => void;
   onSeek: (n: number) => void;
   bench: boolean;
+  delta: number | null;
   markers: CutMarker[];
   flagging: boolean;
   lastFlag: { segmentId: string; reason: DecisionReason } | null;
@@ -44,28 +48,19 @@ export function CompareMode({
   return (
     <>
       <div className="compare-head">
-        {variants.map((item) => (
-          <button
-            key={item.id}
-            className={`variant-chip ${item.id === variant ? "live" : ""}`}
-            onClick={() => item.id !== variant && onSwap()}
-          >
-            {item.id}
-            {bench && <i title="word timestamps unverified" />}
-          </button>
-        ))}
-        <span>word-locked</span>
+        <span className="bench-tag">word-locked</span>
+        <BenchSwitch
+          variants={variants}
+          variant={variant}
+          bench={bench}
+          delta={delta}
+          onSwap={onSwap}
+        />
         {lastFlag && (
           <span className="flag-badge" title="latest segment flag">
             ⚑ {lastFlag.segmentId} · {lastFlag.reason}
           </span>
         )}
-        <button
-          aria-label="Swap variants"
-          onClick={onSwap}
-        >
-          A ⇄
-        </button>
         <button
           className={`flag-segment ${flagging ? "arming" : ""}`}
           title="Flag the segment at the playhead"

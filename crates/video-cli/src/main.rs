@@ -3,9 +3,10 @@ mod doctor;
 
 use clap::Parser;
 use cli::{
-    AnalyzeCommand, BenchCommand, Cli, Command, EditCommand, EvidenceCommand, ExportCommand,
-    FinishCommand, PackageCommand, PreferencesCommand, ProjectCommand, ReceiptsCommand,
-    ReframeCommand, RenderCommand, ReviewCommand, ShortsCommand, SlotCommand, TranscriptCommand,
+    AnalyzeCommand, BenchCommand, Cli, CloudCommand, Command, EditCommand, EvidenceCommand,
+    ExportCommand, FinishCommand, PackageCommand, PreferencesCommand, ProjectCommand,
+    ReceiptsCommand, ReframeCommand, RenderCommand, ReviewCommand, ShortsCommand, SlotCommand,
+    TranscriptCommand,
 };
 use doctor::DoctorOutcome;
 use serde_json::{json, Value};
@@ -182,6 +183,38 @@ fn run(cli: Cli) -> Result<Outcome, String> {
         } => video_project::analyze_local(&args.project, cli.dry_run)
             .map(|result| Outcome::Value(json!({ "event": "analyze.local", "result": result })))
             .map_err(|error| error.to_string()),
+        Command::Analyze {
+            command: AnalyzeCommand::Cloud(args),
+        } => video_project::CloudCapability::parse(&args.capability)
+            .map_err(|error| error.to_string())
+            .and_then(|capability| {
+                let provider = video_project::resolve_provider(&args.provider);
+                video_project::analyze_cloud(
+                    &args.project,
+                    provider.as_ref(),
+                    capability,
+                    args.target.as_deref(),
+                    args.use_source,
+                    cli.dry_run,
+                )
+                .map_err(|error| error.to_string())
+            })
+            .map(|result| Outcome::Value(json!({ "event": "analyze.cloud", "result": result }))),
+        Command::Cloud {
+            command: CloudCommand::Consent { project, enable },
+        } => video_project::set_cloud_consent(&project, enable, cli.dry_run)
+            .map(|result| Outcome::Value(json!({ "event": "cloud.consent", "result": result })))
+            .map_err(|error| error.to_string()),
+        Command::Cloud {
+            command: CloudCommand::Budget { project, usd },
+        } => video_project::set_cloud_budget(&project, usd, cli.dry_run)
+            .map(|result| Outcome::Value(json!({ "event": "cloud.budget", "result": result })))
+            .map_err(|error| error.to_string()),
+        Command::Cloud {
+            command: CloudCommand::Delete(args),
+        } => video_project::delete_cloud_retention(&args.project, cli.dry_run)
+            .map(|result| Outcome::Value(json!({ "event": "cloud.delete", "result": result })))
+            .map_err(|error| error.to_string()),
         Command::Reframe {
             command: ReframeCommand::Plan(args),
         } => video_project::reframe_plan(&args.project, args.variant.as_deref(), cli.dry_run)
@@ -323,6 +356,14 @@ fn run(cli: Cli) -> Result<Outcome, String> {
                     .map_err(|error| error.to_string())
             })
         }
+        // Every `Command` variant is matched explicitly above as of this
+        // change (cloud analysis was the last stub the frozen CLI contract
+        // reserved exit code 3 for). This arm, `command_name`, and
+        // `not_implemented` stay in place on purpose — unreachable today,
+        // not dead: a future `Command` variant added without its own arm
+        // above still falls through here and reports a clean
+        // `status: "not_implemented"` / exit 3 instead of a match error.
+        #[allow(unreachable_patterns)]
         command => Ok(Outcome::NotImplemented(not_implemented(
             command_name(&command),
             cli.dry_run,
@@ -350,6 +391,7 @@ fn command_name(command: &Command) -> String {
         Command::Export { .. } => "export otio",
         Command::Receipts { .. } => "receipts verify",
         Command::Preferences { .. } => "preferences recommend",
+        Command::Cloud { .. } => "cloud",
         Command::Doctor(_) | Command::Project { .. } => "unknown",
     }
     .to_string()
@@ -364,4 +406,26 @@ fn not_implemented(command: String, dry_run: bool) -> Value {
         "phase": 0,
         "message": "The command is part of the frozen CLI contract and lands in a later phase."
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every `Command` variant is matched explicitly in `run()` as of the
+    /// cloud-analysis change, so no CLI invocation can reach the
+    /// `not_implemented` fallback any more — the black-box integration test
+    /// that used to exercise it (`analyze cloud`) now asserts real
+    /// behavior instead. This unit test keeps the exit-code-3 contract
+    /// (plan §10.8) covered directly: the JSON shape `main()` prints, and
+    /// the exit code it maps to, for whichever future command eventually
+    /// falls through to this path again.
+    #[test]
+    fn not_implemented_reports_the_documented_shape_and_exit_code() {
+        let value = not_implemented("future command".to_string(), false);
+        assert_eq!(value["status"], "not_implemented");
+        assert_eq!(value["command"], "future command");
+        assert_eq!(value["dry_run"], false);
+        assert_eq!(EXIT_NOT_IMPLEMENTED, 3);
+    }
 }

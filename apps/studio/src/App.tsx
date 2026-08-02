@@ -6,6 +6,7 @@ import { useProject } from "./hooks/useProject";
 import { usePlayback } from "./hooks/usePlayback";
 import { useReviewLedger } from "./hooks/useReviewLedger";
 import { useKeyboard } from "./hooks/useKeyboard";
+import { qa as qaMode } from "./lib/api";
 import { Empty } from "./components/Empty";
 import { Transcript } from "./components/Transcript";
 import { SourceFacts } from "./components/SourceFacts";
@@ -14,6 +15,7 @@ import { DecisionsLedger } from "./components/DecisionsLedger";
 import { Help } from "./components/Help";
 import { CommandPalette } from "./components/CommandPalette";
 import { TitleBar } from "./components/TitleBar";
+import { ModeRail } from "./components/ModeRail";
 import { SourcesRail } from "./components/SourcesRail";
 import { VerdictPanel } from "./components/VerdictPanel";
 import { StatusStrip } from "./components/StatusStrip";
@@ -21,7 +23,8 @@ import { SourcesMode } from "./modes/SourcesMode";
 import { CompareMode } from "./modes/CompareMode";
 import { FinalsMode } from "./modes/FinalsMode";
 import { QaMode } from "./modes/QaMode";
-import type { Mode } from "./types";
+import { SettingsMode } from "./modes/SettingsMode";
+import type { Register } from "./types";
 
 export function App() {
   const [help, setHelp] = useState(false);
@@ -31,6 +34,19 @@ export function App() {
       localStorage.getItem("cutright-theme") ??
       (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"),
   );
+  // Three parked register variants (redesign spec Phase 2), QA-only picker
+  // — see TitleBar/RegisterSwitch. R1 is the default until Adrian locks one
+  // into brands.md; a real user never sees the switcher (gated on `qaMode`
+  // from lib/api, the same flag the browser-QA fixture path uses).
+  const [register, setRegister] = useState<Register>(
+    () =>
+      (new URLSearchParams(location.search).get("register") as Register) ||
+      "cutting-room",
+  );
+  // Last swap's word-cut delta (word-lock.ts's `swapTarget().cut_count`),
+  // shown at the bench switch's lock point — spec Phase 1's "3 words cut
+  // here" evidence. `null` until the first swap in this session.
+  const [lastDelta, setLastDelta] = useState<number | null>(null);
 
   // `useProject.load()` needs to seed `useReviewLedger`'s state, but ledger
   // is composed after project below; a render-phase ref keeps `load()`'s
@@ -123,6 +139,10 @@ export function App() {
     localStorage.setItem("cutright-theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.dataset.register = register;
+  }, [register]);
+
   function swap() {
     const other = variant === "natural" ? "tight" : "natural";
     const target = swapTarget(
@@ -134,6 +154,7 @@ export function App() {
       setError(`${other} has no content`);
       return;
     }
+    setLastDelta(target.cut_count);
     const outgoing = videoRefs.current[variant];
     const incoming = videoRefs.current[other];
     outgoing?.pause();
@@ -202,8 +223,12 @@ export function App() {
         theme={theme}
         onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
         onHelp={() => setHelp(true)}
+        qa={qaMode}
+        register={register}
+        setRegister={setRegister}
       />
       <div className="shell">
+        <ModeRail mode={mode} setMode={setMode} available={available} />
         <SourcesRail
           sources={snapshot.sources}
           sourceIndex={sourceIndex}
@@ -213,24 +238,6 @@ export function App() {
           }}
         />
         <section className="viewer">
-          <nav className="modes" aria-label="Viewer modes">
-            {(["sources", "compare", "finals", "qa"] as Mode[]).map((item) => (
-              <button
-                key={item}
-                disabled={!available[item]}
-                aria-disabled={!available[item]}
-                title={
-                  !available[item]
-                    ? `No ${item === "compare" ? "rough cuts yet — run videoctl edit render" : `${item} yet`}`
-                    : undefined
-                }
-                className={mode === item ? "active" : ""}
-                onClick={() => setMode(item)}
-              >
-                {item === "qa" ? "QA" : item}
-              </button>
-            ))}
-          </nav>
           {benchProvisional && (
             <div className="bench-banner" role="status">
               <b>PROVISIONAL REVIEW</b>
@@ -240,104 +247,114 @@ export function App() {
               </span>
             </div>
           )}
-          {mode === "sources" && (
-            <SourcesMode
-              source={selected}
-              videoRef={(node) => {
-                videoRefs.current.source = node;
-              }}
-              playing={playing}
-              onPlaying={setPlaying}
-              playhead={playhead}
-              playheadRef={playheadRef}
-              onSeek={seek}
-              markers={cutMarkers(undefined, sourceWords)}
-            />
-          )}
-          {mode === "compare" && (
-            <CompareMode
-              variants={snapshot.variants}
-              variant={variant}
-              words={words}
-              cursor={cursor.word}
-              videoRefs={videoRefs}
-              playing={playing}
-              onPlaying={setPlaying}
-              onSwap={swap}
-              onSeek={seek}
-              bench={snapshot.bench?.decision === "unresolved"}
-              markers={cutMarkers(
-                activeVariant?.cut_plan?.segments,
-                words[variant] ?? [],
-              )}
-              flagging={flagging}
-              lastFlag={lastFlag}
-              onFlag={() => {
-                setReasonKind(null);
-                setFlagging(true);
-              }}
-            />
-          )}
-          {mode === "finals" && (
-            <FinalsMode
-              finals={snapshot.finals}
-              selected={finalPreset}
-              onSelect={setFinalPreset}
-              selection={selection}
-              selecting={selecting}
-              onUseFinal={useFinal}
-            />
-          )}
-          {mode === "qa" && (
-            <QaMode
-              report={snapshot.qa}
-              acknowledged={qaAcknowledged}
-              onAcknowledge={acknowledgeQa}
-            />
-          )}
-          {(mode === "compare" || mode === "finals") && (
-            <VerdictPanel
-              mode={mode}
-              flagging={flagging}
-              note={note}
-              setNote={setNote}
-              commitSegment={commitSegment}
-              onCancelFlag={() => setFlagging(false)}
-              latest={latest}
-              reasonKind={reasonKind}
-              commit={commit}
-              onCancelReason={() => setReasonKind(null)}
-              onApprove={() => setReasonKind("approved")}
-              onReject={() => setReasonKind("rejected")}
-            />
-          )}
+          {/* Mode switch motion (spec: "100ms opacity, no slide — modes are
+              places, not slides"). Remounting on `key={mode}` fires the CSS
+              `mode-in` animation on every mode change; reduced-motion zeroes
+              it globally (styles.css). */}
+          <div key={mode} className="mode-panel">
+            {mode === "sources" && (
+              <SourcesMode
+                source={selected}
+                videoRef={(node) => {
+                  videoRefs.current.source = node;
+                }}
+                playing={playing}
+                onPlaying={setPlaying}
+                playhead={playhead}
+                playheadRef={playheadRef}
+                onSeek={seek}
+                markers={cutMarkers(undefined, sourceWords)}
+              />
+            )}
+            {mode === "compare" && (
+              <CompareMode
+                variants={snapshot.variants}
+                variant={variant}
+                words={words}
+                cursor={cursor.word}
+                videoRefs={videoRefs}
+                playing={playing}
+                onPlaying={setPlaying}
+                onSwap={swap}
+                onSeek={seek}
+                bench={snapshot.bench?.decision === "unresolved"}
+                delta={lastDelta}
+                markers={cutMarkers(
+                  activeVariant?.cut_plan?.segments,
+                  words[variant] ?? [],
+                )}
+                flagging={flagging}
+                lastFlag={lastFlag}
+                onFlag={() => {
+                  setReasonKind(null);
+                  setFlagging(true);
+                }}
+              />
+            )}
+            {mode === "finals" && (
+              <FinalsMode
+                finals={snapshot.finals}
+                selected={finalPreset}
+                onSelect={setFinalPreset}
+                selection={selection}
+                selecting={selecting}
+                onUseFinal={useFinal}
+              />
+            )}
+            {mode === "qa" && (
+              <QaMode
+                report={snapshot.qa}
+                acknowledged={qaAcknowledged}
+                onAcknowledge={acknowledgeQa}
+              />
+            )}
+            {mode === "settings" && <SettingsMode project={snapshot} />}
+            {(mode === "compare" || mode === "finals") && (
+              <VerdictPanel
+                mode={mode}
+                flagging={flagging}
+                note={note}
+                setNote={setNote}
+                commitSegment={commitSegment}
+                onCancelFlag={() => setFlagging(false)}
+                latest={latest}
+                reasonKind={reasonKind}
+                commit={commit}
+                onCancelReason={() => setReasonKind(null)}
+                onApprove={() => setReasonKind("approved")}
+                onReject={() => setReasonKind("rejected")}
+              />
+            )}
+          </div>
         </section>
         <aside className="inspector">
-          {mode === "compare" ? (
-            <Transcript
-              words={words[variant] ?? []}
-              cursor={cursor.word}
-              onSeek={seek}
-              variant={variant}
-            />
-          ) : mode === "sources" ? (
-            <>
-              <SourceFacts source={selected} words={sourceWords} onSeek={seek} />
-              <SourceIntegrityPanel
-                checks={checks}
-                verifying={verifying}
-                progress={verifyProgress}
-                relinks={relinks}
-                onVerify={verifySources}
-                onRelink={relink}
+          <div key={mode} className="mode-panel">
+            {mode === "compare" ? (
+              <Transcript
+                words={words[variant] ?? []}
+                cursor={cursor.word}
+                onSeek={seek}
+                variant={variant}
               />
-            </>
-          ) : (
-            <div className="empty-rail">
-              <b>{mode.toUpperCase()}</b>
-              <p>Evidence and verdict context appears here.</p>
-            </div>
-          )}
+            ) : mode === "sources" ? (
+              <>
+                <SourceFacts source={selected} words={sourceWords} onSeek={seek} />
+                <SourceIntegrityPanel
+                  checks={checks}
+                  verifying={verifying}
+                  progress={verifyProgress}
+                  relinks={relinks}
+                  onVerify={verifySources}
+                  onRelink={relink}
+                />
+              </>
+            ) : (
+              <div className="empty-rail">
+                <b>{mode.toUpperCase()}</b>
+                <p>Evidence and verdict context appears here.</p>
+              </div>
+            )}
+          </div>
         </aside>
       </div>
       <StatusStrip
