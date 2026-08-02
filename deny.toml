@@ -1,0 +1,48 @@
+# cargo-deny policy for CutRight.
+#
+# Without this file cargo-deny's allow-list is empty, so it rejects EVERY
+# license including MIT — that is an unconfigured tool reporting a failure,
+# not a real finding. This file states the actual policy so the check means
+# something.
+#
+# Re-run: cargo deny check
+# Inventory the tree's real licenses with: cargo deny list
+
+[licenses]
+# Every license below was inventoried from the actual dependency tree
+# (`cargo deny list`) and is permissive and compatible with shipping CutRight
+# under MIT. There is no copyleft (GPL/LGPL/AGPL/MPL) anywhere in the graph,
+# and adding one should fail this gate loudly rather than slip in.
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "CC0-1.0",
+    "Unicode-3.0",
+    "Unlicense",
+]
+# A dependency whose license cargo-deny cannot determine with at least this
+# much confidence is a finding, not a pass.
+confidence-threshold = 0.9
+
+[advisories]
+# RustSec advisories: fail on anything unhandled. Do not add ignores without
+# recording why the advisory does not apply to this codebase.
+yanked = "deny"
+
+[bans]
+multiple-versions = "warn"
+# A `foo = "*"` dependency from a registry is a real supply-chain risk: it
+# resolves to whatever is newest at build time. That stays denied.
+wildcards = "deny"
+# Intra-workspace path dependencies (`video-core = { path = "../video-core" }`)
+# carry no version requirement by design and are not that risk — they resolve
+# to the source in this repo. Exempt only those.
+allow-wildcard-paths = true
+
+[sources]
+# Only crates.io. A git or alternate-registry dependency is a supply-chain
+# decision that must be made deliberately, not discovered later.
+unknown-registry = "deny"
+unknown-git = "deny"

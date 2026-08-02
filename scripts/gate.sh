@@ -81,6 +81,11 @@ QA_STARTED=0
 log() { printf '\n%s==> %s%s\n' "$C_BLUE" "$*" "$C_RESET"; }
 ok()  { printf '%s[PASS]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
 
+# `have` + `skip_note` exist so an absent scanner reads as UNPROVEN rather
+# than silently passing. A check whose tool never ran must never look clean.
+have() { command -v "$1" >/dev/null 2>&1; }
+skip_note() { printf '%s[SKIP]%s %s\n' "$C_BLUE" "$C_RESET" "$*"; }
+
 run() {
   CURRENT_STEP="$1"; shift
   log "$CURRENT_STEP"
@@ -168,6 +173,25 @@ run "effects: pnpm --dir apps/effects build" \
 # --- 5. license/asset resolution --------------------------------------------
 run "license/asset resolution (scripts/resolve-license.sh)" \
   bash scripts/resolve-license.sh
+
+# --- 5b. supply chain + dead code (skipped when the tool is absent) ----------
+# These were UNPROVEN for the whole hardening campaign because the tools were
+# not installed. They are wired in here so they cannot silently regress. Each
+# is skipped with a loud note rather than failing the gate when its tool is
+# missing — an absent scanner is honestly "not run", never "clean".
+if have cargo-deny; then
+  run "supply chain: cargo deny check (deny.toml)" \
+    cargo deny check
+else
+  skip_note "cargo-deny absent — advisories/licenses/bans/sources UNPROVEN (cargo install cargo-deny)"
+fi
+
+if have cargo-machete; then
+  run "unused deps: cargo machete" \
+    cargo machete
+else
+  skip_note "cargo-machete absent — unused-dependency check UNPROVEN (cargo install cargo-machete)"
+fi
 
 # --- 6. optional headless QA lane -------------------------------------------
 if [ "$WITH_QA" -eq 1 ]; then

@@ -674,6 +674,7 @@ dependencies = [
  "blake3",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror",
  "video-core",
 ]
@@ -702,7 +703,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "video-core",
- "video-media",
 ]
 
 [[package]]
@@ -716,7 +716,6 @@ dependencies = [
  "predicates",
  "serde_json",
  "video-core",
- "video-media",
  "video-project",
  "video-providers",
 ]

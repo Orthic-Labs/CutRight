@@ -13,6 +13,11 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 authors = ["Orthic Labs"]
+# These crates are internal members of one application, not a published
+# library set. Saying so explicitly prevents an accidental `cargo publish`
+# and lets supply-chain tooling treat the intra-workspace `path` dependencies
+# as what they are — local source, not unversioned registry wildcards.
+publish = false
 
 [workspace.dependencies]
 blake3 = "1.8"
