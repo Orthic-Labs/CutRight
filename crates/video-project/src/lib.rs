@@ -15,6 +15,7 @@ mod io;
 mod package;
 mod project_init;
 mod qa;
+mod qa_probes;
 mod reframe;
 mod remap;
 mod rough_render;
