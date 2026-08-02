@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/effect-registry.schema.json",
+  "title": "CutRight effect registry",
+  "description": "REV2 plan §15.3: the typed effect registry. Each entry describes one render effect's renderer, props schema, safe-zone collision targets, motion profile, reduced-motion behavior, and preview fixtures. Adding an effect means adding one entry here plus a fixture, never a new branch in the render pipeline.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "effects"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "effects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "safe_zone_pct": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["top_pct", "bottom_pct", "left_pct", "right_pct"],
+      "properties": {
+        "top_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "bottom_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "left_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "right_pct": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "effect_id",
+        "renderer",
+        "schema_version",
+        "props_schema",
+        "safe_zones",
+        "motion_profile",
+        "preview_fixture",
+        "footprint",
+        "reduced_motion"
+      ],
+      "properties": {
+        "effect_id": { "type": "string" },
+        "renderer": { "enum": ["ffmpeg", "remotion"] },
+        "schema_version": { "type": "integer", "minimum": 1 },
+        "props_schema": { "type": "object" },
+        "safe_zones": {
+          "type": "array",
+          "items": { "enum": ["youtube-lower-third", "vertical-bottom"] }
+        },
+        "motion_profile": { "enum": ["static", "restrained", "expressive"] },
+        "preview_fixture": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["still"],
+          "properties": {
+            "still": { "type": "string" },
+            "motion": { "type": "string" }
+          }
+        },
+        "footprint": {
+          "anyOf": [{ "$ref": "#/$defs/safe_zone_pct" }, { "type": "null" }]
+        },
+        "reduced_motion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": { "enum": ["not-meaningful", "static-fallback", "unsupported"] },
+            "description": { "type": "string" },
+            "reason": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

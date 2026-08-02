@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "effects": [
+    {
+      "effect_id": "caption.bold-karaoke.v1",
+      "renderer": "ffmpeg",
+      "schema_version": 1,
+      "props_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["highlight_color", "emphasis_scale"],
+        "properties": {
+          "highlight_color": { "type": "string" },
+          "emphasis_scale": { "type": "number", "minimum": 1, "maximum": 2 }
+        }
+      },
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "restrained",
+      "preview_fixture": {
+        "still": "fixtures/effects/caption.bold-karaoke.v1/still.png",
+        "motion": "fixtures/effects/caption.bold-karaoke.v1/motion.mp4"
+      },
+      "footprint": null,
+      "reduced_motion": {
+        "kind": "static-fallback",
+        "description": "All cue words render at full emphasis simultaneously instead of the per-word karaoke highlight sweep."
+      }
+    },
+    {
+      "effect_id": "lower-third.identity-card.v1",
+      "renderer": "ffmpeg",
+      "schema_version": 1,
+      "props_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "title", "accent_color"],
+        "properties": {
+          "name": { "type": "string" },
+          "title": { "type": "string" },
+          "accent_color": { "type": "string" }
+        }
+      },
+      "safe_zones": ["youtube-lower-third"],
+      "motion_profile": "restrained",
+      "preview_fixture": {
+        "still": "fixtures/effects/lower-third.identity-card.v1/still.png",
+        "motion": "fixtures/effects/lower-third.identity-card.v1/motion.mp4"
+      },
+      "footprint": { "top_pct": 64, "bottom_pct": 14, "left_pct": 8, "right_pct": 45 },
+      "reduced_motion": {
+        "kind": "static-fallback",
+        "description": "Card appears fully composited at full opacity from frame zero instead of sliding/fading in."
+      }
+    },
+    {
+      "effect_id": "stat-counter.v1",
+      "renderer": "ffmpeg",
+      "schema_version": 1,
+      "props_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "value", "accent_color"],
+        "properties": {
+          "label": { "type": "string" },
+          "value": { "type": "number" },
+          "accent_color": { "type": "string" }
+        }
+      },
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "expressive",
+      "preview_fixture": {
+        "still": "fixtures/effects/stat-counter.v1/still.png",
+        "motion": "fixtures/effects/stat-counter.v1/motion.mp4"
+      },
+      "footprint": { "top_pct": 14, "bottom_pct": 70, "left_pct": 60, "right_pct": 8 },
+      "reduced_motion": {
+        "kind": "static-fallback",
+        "description": "Final value renders immediately instead of the count-up numeral animation."
+      }
+    },
+    {
+      "effect_id": "quote-card.v1",
+      "renderer": "ffmpeg",
+      "schema_version": 1,
+      "props_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["quote", "accent_color"],
+        "properties": {
+          "quote": { "type": "string" },
+          "attribution": { "type": "string" },
+          "accent_color": { "type": "string" }
+        }
+      },
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "restrained",
+      "preview_fixture": {
+        "still": "fixtures/effects/quote-card.v1/still.png",
+        "motion": "fixtures/effects/quote-card.v1/motion.mp4"
+      },
+      "footprint": { "top_pct": 30, "bottom_pct": 30, "left_pct": 15, "right_pct": 15 },
+      "reduced_motion": {
+        "kind": "static-fallback",
+        "description": "Quote card appears at full opacity from frame zero instead of fading in."
+      }
+    },
+    {
+      "effect_id": "cta-end-card.v1",
+      "renderer": "ffmpeg",
+      "schema_version": 1,
+      "props_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["headline", "accent_color"],
+        "properties": {
+          "headline": { "type": "string" },
+          "subtext": { "type": "string" },
+          "accent_color": { "type": "string" }
+        }
+      },
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "restrained",
+      "preview_fixture": {
+        "still": "fixtures/effects/cta-end-card.v1/still.png",
+        "motion": "fixtures/effects/cta-end-card.v1/motion.mp4"
+      },
+      "footprint": { "top_pct": 20, "bottom_pct": 22, "left_pct": 8, "right_pct": 8 },
+      "reduced_motion": {
+        "kind": "static-fallback",
+        "description": "End card appears fully composited at full opacity from frame zero instead of fading in."
+      }
+    }
+  ]
+}

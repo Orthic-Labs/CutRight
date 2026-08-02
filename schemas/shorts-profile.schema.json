@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/shorts-profile.schema.json",
+  "title": "CutRight shorts extraction scoring profile",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "profile_version",
+    "platform",
+    "weights",
+    "diversity_similarity_threshold",
+    "max_group_gap_ms",
+    "dangling_openers",
+    "hook_cues",
+    "payoff_cues",
+    "proof_cues",
+    "brand_banned_terms"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "profile_version": { "type": "integer", "minimum": 1 },
+    "platform": {
+      "type": "object",
+      "required": ["id", "min_duration_ms", "ideal_min_ms", "ideal_max_ms", "max_duration_ms"],
+      "properties": {
+        "id": { "type": "string" },
+        "min_duration_ms": { "type": "integer", "minimum": 0 },
+        "ideal_min_ms": { "type": "integer", "minimum": 0 },
+        "ideal_max_ms": { "type": "integer", "minimum": 0 },
+        "max_duration_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "weights": {
+      "type": "object",
+      "required": [
+        "hook", "payoff", "proof", "value", "duration_fit",
+        "visual_support", "platform_fit", "brand_fit"
+      ],
+      "properties": {
+        "hook": { "type": "number", "minimum": 0 },
+        "payoff": { "type": "number", "minimum": 0 },
+        "proof": { "type": "number", "minimum": 0 },
+        "value": { "type": "number", "minimum": 0 },
+        "duration_fit": { "type": "number", "minimum": 0 },
+        "visual_support": { "type": "number", "minimum": 0 },
+        "platform_fit": { "type": "number", "minimum": 0 },
+        "brand_fit": { "type": "number", "minimum": 0 }
+      }
+    },
+    "diversity_similarity_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+    "max_group_gap_ms": { "type": "integer", "minimum": 0 },
+    "dangling_openers": { "type": "array", "items": { "type": "string" } },
+    "hook_cues": { "type": "array", "items": { "type": "string" } },
+    "payoff_cues": { "type": "array", "items": { "type": "string" } },
+    "proof_cues": { "type": "array", "items": { "type": "string" } },
+    "brand_banned_terms": { "type": "array", "items": { "type": "string" } }
+  }
+}

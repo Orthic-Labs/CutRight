@@ -9,6 +9,7 @@ mod candidates;
 pub mod caption_profile;
 mod color_profile;
 mod cut_plan;
+pub mod effects;
 mod evidence;
 mod export;
 mod final_render;
@@ -20,9 +21,11 @@ mod project_init;
 mod qa;
 mod qa_probes;
 mod reframe;
+mod reframe_track;
 mod remap;
 mod rough_render;
 mod shorts;
+mod shorts_scoring;
 mod snapshot;
 mod timeline;
 mod transcription;
@@ -40,6 +43,11 @@ pub use color_profile::{
     COLOR_PROFILE_SCHEMA_VERSION,
 };
 pub use cut_plan::build_cut_plan;
+pub use effects::{
+    render_effect_preview, EffectPreviewFixture, EffectPreviewOutcome, EffectRegistry,
+    EffectRegistryEntry, EffectRegistryError, EffectRenderer, MotionProfile, ReducedMotionBehavior,
+    SafeZoneRef, EFFECT_REGISTRY_SCHEMA_VERSION,
+};
 pub use evidence::evidence_build;
 pub use export::export_otio;
 pub use final_render::{render_final, render_master};

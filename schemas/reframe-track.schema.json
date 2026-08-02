@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/reframe-track.schema.json",
+  "title": "CutRight temporal reframe track",
+  "description": "REV2 plan §15.5 (Phase 7): the sampled multi-modal temporal track behind one variant's vertical reframe plan. This is the full per-sample resolution; the co-located reframe-plan.json's `anchors[]` array is one collapsed representative point per timeline segment derived from this track.",
+  "type": "object",
+  "required": ["schema_version", "variant", "sample_interval_ms", "points"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "variant": { "type": "string", "enum": ["tight", "natural"] },
+    "sample_interval_ms": { "type": "integer", "minimum": 1 },
+    "points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["output_ms", "center_x", "center_y", "confidence", "gap", "shot_boundary", "source"],
+        "properties": {
+          "output_ms": { "type": "integer", "minimum": 0 },
+          "center_x": { "type": "number", "minimum": 0, "maximum": 1 },
+          "center_y": { "type": "number", "minimum": 0, "maximum": 1 },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "gap": { "type": "boolean" },
+          "shot_boundary": { "type": "boolean" },
+          "source": { "type": "string" }
+        }
+      }
+    }
+  }
+}

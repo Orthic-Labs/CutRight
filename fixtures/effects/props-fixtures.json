@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "description": "Valid/invalid props samples per registry effect, used by video-project::effects tests to prove props_schema validation accepts valid props and rejects invalid ones (REV2 plan §15.3).",
+  "effects": {
+    "caption.bold-karaoke.v1": {
+      "valid": { "highlight_color": "#FFC24B", "emphasis_scale": 1.4 },
+      "invalid": [
+        { "highlight_color": "#FFC24B" },
+        { "highlight_color": "#FFC24B", "emphasis_scale": 3.0 },
+        { "highlight_color": "#FFC24B", "emphasis_scale": 1.4, "extra": true }
+      ]
+    },
+    "lower-third.identity-card.v1": {
+      "valid": { "name": "Adrian D'souza", "title": "Founder", "accent_color": "#FF5630" },
+      "invalid": [
+        { "name": "Adrian D'souza", "accent_color": "#FF5630" },
+        { "name": "Adrian D'souza", "title": "Founder", "accent_color": 123 }
+      ]
+    },
+    "stat-counter.v1": {
+      "valid": { "label": "Founders shipped", "value": 149, "accent_color": "#DF6428" },
+      "invalid": [
+        { "label": "Founders shipped", "accent_color": "#DF6428" },
+        { "label": "Founders shipped", "value": "149", "accent_color": "#DF6428" }
+      ]
+    },
+    "quote-card.v1": {
+      "valid": { "quote": "Local-first, always.", "attribution": "HeardRight", "accent_color": "#A78BFA" },
+      "invalid": [
+        { "attribution": "HeardRight", "accent_color": "#A78BFA" },
+        { "quote": "Local-first, always.", "accent_color": true }
+      ]
+    },
+    "cta-end-card.v1": {
+      "valid": { "headline": "Try HeardRight", "subtext": "Local-first dictation", "accent_color": "#FF5630" },
+      "invalid": [
+        { "subtext": "Local-first dictation", "accent_color": "#FF5630" },
+        { "headline": "Try HeardRight", "accent_color": "#FF5630", "cta_url": "https://heardright.app" }
+      ]
+    }
+  }
+}

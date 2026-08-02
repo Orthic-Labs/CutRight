@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/shorts.schema.json",
+  "title": "CutRight proposed shorts",
+  "description": "Output of the REV2 plan §15.4 Phase 6 real shorts extraction pipeline. The pipeline only ever proposes candidates (status is always \"proposed\" and selected_id is null on write); a human selects one out-of-band.",
+  "type": "object",
+  "required": [
+    "schema_version", "status", "strategy", "profile_version", "profile_path",
+    "platform", "candidates_considered", "variants", "rejected", "selected_id"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "status": { "const": "proposed" },
+    "strategy": { "type": "string" },
+    "profile_version": { "type": "integer", "minimum": 1 },
+    "profile_path": { "type": "string" },
+    "platform": { "type": "string" },
+    "candidates_considered": { "type": "integer", "minimum": 0 },
+    "variants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id", "source_mapping", "start_ms", "end_ms", "duration_ms", "transcript",
+          "rationale", "scores", "standalone", "truthfulness", "preview", "diversity_cluster"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "source_mapping": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["candidate_id", "source_id", "start_ms", "end_ms"],
+              "properties": {
+                "candidate_id": { "type": "string" },
+                "source_id": { "type": "string" },
+                "start_ms": { "type": "integer", "minimum": 0 },
+                "end_ms": { "type": "integer", "minimum": 0 }
+              }
+            }
+          },
+          "start_ms": { "type": "integer", "minimum": 0 },
+          "end_ms": { "type": "integer", "minimum": 0 },
+          "duration_ms": { "type": "integer", "minimum": 0 },
+          "transcript": { "type": "string" },
+          "rationale": { "type": "string" },
+          "scores": {
+            "type": "object",
+            "required": [
+              "hook", "payoff", "proof", "value", "duration_fit",
+              "visual_support", "platform_fit", "brand_fit", "composite"
+            ],
+            "properties": {
+              "hook": { "$ref": "#/$defs/score" },
+              "payoff": { "$ref": "#/$defs/score" },
+              "proof": { "$ref": "#/$defs/score" },
+              "value": { "$ref": "#/$defs/score" },
+              "duration_fit": { "$ref": "#/$defs/score" },
+              "visual_support": { "$ref": "#/$defs/score" },
+              "platform_fit": { "$ref": "#/$defs/score" },
+              "brand_fit": { "$ref": "#/$defs/score" },
+              "composite": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          },
+          "standalone": {
+            "type": "object",
+            "required": ["passed", "confidence", "reasons"],
+            "properties": {
+              "passed": { "type": "boolean" },
+              "confidence": { "$ref": "#/$defs/confidence" },
+              "reasons": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "truthfulness": {
+            "type": "object",
+            "required": ["reorders_or_omits_material", "note"],
+            "properties": {
+              "reorders_or_omits_material": { "type": "boolean" },
+              "note": { "type": "string" }
+            }
+          },
+          "preview": {
+            "type": "object",
+            "required": ["poster_source_id", "poster_ms", "snippet"],
+            "properties": {
+              "poster_source_id": { "type": "string" },
+              "poster_ms": { "type": "integer", "minimum": 0 },
+              "snippet": { "type": "string" }
+            }
+          },
+          "diversity_cluster": { "type": "string" }
+        }
+      }
+    },
+    "rejected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["unit_id", "source_id", "start_ms", "end_ms", "stage", "reason"],
+        "properties": {
+          "unit_id": { "type": "string" },
+          "source_id": { "type": "string" },
+          "start_ms": { "type": "integer", "minimum": 0 },
+          "end_ms": { "type": "integer", "minimum": 0 },
+          "stage": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "selected_id": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "confidence": { "enum": ["low", "medium", "high"] },
+    "score": {
+      "type": "object",
+      "required": ["value", "confidence", "rationale"],
+      "properties": {
+        "value": { "type": "number", "minimum": 0, "maximum": 1 },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "rationale": { "type": "string" }
+      }
+    }
+  }
+}

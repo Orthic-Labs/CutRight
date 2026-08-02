@@ -2,6 +2,7 @@ mod audio;
 mod audio_finish;
 mod captions;
 mod color;
+mod effects;
 mod evidence;
 mod final_render;
 mod probe;
@@ -33,6 +34,9 @@ pub use color::{
     color_filter_chain, detect_color_space, probe_source_color_tags, render_contact_sheet,
     verify_output_color_metadata, ColorCorrection, ColorSpaceKind, CreativeLut,
     ExpectedColorMetadata, ShotMatchTarget, SourceColorTags, REC709_SDR_METADATA,
+};
+pub use effects::{
+    effect_render_toolchain_identity, render_effect_motion, render_effect_still, EffectCard,
 };
 pub use evidence::{compose_decision_evidence, extract_frame};
 pub use final_render::{
