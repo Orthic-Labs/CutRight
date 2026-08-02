@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/caption-document.schema.json",
+  "title": "CutRight canonical caption document",
+  "description": "REV2 plan §15.2: the canonical word/phrase caption model. SRT/VTT sidecars and burned caption cards are exports derived from this artifact, not the other way around.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile_id", "platform", "cues", "font_notices"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "profile_id": { "type": "string" },
+    "platform": { "enum": ["youtube-lower-third", "vertical-bottom"] },
+    "cues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "start_ms", "end_ms", "lines", "word_ids", "font_family"],
+        "properties": {
+          "id": { "type": "string" },
+          "start_ms": { "type": "integer", "minimum": 0 },
+          "end_ms": { "type": "integer", "minimum": 0 },
+          "lines": { "type": "array", "items": { "type": "string" } },
+          "word_ids": { "type": "array", "items": { "type": "string" } },
+          "font_family": { "type": "string" }
+        }
+      }
+    },
+    "font_notices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codepoint", "requested_font", "resolved_font", "reason"],
+        "properties": {
+          "codepoint": { "type": "string" },
+          "requested_font": { "type": "string" },
+          "resolved_font": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}

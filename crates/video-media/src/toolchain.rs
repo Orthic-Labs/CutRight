@@ -24,6 +24,18 @@ pub struct MediaCapabilities {
     /// `h264_videotoolbox` encoder — required for macOS hardware-accelerated
     /// preview rendering.
     pub has_h264_videotoolbox: bool,
+    /// `prores_ks` encoder — the software archival/master delivery codec
+    /// (plan §15.2 Export: a software master path alongside the hardware
+    /// preview encoder). Native to every mainstream FFmpeg build (unlike
+    /// `zscale`, it needs no external library), but still probed rather than
+    /// assumed.
+    pub has_prores_ks: bool,
+    /// `lut3d` filter — required to apply a bounded-strength creative LUT
+    /// (plan §15.2 Color).
+    pub has_lut3d: bool,
+    /// `colortemperature` filter — required for white-balance correction
+    /// (plan §15.2 Color).
+    pub has_colortemperature: bool,
 }
 
 /// The resolved, verified FFmpeg/FFprobe pair plus its identity, per plan
@@ -115,6 +127,9 @@ fn resolve_from(
     let capabilities = MediaCapabilities {
         has_zscale: list_contains(&ffmpeg, "-filters", "zscale")?,
         has_h264_videotoolbox: list_contains(&ffmpeg, "-encoders", "h264_videotoolbox")?,
+        has_prores_ks: list_contains(&ffmpeg, "-encoders", "prores_ks")?,
+        has_lut3d: list_contains(&ffmpeg, "-filters", "lut3d")?,
+        has_colortemperature: list_contains(&ffmpeg, "-filters", "colortemperature")?,
     };
 
     Ok(MediaToolchain {
@@ -304,6 +319,9 @@ mod tests {
         assert!(!toolchain.content_hash.is_empty());
         assert!(!toolchain.capabilities.has_zscale);
         assert!(!toolchain.capabilities.has_h264_videotoolbox);
+        assert!(!toolchain.capabilities.has_prores_ks);
+        assert!(!toolchain.capabilities.has_lut3d);
+        assert!(!toolchain.capabilities.has_colortemperature);
         fs::remove_dir_all(&dir).expect("remove test dir");
     }
 

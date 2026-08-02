@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "profile_id": "youtube-lower-third.v1",
+  "platform": "youtube-lower-third",
+  "cues": [
+    {
+      "id": "cue_000000",
+      "start_ms": 0,
+      "end_ms": 1300,
+      "lines": ["Today we build this."],
+      "word_ids": ["w1", "w2", "w3", "w4"],
+      "font_family": "IBM Plex Sans"
+    },
+    {
+      "id": "cue_000001",
+      "start_ms": 2200,
+      "end_ms": 3400,
+      "lines": ["Then we ship it."],
+      "word_ids": ["w5", "w6", "w7", "w8"],
+      "font_family": "IBM Plex Sans"
+    }
+  ],
+  "font_notices": []
+}

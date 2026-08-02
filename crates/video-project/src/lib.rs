@@ -3,8 +3,11 @@ mod receipts;
 pub use receipts::{verify_receipts, ReceiptCheck, ReceiptVerificationReport};
 
 mod analysis;
+mod audio_profile;
 mod benchmark;
 mod candidates;
+pub mod caption_profile;
+mod color_profile;
 mod cut_plan;
 mod evidence;
 mod export;
@@ -25,13 +28,22 @@ mod timeline;
 mod transcription;
 
 pub use analysis::analyze_local;
+pub use audio_profile::{AudioProfile, LoudnessGateResult, AUDIO_PROFILE_SCHEMA_VERSION};
 pub use benchmark::bench_transcribe;
 pub use candidates::{build_candidates, build_candidates_with_policy, count_fillers};
+pub use caption_profile::{
+    build_default_caption_document, default_fallback_chain, default_primary_font, default_profile,
+    CaptionDocument, CaptionProfile, CAPTION_MODEL_SCHEMA_VERSION,
+};
+pub use color_profile::{
+    export_preset_settings, ColorProfile, ExportPresetSettings, ARCHIVE_EXPORT_PRESET,
+    COLOR_PROFILE_SCHEMA_VERSION,
+};
 pub use cut_plan::build_cut_plan;
 pub use evidence::evidence_build;
 pub use export::export_otio;
-pub use final_render::render_final;
-pub use finish::{finish_validate, render_slot};
+pub use final_render::{render_final, render_master};
+pub use finish::{audio_finish, finish_validate, render_slot};
 pub use ingest::{ingest_sources, IngestResult, IngestedSource};
 pub use package::package_social;
 pub use project_init::{
@@ -85,6 +97,8 @@ pub enum ProjectError {
     Render(#[from] RenderError),
     #[error(transparent)]
     Audio(#[from] AudioError),
+    #[error(transparent)]
+    AudioFinish(#[from] video_media::AudioFinishError),
     #[error("pipeline state is invalid: {0}")]
     InvalidState(String),
 }

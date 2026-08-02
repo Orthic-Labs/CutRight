@@ -1,5 +1,7 @@
 mod audio;
+mod audio_finish;
 mod captions;
+mod color;
 mod evidence;
 mod final_render;
 mod probe;
@@ -14,12 +16,28 @@ use thiserror::Error;
 use video_core::process_runner::ProcessRunError;
 
 pub use audio::{extract_audio_f32, extract_audio_f32_with_receipt, AudioError};
+pub use audio_finish::{
+    dialogue_chain_filter, duck_track_under_speech, ducking_filter, measure_loudness_and_clipping,
+    measure_room_tone_step, process_dialogue_stem, process_dialogue_stem_with_receipt,
+    AudioFinishError, CompressorParams, DeEsserParams, DialogueChainParams, LoudnessMeasurement,
+    RoomToneStep,
+};
 pub use captions::{
-    render_preset_with_captions, render_preset_with_captions_and_reframe,
-    render_preset_with_captions_and_reframe_with_receipt, render_subtitled,
+    build_caption_document, render_preset_with_captions, render_preset_with_captions_and_reframe,
+    render_preset_with_captions_and_reframe_with_caption_receipt,
+    render_preset_with_captions_and_reframe_with_receipt, render_subtitled, resolve_font_for_text,
+    CaptionCueModel, CaptionDocument, CaptionFontDescriptor, CaptionFontNotice, CaptionPlatform,
+    CaptionProfile, CaptionSafeZone, CAPTION_MODEL_SCHEMA_VERSION,
+};
+pub use color::{
+    color_filter_chain, detect_color_space, probe_source_color_tags, render_contact_sheet,
+    verify_output_color_metadata, ColorCorrection, ColorSpaceKind, CreativeLut,
+    ExpectedColorMetadata, ShotMatchTarget, SourceColorTags, REC709_SDR_METADATA,
 };
 pub use evidence::{compose_decision_evidence, extract_frame};
-pub use final_render::render_to_preset;
+pub use final_render::{
+    render_master, render_master_contact_sheet, render_to_preset, MasterRenderRequest,
+};
 pub use probe::{probe, MediaMetadata, ProbeError};
 pub use reframe::ReframeAnchor;
 pub use rough_render::{
@@ -45,6 +63,8 @@ pub enum RenderError {
     Failed(String),
     #[error("required FFmpeg capability is unavailable: {0}")]
     CapabilityMissing(String),
+    #[error("output color metadata does not match the profile: expected {expected}, got {actual}")]
+    ColorMetadataMismatch { expected: String, actual: String },
     #[error("caption card worker could not start: {0}")]
     CaptionStart(#[source] std::io::Error),
     #[error("caption card worker failed: {0}")]

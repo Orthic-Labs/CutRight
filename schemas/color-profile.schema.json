@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/color-profile.schema.json",
+  "title": "CutRight color profile",
+  "description": "REV2 plan §15.2 'Color': every grading parameter used by a project's master render lives in one versioned artifact, never scattered constants.",
+  "type": "object",
+  "required": ["schema_version", "id", "exposure_ev", "white_balance_temp_shift", "white_balance_tint_shift"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "exposure_ev": { "type": "number", "minimum": -6, "maximum": 6 },
+    "white_balance_temp_shift": { "type": "number", "minimum": -2000, "maximum": 2000 },
+    "white_balance_tint_shift": { "type": "number", "minimum": -100, "maximum": 100 },
+    "shot_match": {
+      "type": ["object", "null"],
+      "required": ["mean_luma", "saturation_scale"],
+      "additionalProperties": false,
+      "properties": {
+        "mean_luma": { "type": "number", "minimum": 0, "maximum": 1 },
+        "saturation_scale": { "type": "number", "minimum": 0, "maximum": 3 }
+      }
+    },
+    "creative_lut": {
+      "type": ["object", "null"],
+      "required": ["name", "path", "strength"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "strength": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

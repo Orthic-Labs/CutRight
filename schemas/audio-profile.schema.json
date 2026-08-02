@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/audio-profile.schema.json",
+  "title": "CutRight audio-finish profile",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "profile_version",
+    "high_pass_hz",
+    "compressor_threshold_db",
+    "compressor_ratio",
+    "compressor_attack_ms",
+    "compressor_release_ms",
+    "deesser_intensity",
+    "deesser_frequency",
+    "limiter_ceiling_dbtp",
+    "target_integrated_lufs",
+    "loudness_tolerance_lu",
+    "target_true_peak_dbtp",
+    "true_peak_tolerance_db",
+    "duck_reduction_db",
+    "room_tone_step_tolerance_db"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "profile_version": { "type": "integer", "minimum": 1 },
+    "high_pass_hz": { "type": "number" },
+    "compressor_threshold_db": { "type": "number" },
+    "compressor_ratio": { "type": "number" },
+    "compressor_attack_ms": { "type": "number" },
+    "compressor_release_ms": { "type": "number" },
+    "deesser_intensity": { "type": "number" },
+    "deesser_frequency": { "type": "number" },
+    "limiter_ceiling_dbtp": { "type": "number" },
+    "target_integrated_lufs": { "type": "number" },
+    "loudness_tolerance_lu": { "type": "number" },
+    "target_true_peak_dbtp": { "type": "number" },
+    "true_peak_tolerance_db": { "type": "number" },
+    "duck_reduction_db": { "type": "number" },
+    "room_tone_step_tolerance_db": { "type": "number" }
+  }
+}

@@ -93,7 +93,23 @@ pub fn remap_transcript_with_variant(
             Some(variant) => project_path.join(format!("edit/captions-{variant}.srt")),
             None => project_path.join("edit/captions.srt"),
         };
-        write_srt(&captions_path, &transcript.words)?;
+        let captions_vtt_path = match variant {
+            Some(variant) => project_path.join(format!("edit/captions-{variant}.vtt")),
+            None => project_path.join("edit/captions.vtt"),
+        };
+        let captions_document_path = match variant {
+            Some(variant) => project_path.join(format!("edit/captions-{variant}.json")),
+            None => project_path.join("edit/captions.json"),
+        };
+        // REV2 plan §15.2: build the canonical word/phrase caption document
+        // once, then derive every sidecar from it — SRT/VTT are exports, not
+        // the source of truth.
+        let caption_profile = crate::caption_profile::default_profile();
+        let caption_document =
+            crate::caption_profile::build_default_caption_document(&transcript.words);
+        write_json_atomic(&captions_document_path, &caption_document)?;
+        write_srt_from_document(&captions_path, &caption_document)?;
+        write_vtt_from_document(&captions_vtt_path, &caption_document)?;
 
         let mut inputs: Vec<PathBuf> = vec![plan_path.clone()];
         inputs.extend(transcript_file_paths(project_path)?);
@@ -102,9 +118,19 @@ pub fn remap_transcript_with_variant(
             &receipts::receipt_path_for(&path),
             "edit.transcript_remap",
             &input_refs,
-            &serde_json::json!({ "variant": variant }),
+            &serde_json::json!({
+                "variant": variant,
+                "caption_profile_id": caption_profile.id,
+                "caption_profile_schema_version": caption_profile.schema_version,
+                "caption_font_notice_count": caption_document.font_notices.len(),
+            }),
             BTreeMap::new(),
-            &[path.as_path(), captions_path.as_path()],
+            &[
+                path.as_path(),
+                captions_document_path.as_path(),
+                captions_path.as_path(),
+                captions_vtt_path.as_path(),
+            ],
         )?;
 
         // §6.1: once a variant's plan, timeline, remapped transcript,
@@ -289,6 +315,105 @@ mod tests {
         assert_eq!(ids.len(), 2);
         assert!(ids.contains("source-a:w_000000"));
         assert!(ids.contains("source-b:w_000000"));
+    }
+
+    /// REV2 plan §15.2: transcript remap must persist the canonical caption
+    /// document (source of truth) alongside its SRT/VTT exports, and the
+    /// receipt bound to the remap stage must record which caption profile
+    /// produced them.
+    #[test]
+    fn variant_remap_writes_canonical_caption_document_and_sidecars_with_receipt() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        write_json_atomic(
+            &temp.path().join("analysis/transcripts/source-a.json"),
+            &Transcript {
+                schema_version: SCHEMA_VERSION,
+                provider: "fixture".into(),
+                source_id: "source-a".into(),
+                language: "en".into(),
+                words: vec![
+                    Word {
+                        id: "w_000000".into(),
+                        source_word_id: None,
+                        text: "Hello".into(),
+                        start_ms: 0,
+                        end_ms: 300,
+                        confidence: 1.0,
+                        speaker: None,
+                        kind: "word".into(),
+                    },
+                    Word {
+                        id: "w_000001".into(),
+                        source_word_id: None,
+                        text: "world.".into(),
+                        start_ms: 300,
+                        end_ms: 700,
+                        confidence: 1.0,
+                        speaker: None,
+                        kind: "word".into(),
+                    },
+                ],
+                events: Vec::new(),
+            },
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("edit/cut-plan-natural.json"),
+            &CutPlan {
+                schema_version: SCHEMA_VERSION,
+                variant: "natural".into(),
+                gap_threshold_ms: 0,
+                head_margin_ms: 0,
+                tail_margin_ms: 0,
+                segments: vec![CutSegment {
+                    id: "one".into(),
+                    source_id: "source-a".into(),
+                    source_start_ms: 0,
+                    source_end_ms: 700,
+                    reason: "fixture".into(),
+                }],
+            },
+        )
+        .unwrap();
+
+        remap_transcript_for_variant(temp.path(), "natural", false).unwrap();
+
+        let document_path = temp.path().join("edit/captions-natural.json");
+        let srt_path = temp.path().join("edit/captions-natural.srt");
+        let vtt_path = temp.path().join("edit/captions-natural.vtt");
+        assert!(document_path.is_file());
+        assert!(srt_path.is_file());
+        assert!(vtt_path.is_file());
+
+        let document: crate::caption_profile::CaptionDocument = read_json(&document_path).unwrap();
+        assert_eq!(
+            document.schema_version,
+            crate::caption_profile::CAPTION_MODEL_SCHEMA_VERSION
+        );
+        assert!(!document.cues.is_empty());
+
+        let receipt_path =
+            receipts::receipt_path_for(&temp.path().join("edit/output-transcript-natural.json"));
+        let receipt: video_core::StageReceipt = read_json(&receipt_path).unwrap();
+        assert!(
+            !receipt.parameters_blake3.is_empty(),
+            "receipt must carry parameters"
+        );
+        let output_paths: Vec<&str> = receipt
+            .outputs
+            .iter()
+            .map(|output| output.path.as_str())
+            .collect();
+        assert!(output_paths
+            .iter()
+            .any(|p| p.ends_with("captions-natural.json")));
+        assert!(output_paths
+            .iter()
+            .any(|p| p.ends_with("captions-natural.srt")));
+        assert!(output_paths
+            .iter()
+            .any(|p| p.ends_with("captions-natural.vtt")));
     }
 
     #[test]

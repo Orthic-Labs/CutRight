@@ -63,45 +63,34 @@ pub(crate) fn detect_tail_black_or_frozen(
     ))
 }
 
-/// Measures integrated loudness (LUFS) and true peak (dBTP) via `ebur128`
-/// and sums clipped-sample counts across channels via `astats`, all in one
-/// ffmpeg pass over the audio.
+/// Measures integrated loudness (LUFS), true peak (dBTP) and clipped samples
+/// for a final deliverable.
+///
+/// This delegates to `video_media::measure_loudness_and_clipping` rather than
+/// parsing `astats` itself. The old implementation summed an
+/// `astats`-reported "Number of clipped samples:" line — but ffmpeg 8.1.2's
+/// `astats` no longer emits that metric at all (`ffmpeg -h filter=astats`
+/// mentions clipping zero times), so the parse always found nothing and the
+/// QA clipping check silently reported 0 for every deliverable. A gate that
+/// cannot fail is worse than no gate, because it reads as evidence. The
+/// shared implementation scans raw `f32le` samples for full-scale magnitude
+/// instead, which does not depend on an ffmpeg build's metric names.
 pub(crate) fn measure_loudness(path: &Path) -> Result<LoudnessMeasurement, ProjectError> {
-    let output = Command::new(qa_ffmpeg_bin())
-        .args(["-v", "info", "-i"])
-        .arg(path)
-        .args(["-af", "astats=reset=1,ebur128=peak=true", "-f", "null", "-"])
-        .output()
-        .map_err(|error| {
-            ProjectError::InvalidState(format!("ffmpeg loudness check could not start: {error}"))
-        })?;
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let measured = video_media::measure_loudness_and_clipping(path).map_err(|error| {
+        ProjectError::InvalidState(format!("ffmpeg loudness check failed: {error}"))
+    })?;
     Ok(LoudnessMeasurement {
-        integrated_lufs: parse_last_labeled_f64(&stderr, "I:"),
-        true_peak_dbtp: parse_last_labeled_f64(&stderr, "Peak:"),
-        clipped_samples: parse_summed_labeled_u64(&stderr, "Number of clipped samples:"),
+        integrated_lufs: measured.integrated_lufs,
+        true_peak_dbtp: measured.true_peak_dbtp,
+        clipped_samples: measured.clipped_samples,
     })
 }
 
-pub(crate) fn parse_last_labeled_f64(text: &str, label: &str) -> Option<f64> {
-    text.lines().rev().find_map(|line| {
-        line.trim()
-            .strip_prefix(label)
-            .and_then(|rest| rest.split_whitespace().next())
-            .and_then(|token| token.parse::<f64>().ok())
-    })
-}
-
-pub(crate) fn parse_summed_labeled_u64(text: &str, label: &str) -> u64 {
-    text.lines()
-        .filter_map(|line| {
-            line.trim()
-                .strip_prefix(label)
-                .and_then(|rest| rest.split_whitespace().next())
-                .and_then(|token| token.parse::<u64>().ok())
-        })
-        .sum()
-}
+// The `astats`/`ebur128` stderr parsers that used to live here are gone with
+// their only caller: loudness, true-peak and clipping measurement now goes
+// through `video_media::measure_loudness_and_clipping`, so QA and the audio
+// finish stage read the same numbers from the same implementation instead of
+// two parsers that could drift apart.
 
 /// Counts SRT cues and finds the last cue's end timestamp so QA can compare
 /// caption coverage against the deliverable's actual duration.

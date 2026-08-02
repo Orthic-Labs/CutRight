@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/audio-finish.schema.json",
+  "title": "CutRight audio finish stage output",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "variant",
+    "profile_version",
+    "profile_path",
+    "dialogue_stem",
+    "stem_cached",
+    "measurement",
+    "gate",
+    "room_tone_problems"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "variant": { "type": "string" },
+    "profile_version": { "type": "integer", "minimum": 1 },
+    "profile_path": { "type": "string" },
+    "dialogue_stem": { "type": "string" },
+    "stem_cached": { "type": "boolean" },
+    "measurement": {
+      "type": "object",
+      "required": ["integrated_lufs", "true_peak_dbtp", "clipped_samples"],
+      "properties": {
+        "integrated_lufs": { "type": ["number", "null"] },
+        "true_peak_dbtp": { "type": ["number", "null"] },
+        "clipped_samples": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "required": ["passed", "failures"],
+      "properties": {
+        "passed": { "type": "boolean" },
+        "target_integrated_lufs": { "type": "number" },
+        "loudness_tolerance_lu": { "type": "number" },
+        "target_true_peak_dbtp": { "type": "number" },
+        "true_peak_tolerance_db": { "type": "number" },
+        "failures": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "ducking": {
+      "type": ["object", "null"],
+      "properties": {
+        "input": { "type": "string" },
+        "output": { "type": "string" },
+        "speech_region_count": { "type": "integer", "minimum": 0 },
+        "duck_reduction_db": { "type": "number" }
+      }
+    },
+    "room_tone_problems": { "type": "array" }
+  }
+}

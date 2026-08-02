@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/caption-profile.schema.json",
+  "title": "CutRight caption profile",
+  "description": "REV2 plan §15.2: versioned reading-speed, line-length, phrase-grouping, safe-zone, and font-fallback limits for one caption platform. Every caption numeric limit lives here rather than as a scattered constant.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "platform",
+    "max_chars_per_second",
+    "max_chars_per_line",
+    "max_lines",
+    "max_gap_merge_ms",
+    "safe_zone",
+    "font_family",
+    "font_fallback_chain"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string" },
+    "platform": { "enum": ["youtube-lower-third", "vertical-bottom"] },
+    "max_chars_per_second": { "type": "number", "exclusiveMinimum": 0 },
+    "max_chars_per_line": { "type": "integer", "minimum": 1 },
+    "max_lines": { "type": "integer", "minimum": 1 },
+    "max_gap_merge_ms": { "type": "integer", "minimum": 0 },
+    "safe_zone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["top_pct", "bottom_pct", "left_pct", "right_pct"],
+      "properties": {
+        "top_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "bottom_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "left_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "right_pct": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "font_family": { "type": "string" },
+    "font_fallback_chain": { "type": "array", "items": { "type": "string" } }
+  }
+}

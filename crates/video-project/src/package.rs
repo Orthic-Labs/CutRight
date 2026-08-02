@@ -1,3 +1,4 @@
+use crate::color_profile::ColorProfile;
 use crate::io::*;
 use crate::receipts;
 use crate::PipelineArtifact;
@@ -105,6 +106,30 @@ pub fn package_social(
         package_inputs.push(final_video);
         package_inputs.push(qa_report_path);
     }
+
+    // §15.2 Export: bind the master/archive artifact (when it exists) and
+    // the color profile version that produced it into the SAME manifest —
+    // extending it rather than replacing any of the deliverable
+    // hashes/QA binding built above.
+    let color_profile = ColorProfile::load_or_default(project_path)?;
+    let master_video = project_path.join("render/finals/master.mov");
+    let master_provenance_path = project_path.join("render/finals/master.provenance.json");
+    let master = if master_video.is_file() && master_provenance_path.is_file() {
+        package_inputs.push(master_video.clone());
+        package_inputs.push(master_provenance_path.clone());
+        Some(serde_json::json!({
+            "video": {
+                "path": relative_artifact_path(project_path, &master_video),
+                "hash": format!("blake3:{}", hash_file(&master_video)?),
+                "size_bytes": fs::metadata(&master_video)?.len(),
+            },
+            "provenance_path": relative_artifact_path(project_path, &master_provenance_path),
+            "provenance_hash": format!("blake3:{}", hash_file(&master_provenance_path)?),
+        }))
+    } else {
+        None
+    };
+
     let package = serde_json::json!({
         "schema_version": SCHEMA_VERSION,
         "created_at": Utc::now(),
@@ -112,6 +137,9 @@ pub fn package_social(
             "videoctl_version": env!("CARGO_PKG_VERSION"),
             "ffmpeg": std::env::var("CUTRIGHT_FFMPEG").unwrap_or_else(|_| "ffmpeg".into()),
         },
+        "color_profile_id": color_profile.id,
+        "color_profile_version": color_profile.schema_version,
+        "master": master,
         "deliverables": deliverables,
     });
     write_json_atomic(&path, &package)?;
@@ -133,4 +161,85 @@ pub fn package_social(
         path,
         count: deliverables.len(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::init_project;
+
+    /// Fakes exactly what one deliverable preset needs for `package_social`
+    /// to accept it (final video + provenance naming a variant + captions
+    /// for that variant + a passing QA report) without shelling out to
+    /// ffmpeg — `package_social` itself never calls ffmpeg, only copies and
+    /// hashes files.
+    fn fake_deliverable(project_path: &Path, preset_id: &str) {
+        fs::write(
+            project_path.join(format!("render/finals/{preset_id}.mp4")),
+            format!("{preset_id}-video").as_bytes(),
+        )
+        .unwrap();
+        write_json_atomic(
+            &project_path.join(format!("render/finals/{preset_id}.provenance.json")),
+            &serde_json::json!({ "variant": "natural" }),
+        )
+        .unwrap();
+        fs::write(
+            project_path.join("edit/captions-natural.srt"),
+            b"1\n00:00:00,000 --> 00:00:01,000\nfixture\n\n",
+        )
+        .unwrap();
+        write_json_atomic(
+            &project_path.join(format!("qa/{preset_id}.report.json")),
+            &serde_json::json!({ "status": "pass" }),
+        )
+        .unwrap();
+    }
+
+    /// REV2 plan §15.2 Export regression: `package_social` extends the
+    /// existing manifest with the color profile version and, when a master
+    /// artifact exists, its own hashed entry — without breaking any
+    /// existing deliverable hash/QA binding.
+    #[test]
+    fn package_manifest_includes_color_profile_and_optional_master() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        for preset_id in ["youtube", "reels", "tiktok"] {
+            fake_deliverable(temp.path(), preset_id);
+        }
+
+        // No master rendered yet: the manifest still builds, with
+        // "master": null and existing deliverable binding intact.
+        let result = package_social(temp.path(), false).unwrap();
+        assert_eq!(result.count, 3);
+        let package: serde_json::Value = read_json(&result.path).unwrap();
+        assert_eq!(package["color_profile_id"], "default-sdr-v1");
+        assert_eq!(package["color_profile_version"], SCHEMA_VERSION);
+        assert!(package["master"].is_null());
+        assert_eq!(package["deliverables"].as_array().unwrap().len(), 3);
+        assert_eq!(package["deliverables"][0]["preset"], "youtube");
+
+        // Now fake a rendered master + provenance and repackage: the
+        // manifest's master entry appears, hashed, without touching the
+        // deliverables that were already correct.
+        fs::write(
+            temp.path().join("render/finals/master.mov"),
+            b"master-video-bytes",
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("render/finals/master.provenance.json"),
+            &serde_json::json!({ "output_metadata_verified": true }),
+        )
+        .unwrap();
+
+        let result = package_social(temp.path(), false).unwrap();
+        let package: serde_json::Value = read_json(&result.path).unwrap();
+        assert!(!package["master"].is_null());
+        assert_eq!(
+            package["master"]["video"]["path"],
+            "render/finals/master.mov"
+        );
+        assert_eq!(package["deliverables"].as_array().unwrap().len(), 3);
+    }
 }

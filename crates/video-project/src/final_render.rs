@@ -1,3 +1,4 @@
+use crate::color_profile::ColorProfile;
 use crate::io::*;
 use crate::receipts;
 use crate::PipelineArtifact;
@@ -8,8 +9,9 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use video_core::{models::SCHEMA_VERSION, OutputPreset, Timeline};
 use video_media::{
+    detect_color_space, probe, probe_source_color_tags, render_master_contact_sheet,
     render_preset_with_captions, render_preset_with_captions_and_reframe, resolve_toolchain,
-    ReframeAnchor,
+    MasterRenderRequest, ReframeAnchor,
 };
 
 #[derive(Debug, Deserialize)]
@@ -123,6 +125,106 @@ pub fn render_final(
     }
     Ok(PipelineArtifact {
         status: if dry_run { "dry-run" } else { "created" },
+        path: output,
+        count: 1,
+    })
+}
+
+/// Renders the software archival/master delivery path (plan §15.2 Export §
+/// Color): resolves the project's [`ColorProfile`], detects the rough cut's
+/// actual input color space rather than assuming Rec.709, and produces a
+/// `prores_ks`-encoded master at native resolution plus a review contact
+/// sheet — a distinct artifact from every `render_final` delivery preset,
+/// never overwritten by one. Master output metadata verification runs
+/// inside `video_media::render_master` itself: a successful return already
+/// proves the delivered color tags matched the profile's expectation.
+pub fn render_master(
+    project_path: &Path,
+    variant: Option<&str>,
+    dry_run: bool,
+) -> Result<PipelineArtifact, ProjectError> {
+    let variant = resolve_variant(project_path, variant)?;
+    let input = project_path.join(format!("render/rough-cuts/{variant}.mp4"));
+    if !input.is_file() {
+        return Err(ProjectError::InvalidState(format!(
+            "master rendering requires the selected rough cut: render/rough-cuts/{variant}.mp4"
+        )));
+    }
+    let output = project_path.join("render/finals/master.mov");
+    let contact_sheet = project_path.join("render/finals/master.contact-sheet.png");
+    let profile = ColorProfile::load_or_default(project_path)?;
+
+    if dry_run {
+        return Ok(PipelineArtifact {
+            status: "dry-run",
+            path: output,
+            count: 1,
+        });
+    }
+
+    let toolchain = resolve_toolchain().map_err(video_media::RenderError::from)?;
+    let source_tags = probe_source_color_tags(&input, &toolchain)?;
+    let color_space = detect_color_space(&source_tags);
+
+    let expected_metadata = video_media::render_master(MasterRenderRequest {
+        input: &input,
+        output: &output,
+        width: None,
+        height: None,
+        color_space,
+        correction: profile.correction(),
+        shot_match: profile.shot_match_target(),
+        lut: profile.creative_lut(),
+    })?;
+
+    render_master_contact_sheet(&output, &contact_sheet, 4, 4)?;
+
+    let input_metadata = probe(&input)?;
+    let provenance = serde_json::json!({
+        "schema_version": SCHEMA_VERSION,
+        "variant": variant,
+        "rough_cut_path": relative_artifact_path(project_path, &input),
+        "rough_cut_hash": format!("blake3:{}", hash_file(&input)?),
+        "detected_color_space": color_space,
+        "color_profile_id": profile.id,
+        "color_profile_version": profile.schema_version,
+        "output_path": relative_artifact_path(project_path, &output),
+        "output_hash": format!("blake3:{}", hash_file(&output)?),
+        "output_width": input_metadata.width,
+        "output_height": input_metadata.height,
+        "expected_color_metadata": {
+            "color_primaries": expected_metadata.color_primaries,
+            "color_transfer": expected_metadata.color_transfer,
+            "color_matrix": expected_metadata.color_matrix,
+        },
+        "output_metadata_verified": true,
+        "contact_sheet_path": relative_artifact_path(project_path, &contact_sheet),
+        "contact_sheet_hash": format!("blake3:{}", hash_file(&contact_sheet)?),
+        "created_at": Utc::now(),
+    });
+    write_json_atomic(
+        &project_path.join("render/finals/master.provenance.json"),
+        &provenance,
+    )?;
+
+    let mut toolchains = BTreeMap::new();
+    toolchains.insert("ffmpeg".to_string(), toolchain.identity());
+    receipts::write_stage_receipt(
+        &receipts::receipt_path_for(&output),
+        "render.master",
+        &[input.as_path()],
+        &serde_json::json!({
+            "variant": variant,
+            "color_profile_id": profile.id,
+            "color_profile_version": profile.schema_version,
+            "detected_color_space": color_space,
+        }),
+        toolchains,
+        &[output.as_path(), contact_sheet.as_path()],
+    )?;
+
+    Ok(PipelineArtifact {
+        status: "created",
         path: output,
         count: 1,
     })
@@ -451,5 +553,60 @@ mod tests {
         // captions — the exact binding the P0 bug allowed to drift.
         assert_ne!(tight_provenance["captions_hash"], natural_captions_hash);
         assert_ne!(natural_provenance["captions_hash"], tight_captions_hash);
+    }
+
+    /// REV2 plan §15.2 Color/Export regression, real render: the software
+    /// master path must produce a DISTINCT, software-encoded artifact from
+    /// the `render_final` delivery preset path (different codec, different
+    /// container), and its provenance must record output metadata
+    /// verification as having actually run and passed.
+    #[test]
+    fn render_master_produces_a_distinct_verified_artifact_from_the_delivery_preset() {
+        let temp = tempfile::tempdir().unwrap();
+        init_project(temp.path(), false).unwrap();
+        generate_fixture_mp4(&temp.path().join("render/rough-cuts/natural.mp4"), "1");
+        fs::write(
+            temp.path().join("edit/captions-natural.srt"),
+            b"1\n00:00:00,000 --> 00:00:01,000\nfixture\n\n",
+        )
+        .unwrap();
+        write_json_atomic(
+            &temp.path().join("edit/timeline-natural.json"),
+            &serde_json::json!({
+                "schema_version": SCHEMA_VERSION,
+                "timebase": { "fps_num": 30, "fps_den": 1 },
+                "tracks": [{ "id": "main", "track_type": "av", "segments": [] }]
+            }),
+        )
+        .unwrap();
+
+        render_final(temp.path(), "youtube", Some("natural"), false).unwrap();
+        let delivery_output = temp.path().join("render/finals/youtube.mp4");
+        assert!(delivery_output.is_file());
+
+        let master_result = render_master(temp.path(), Some("natural"), false).unwrap();
+        assert_eq!(master_result.status, "created");
+        let master_output = temp.path().join("render/finals/master.mov");
+        assert!(master_output.is_file());
+        assert_ne!(master_output, delivery_output);
+
+        // Different codec, so never byte-identical to the delivery preset
+        // even by coincidence.
+        let delivery_bytes = fs::read(&delivery_output).unwrap();
+        let master_bytes = fs::read(&master_output).unwrap();
+        assert_ne!(delivery_bytes, master_bytes);
+
+        let provenance: serde_json::Value =
+            read_json(&temp.path().join("render/finals/master.provenance.json")).unwrap();
+        assert_eq!(provenance["variant"], "natural");
+        assert_eq!(provenance["output_metadata_verified"], true);
+        assert_eq!(
+            provenance["expected_color_metadata"]["color_transfer"],
+            "bt709"
+        );
+        assert!(temp
+            .path()
+            .join("render/finals/master.contact-sheet.png")
+            .is_file());
     }
 }
