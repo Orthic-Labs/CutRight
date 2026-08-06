@@ -1,4 +1,4 @@
-# App-UI surface — gates and tests (absorbs the retired /app skill)
+# App-UI surface — gates and tests (absorbs the retired upstream app skill)
 
 Product/application UI: desktop apps, SaaS dashboards, tools, editors, inboxes, queues, settings,
 forms, data tables, workflows, modals, stateful repeated-use screens. Design SERVES the product —
@@ -108,12 +108,12 @@ sets · tabs only for sibling views · stable dimensions for repeated controls.
 - Advanced operational controls use progressive disclosure; the default pane is a task-oriented
   summary, not a permanent wall of raw inputs.
 
-Use `/qa` for hidden/background QA (project `qa:browser` contract, `qa-functional.mjs` for
+Use `cutright://skill/qa` for hidden/background QA (project `qa:browser` contract, `qa-functional.mjs` for
 hover/click/type/key/assert, `qa-shot.mjs` for app-viewport screenshots). No foreground native
 windows or desktop screenshots by default.
 
-## Phase 6 — audit-visual gate
+## Phase 6 — visual review gate
 
-Run `/audit-visual` with app context: repeated-use product surface, so weight action count, task
+Run `cutright://skill/qa {"mode":"visual_review"}` with app context: repeated-use product surface, so weight action count, task
 clarity, keyboard/focus, state completeness, and micro-interaction fidelity more heavily than
 first-impression drama.

@@ -330,9 +330,9 @@ ffmpeg -i video.mp4 -ss $DURATION-0.1 -vframes 1 frame-end.png
 bash convert-formats.sh input.mp4 --minterpolate
 ```
 
-## 15. `file://` + 外部 `.jsx` 的 CORS 陷阱 —— 单文件交付必须内联引擎
+## 15. `file-scheme` + 外部 `.jsx` 的 CORS 陷阱 —— 单文件交付必须内联引擎
 
-**踩的坑**：动画 HTML 里用 `<script type="text/babel" src="animations.jsx"></script>` 外部加载引擎。本机双击打开（`file://` 协议）→ Babel Standalone 走 XHR 拉 `.jsx` → Chrome 报 `Cross origin requests are only supported for protocol schemes: http, https, chrome, chrome-extension...` → 整页黑屏，不报 `pageerror` 只报 console error，很容易当"动画没触发"误诊。
+**踩的坑**：动画 HTML 里用 `<script type="text/babel" src="animations.jsx"></script>` 外部加载引擎。本机双击打开（`file-scheme` 协议）→ Babel Standalone 走 XHR 拉 `.jsx` → Chrome 报 `Cross origin requests are only supported for protocol schemes: http, https, chrome, chrome-extension...` → 整页黑屏，不报 `pageerror` 只报 console error，很容易当"动画没触发"误诊。
 
 启 HTTP server 也未必救得了——本机有全局代理时 `localhost` 也会走代理，返回 502 / 连接失败。
 
@@ -374,12 +374,12 @@ bash convert-formats.sh input.mp4 --minterpolate
 - **React + ReactDOM 本地内联**：`curl` 下载 `react.production.min.js`（~10KB）+ `react-dom.production.min.js`（~131KB）到本地，inline 进 `<script>`，不走 CDN
 - **构建期 Babel 预编译，运行期不带 Babel**：用 `@babel/standalone`（下载一次，仅构建用）在 node 里 `Babel.transform(src,{presets:['react']}).code`，把 JSX → `React.createElement`。**app 和 `animations.jsx` 引擎两段都要过 transform**——引擎含 JSX，漏了它必报 `Unexpected token '<'`
 - **字体改系统字体**：Google Fonts CDN 同样会被代理掐断。中文动画用 `'PingFang SC'`（sans）/ `'Songti SC'`（serif）系统字体，不依赖网络。`document.fonts.ready` 对系统字体立即 resolve，录制不卡
-- **base64 内联图片素材**：`<img src="png/x.png">` 相对路径在 `file://` 能渲染，但要真便携（移动文件不丢图）就 base64 data URL 内联；背景大图先转 JPEG 压一下再 base64
+- **base64 内联图片素材**：`<img src="png/x.png">` 相对路径在 `file-scheme` 能渲染，但要真便携（移动文件不丢图）就 base64 data URL 内联；背景大图先转 JPEG 压一下再 base64
 - **构建模板化**：HTML 模板留 `__REACT__/__REACTDOM__/__ASSETS__/__ENGINE__` token + 一段 `type="text/jsx-source"` 的 app 源码，node 构建脚本读 token 注入（vendor 原样、引擎+app 过 Babel）→ 写出最终单文件。改动画只改模板重跑构建
 
 **验证**：Playwright `page.evaluate(()=>({React:typeof window.React, Animations:typeof window.Animations}))`——两个都该是 `object`。任一 `undefined` → 对应 `<script>` 抛了错（多半是没 transpile 的 JSX）。
 
-**和坑 #15 的关系**：#15 讲「单文件别用 `src=` 外链 `.jsx`（file:// CORS）」；本坑更进一步——连 React/Babel/字体的**远程 CDN 在受限网络下也会断**，要做到真自包含必须全内联 + 构建期 transpile。
+**和坑 #15 的关系**：#15 讲「单文件别用 `src=` 外链 `.jsx`（file-scheme CORS）」；本坑更进一步——连 React/Babel/字体的**远程 CDN 在受限网络下也会断**，要做到真自包含必须全内联 + 构建期 transpile。
 
 ## 快速自查清单（开工前 5 秒）
 
@@ -397,6 +397,6 @@ bash convert-formats.sh input.mp4 --minterpolate
 - [ ] 60fps MP4 默认用帧复制模式（兼容性），高质量插帧才加 `--minterpolate`？
 - [ ] 导出后抽第 0 帧 + 末帧验证是动画初始/最终状态？
 - [ ] 涉及具体品牌（Stripe/Anthropic/Lovart/...）：走完了「品牌资产协议」（SKILL.md §1.a 五步）？有没有写 `brand-spec.md`？
-- [ ] 单文件交付的 HTML：`animations.jsx` 是内联的，不是 `src="..."`？（file:// 下 external .jsx 会 CORS 黑屏）
+- [ ] 单文件交付的 HTML：`animations.jsx` 是内联的，不是 `src="..."`？（file-scheme 下 external .jsx 会 CORS 黑屏）
 - [ ] 跨 scene 出现的元素（chapter 标签/水印/scene 编号）没有硬编码颜色？在每个 scene 底色下都可见？
 - [ ] 要离线/真自包含：React+ReactDOM 本地内联、**app 和 `animations.jsx` 引擎都过 Babel transpile**、字体用系统字体？（见坑 #17；引擎含 JSX，漏 transpile 必报 `Unexpected token '<'`）

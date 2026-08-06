@@ -6,7 +6,7 @@ If a gate fails, fix it. If it can't be fixed, remove the animation.
 
 This is a hard review, not a polite one.
 
-**Output contract:** every motion task produces `artifacts/motion-gate.json` (schema below) consumed by `/designer` Phase 5 + `/audit-visual` motion lens. Without `verdict: pass`, the build cannot advance.
+**Output contract:** every motion task produces `artifacts/motion-gate.json` (schema below) consumed by `cutright://skill/designer` Phase 5 + `cutright://skill/qa {"mode":"visual_review"}` motion lens. Without `verdict: pass`, the build cannot advance.
 
 ---
 

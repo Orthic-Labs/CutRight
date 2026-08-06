@@ -178,14 +178,14 @@ const [time, setTime] = useState(frozenTime != null ? frozenTime : 0);
 const [playing, setPlaying] = useState(frozenTime == null);
 ```
 
-→ 这样 `file:///path/animation.html?t=14.5` 直接 freeze 在 14.5 秒。
+→ 这样打开本地 `animation.html?t=14.5`（上游使用本地 file URL）直接 freeze 在 14.5 秒。
 
-批量截图：
+批量截图（CutRight 适配：上游用 npx playwright 抓帧，属 provenance 工作流；CutRight 中等价为 `cutright://skill/qa {"mode":"capture","frames":...}` 类型化动作）：
 
 ```bash
 for t in 0.5 2.5 4.9 7.0 10.5 13.5 16.5 19.0 21.5 23.4 25.5 28.0 29.9; do
   npx -y playwright screenshot \
-    "file://$PWD/animation.html?t=$t" \
+    "$PWD/animation.html?t=$t" \
     "keyframes/t-$t.png" \
     --viewport-size=1920,1136 \
     --wait-for-timeout=2500
@@ -223,7 +223,7 @@ v5f · 草间彌生 Yayoi Kusama（圆点 + 重复 + 单一强色）
 - 必读参考（同一份 v5-director-notes.md 作为方法论模板）
 - **指定的艺术家 DNA**（色板 / 字体 / 视觉语言 / 节奏 / 招牌元素 / 反 slop 强化版本，每条 30-50 字）
 - 统一任务清单（director-notes.md + animation.html + keyframes/ + README.md）
-- 统一约束（30s / 1920×1080 / file:// / Google Fonts）
+- 统一约束（30s / 1920×1080 / 本地文件预览 / Google Fonts）
 
 并行启动 + 后台运行，约 30-60 分钟出 6 套完整版本。
 

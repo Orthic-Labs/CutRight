@@ -60,7 +60,7 @@
 | **色值** | 官网 inline CSS / Tailwind config / brand guidelines PDF |
 | **字体** | 官网 `<link rel="stylesheet">` 引用 · Google Fonts 追踪 · brand guidelines |
 
-`WebSearch` 兜底关键词：
+local fact verification 兜底关键词：
 - Logo 找不到 → `<brand> logo download SVG`、`<brand> press kit`
 - 产品图找不到 → `<brand> <product> official renders`、`<brand> <product> product photography`
 - UI 找不到 → `<brand> app screenshots`、`<brand> dashboard UI`

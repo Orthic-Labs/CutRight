@@ -23,7 +23,7 @@ description: 花叔Design——用HTML做高保真原型、交互Demo、幻灯�
 
 ## 核心原则 #0 · 事实验证先于假设（优先级最高，凌驾所有其他流程）
 
-> **任何涉及具体产品/技术/事件/人物的存在性、发布状态、版本号、规格参数的事实性断言，第一步必须 `WebSearch` 验证，禁止凭训练语料做断言。**
+> **任何涉及具体产品/技术/事件/人物的存在性、发布状态、版本号、规格参数的事实性断言，第一步必须 local fact verification 验证，禁止凭训练语料做断言。**
 
 **触发条件（满足任一）**：
 - 用户提到你不熟悉或不确定的具体产品名（如"大疆 Pocket 4"、"Nano Banana Pro"、"Gemini 3 Pro"、某新版 SDK）
@@ -32,7 +32,7 @@ description: 花叔Design——用HTML做高保真原型、交互Demo、幻灯�
 - 用户请求给某个具体产品/公司做设计物料
 
 **硬流程（开工前执行，优先于 clarifying questions）**：
-1. `WebSearch` 产品名 + 最新时间词（"2026 latest"、"launch date"、"release"、"specs"）
+1. local fact verification 产品名 + 最新时间词（"2026 latest"、"launch date"、"release"、"specs"）
 2. 读 1-3 条权威结果，确认：**存在性 / 发布状态 / 最新版本号 / 关键规格**
 3. 把事实写进项目的 `product-facts.md`（见工作流 Step 2），不靠记忆
 4. 搜不到或结果模糊 → 问用户，而不是自行假设
@@ -42,7 +42,7 @@ description: 花叔Design——用HTML做高保真原型、交互Demo、幻灯�
 - 我：凭记忆说"Pocket 4 还没发布，我们做概念 demo"
 - 真相：Pocket 4 已在 4 天前（2026-04-16）发布，官方 Launch Film + 产品渲染图俱在
 - 后果：基于错误假设做了"概念剪影"动画，违背用户期待，返工 1-2 小时
-- **成本对比：WebSearch 10 秒 << 返工 2 小时**
+- **成本对比：local fact verification 10 秒 << 返工 2 小时**
 
 **这条原则优先级高于"问 clarifying questions"**——问问题的前提是你对事实已有正确理解。事实错了，问什么都是歪的。
 
@@ -51,7 +51,7 @@ description: 花叔Design——用HTML做高保真原型、交互Demo、幻灯�
 - ❌ "X 目前是 vN 版本"（未经搜索的断言）
 - ❌ "X 这个产品可能不存在"
 - ❌ "据我所知 X 的规格是..."
-- ✅ "我 `WebSearch` 一下 X 最新状态"
+- ✅ "我 local fact verification 一下 X 最新状态"
 - ✅ "搜到的权威来源说 X 是 ..."
 
 **与"品牌资产协议"的关系**：本原则是资产协议的**前提**——先确认产品存在且是什么，再去找它的 logo/产品图/色值。顺序不能反。
@@ -243,7 +243,7 @@ description: 花叔Design——用HTML做高保真原型、交互Demo、幻灯�
 跑 `date +%S` 取秒数，算 `秒数 % 20 + 1` 得 1-20，从 `design-styles.md` **对应半区**（做网页用网页 20 种 / 做 PPT 用 PPT 20 种）取那一号风格，subagent 严格按其视觉 DNA + HTML 实现做。作用：用时间掷骰子，强制打破模型「每次都偷选安全极简」的确定性偏好。抽到还原度<70% 的（如 Memphis 做旧纹理）须标注「该部分用纯色块降级，不假装做出原版质感」。
 
 **逻辑二 · 🏆 现实参照（标杆迁移）**
-选 1 个**世界上和该用户需求最相关、且你明确知道设计极出色（最好获奖：Awwwards / CSS Design Awards / FWA / Apple Design Award）**的真实网站 / PPT 模板 / iOS 原型作为参照标准。subagent 先用 WebSearch 核实该案例真实存在与其设计语言，拆解配色/字体/布局/标志元素，再迁移到用户内容上。作用：用真实世界的最高标准锚定，不靠凭空想象。
+选 1 个**世界上和该用户需求最相关、且你明确知道设计极出色（最好获奖：Awwwards / CSS Design Awards / FWA / Apple Design Award）**的真实网站 / PPT 模板 / iOS 原型作为参照标准。subagent 先用 local fact verification 核实该案例真实存在与其设计语言，拆解配色/字体/布局/标志元素，再迁移到用户内容上。作用：用真实世界的最高标准锚定，不靠凭空想象。
 
 **逻辑三 · 🧠 最佳设计师（深呼吸 · 顶级定制）**
 深呼吸一口，认真想：**假如预算没有上限，世界上最适合为「这个用户、这个产品」做设计的工作室 / 设计师是谁？**（如 Pentagram / Collins / IDEO / Jony Ive / 原研哉 / Stripe 设计团队…按产品调性选）subagent 启用该设计师/工作室的**设计思维与设计哲学**，从头为用户设计。作用：用顶级设计智慧做最契合的定制。
@@ -253,7 +253,7 @@ description: 花叔Design——用HTML做高保真原型、交互Demo、幻灯�
 - 纯 HTML/CSS 单文件；**内容必需的图用 Phase 3.5 取的真图**（三版共用），仅装饰/抽象图才用 CSS 几何/SVG/纯色块，绝不留空占位
 - 🎞️ **PPT / deck 场景必走 deck 模板（绝不写竖向平铺长页！）**：每页做成独立 `<section>`（1920×1080），套 `assets/deck_index.html` 的翻页缩放外壳——**左右键 / 点击翻页 + 自适应 `fit()` 缩放**（整页缩进浏览器窗口，绝不按真实像素放大到只看见一角）。三版只换视觉风格，deck 骨架统一用这个模板，演示体验一致。详见 `references/slide-decks.md`。截图按**单页** 1920×1080 截，不是截整条长页。**单页内容绝不自带页码 / 页数 / 进度标记**——页码由 deck 外壳（`deck_index.html` 计数器）统一承载，单页自己画会和 deck 重复打架（实测出现「02/03」和「6/16」双页码）。`deck_index.html` 现**默认进 3D 概览墙**（所有页斜铺延展悬浮，点「▶ 开始演示」或点任意卡片进全屏单页，ESC 回概览）——交付 deck 时跟用户提一句这个功能
 - 存当前**项目目录**（`项目名/design-demos/[逻辑名].html`）——❌ 禁 `_temp/`（花叔铁律）
-- 截图：`npx playwright screenshot file:///path.html out.png --viewport-size=1440,900`（PPT 用 1920,1080）
+- 截图：`npx playwright screenshot file-scheme/path.html out.png --viewport-size=1440,900`（PPT 用 1920,1080）
 - ✅ **产出自检（防偷懒，进 Phase 5 前必查）**：确认 `design-demos/` 下真有 **3 个 .html**——少于 3 个 = 没走完三套逻辑，补齐再往下，不许只做一版交差
 - 三版全部完成后**一起展示三张截图**，每版标明：用了哪套逻辑、具体哪个风格/参照案例/设计师，一句话说为什么
 
@@ -277,7 +277,7 @@ description: 花叔Design——用HTML做高保真原型、交互Demo、幻灯�
 
 ### 0. 架构选型（必先决定）
 
-**默认单文件 inline React**——所有 JSX/data/styles 直接写进主 HTML 的 `<script type="text/babel">...</script>` 标签，**不要**用 `<script src="components.jsx">` 外部加载。原因：`file://` 协议下浏览器把外部 JS 当跨 origin 拦截，强制用户起 HTTP server 违反「双击就能开」的原型直觉。引用本地图片必须 base64 内嵌 data URL，别假设有 server。
+**默认单文件 inline React**——所有 JSX/data/styles 直接写进主 HTML 的 `<script type="text/babel">...</script>` 标签，**不要**用 `<script src="components.jsx">` 外部加载。原因：`file-scheme` 协议下浏览器把外部 JS 当跨 origin 拦截，强制用户起 HTTP server 违反「双击就能开」的原型直觉。引用本地图片必须 base64 内嵌 data URL，别假设有 server。
 
 **拆外部文件只在两种情况**：
 - (a) 单文件 >1000 行难维护 → 拆成 `components.jsx` + `data.js`，同时明确交付说明（`python3 -m http.server` 命令 + 访问 URL）
@@ -420,7 +420,7 @@ Screen 组件接 callback props（`onTabChange`、`onOpen`、`onClose`、`onTogg
 ### 标准流程（用TaskCreate追踪）
 
 1. **理解需求**：
-   - 🔍 **0. 事实验证（涉及具体产品/技术时必做，优先级最高）**：任务涉及具体产品/技术/事件（DJI Pocket 4、Gemini 3 Pro、Nano Banana Pro、某新 SDK 等）时，**第一个动作**是 `WebSearch` 验证其存在性、发布状态、最新版本、关键规格。把事实写入 `product-facts.md`。详见「核心原则 #0」。**这步做在问 clarifying questions 之前**——事实错了问什么都歪。
+   - 🔍 **0. 事实验证（涉及具体产品/技术时必做，优先级最高）**：任务涉及具体产品/技术/事件（DJI Pocket 4、Gemini 3 Pro、Nano Banana Pro、某新 SDK 等）时，**第一个动作**是 local fact verification 验证其存在性、发布状态、最新版本、关键规格。把事实写入 `product-facts.md`。详见「核心原则 #0」。**这步做在问 clarifying questions 之前**——事实错了问什么都歪。
    - 新任务或模糊任务必须问clarifying questions，详见 `references/workflow.md`。一次focused一轮问题通常够，小修小补跳过。
    - 🛑 **检查点1：问题清单一次性发给用户，等用户批量答完再往下走**。不要边问边做。
    - 🛑 **幻灯片/PPT 任务：HTML 聚合演示版永远是默认基础产物**（不管用户最终要什么格式）：
@@ -622,7 +622,7 @@ Skill 路径引用均采用**相对本 skill 根目录**的形式（`references/
 
 ## 核心提醒
 
-- **事实验证先于假设**（核心原则 #0）：涉及具体产品/技术/事件（DJI Pocket 4、Gemini 3 Pro 等）必须先 `WebSearch` 验证存在性和状态，不凭训练语料断言。
+- **事实验证先于假设**（核心原则 #0）：涉及具体产品/技术/事件（DJI Pocket 4、Gemini 3 Pro 等）必须先 local fact verification 验证存在性和状态，不凭训练语料断言。
 - **Embody专家**：做幻灯片时是幻灯片设计师，做动画时是动画师。不是写Web UI。
 - **正文哲学速记**：Junior 先 show → 3+ variations → 诚实 placeholder → 时时反 slop → 涉品牌走资产协议（§1.a，不用 CSS 剪影代替产品图）。展开见上文「核心哲学」各节。
 - **做动画之前**：必读 `references/animation-pitfalls.md`——里面 14 条规则每条都来自真实踩过的坑，跳过会让你重做 1-3 轮。

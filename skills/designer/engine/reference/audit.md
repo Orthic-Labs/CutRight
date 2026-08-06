@@ -95,7 +95,7 @@ For each issue, document:
 - **Impact**: How it affects users
 - **WCAG/Standard**: Which standard it violates (if applicable)
 - **Recommendation**: How to fix it
-- **Suggested command**: Which command to use (prefer: /designer morph, /designer animate, /designer audit, /designer bolder, /designer clarify, /designer colorize, /designer critique, /designer delight, /designer distill, /designer document, /designer harden, /designer layout, /designer onboard, /designer optimize, /designer overdrive, /designer polish, /designer quieter, /designer shape, /designer typeset)
+- **Suggested command**: Which command to use (prefer: cutright://skill/designer morph, cutright://skill/designer animate, cutright://skill/designer audit, cutright://skill/designer bolder, cutright://skill/designer clarify, cutright://skill/designer colorize, cutright://skill/designer critique, cutright://skill/designer delight, cutright://skill/designer distill, cutright://skill/designer document, cutright://skill/designer harden, cutright://skill/designer layout, cutright://skill/designer onboard, cutright://skill/designer optimize, cutright://skill/designer overdrive, cutright://skill/designer polish, cutright://skill/designer quieter, cutright://skill/designer shape, cutright://skill/designer typeset)
 
 ### Patterns & Systemic Issues
 
@@ -114,13 +114,13 @@ List recommended commands in priority order (P0 first, then P1, then P2):
 1. **[P?] `/command-name`**: Brief description (specific context from audit findings)
 2. **[P?] `/command-name`**: Brief description (specific context)
 
-**Rules**: Only recommend commands from: /designer morph, /designer animate, /designer audit, /designer bolder, /designer clarify, /designer colorize, /designer critique, /designer delight, /designer distill, /designer document, /designer harden, /designer layout, /designer onboard, /designer optimize, /designer overdrive, /designer polish, /designer quieter, /designer shape, /designer typeset. Map findings to the most appropriate command. End with `/designer polish` as the final step if any fixes were recommended.
+**Rules**: Only recommend commands from: cutright://skill/designer morph, cutright://skill/designer animate, cutright://skill/designer audit, cutright://skill/designer bolder, cutright://skill/designer clarify, cutright://skill/designer colorize, cutright://skill/designer critique, cutright://skill/designer delight, cutright://skill/designer distill, cutright://skill/designer document, cutright://skill/designer harden, cutright://skill/designer layout, cutright://skill/designer onboard, cutright://skill/designer optimize, cutright://skill/designer overdrive, cutright://skill/designer polish, cutright://skill/designer quieter, cutright://skill/designer shape, cutright://skill/designer typeset. Map findings to the most appropriate command. End with `cutright://skill/designer polish` as the final step if any fixes were recommended.
 
 After presenting the summary, tell the user:
 
 > You can ask me to run these one at a time, all at once, or in any order you prefer.
 >
-> Re-run `/designer audit` after fixes to see your score improve.
+> Re-run `cutright://skill/designer audit` after fixes to see your score improve.
 
 **IMPORTANT**: Be thorough but actionable. Too many P3 issues creates noise. Focus on what actually matters.
 

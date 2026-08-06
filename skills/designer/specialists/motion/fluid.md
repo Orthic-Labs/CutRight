@@ -118,9 +118,9 @@ large moving surfaces semi-transparent while traveling.
 
 - Materials/translucency/vibrancy (the `apple-design` §12 content) is owned by `../glass/GUIDE.md` — don't
   duplicate it here.
-- Typography optical sizing/tracking is owned by `/designer` craft rules +
-  `tools/skills/audit-visual/references/typography.md`.
-- Reviewer-side values (dismissal threshold, spring configs, boundaries): `tools/skills/audit-visual/references/motion-standards.md`
+- Typography optical sizing/tracking is owned by `cutright://skill/designer` craft rules +
+  `cutright://skill/qa {"mode":"visual_review","reference":"typography"}`.
+- Reviewer-side values (dismissal threshold, spring configs, boundaries): `cutright://skill/qa {"mode":"visual_review","reference":"motion-standards"}`
   — keep shared values in sync; this guide is canonical on conflict.
 - Prototype interactively: an interactive demo beats static mocks; review motion in slow motion /
   frame-by-frame before shipping.

@@ -21,7 +21,7 @@ Exemplars never hardcode brand values. They consume CSS custom properties; brand
 
 | Token | Meaning | Source |
 |---|---|---|
-| `--bg` | page base | `Content/<brand>/design/tokens.json` or `.claude/rules/brands.md` |
+| `--bg` | page base | `brand-pack/<brand_code>/design/tokens.json` or `brand-pack/<brand_code>/restrictions.md (upstream workspace file .claude/rules/brands.md)` |
 | `--surface` | card/raised surface | same |
 | `--border` | hairlines, dividers | same |
 | `--text` | primary text | same |
@@ -52,7 +52,7 @@ the config (`colors: { bg: 'var(--bg)', ... }`) or use arbitrary values (`bg-[va
 ## Adaptation rules
 
 1. **Retheme, always.** Tokens carry identity. An exemplar shipped with placeholder values is a defect.
-2. **Rewrite copy, always.** Placeholder copy never ships. Copy comes from `Content/<brand>/copy/bible.md`
+2. **Rewrite copy, always.** Placeholder copy never ships. Copy comes from `brand-pack/<brand_code>/copy/bible.md`
    and the brand voice; the exemplar only proves the layout and motion.
 3. **Restructure freely.** Exemplars are starting points, not components to preserve. Change grid
    counts, swap visual slots, merge sections. Keep the motion values (easing, durations, stagger)
@@ -61,7 +61,7 @@ the config (`colors: { bg: 'var(--bg)', ... }`) or use arbitrary values (`bg-[va
    keyboard focus, contrast. Every exemplar ships with these built in — do not strip them.
 5. **Banned defaults still apply.** Exemplars are designed to not be the centered-hero/blob/SaaS-blue
    slop, but a lazy adaptation can regress into it. `../website.md` banned list is the one list to hold.
-6. **Grow the library.** When a build produces a new section that would survive `/audit-visual`, add
+6. **Grow the library.** When a build produces a new section that would survive `cutright://skill/qa {"mode":"visual_review"}`, add
    it here in the same format: intent header, token-only styling, full code, adaptation notes.
 
 ## Format of each exemplar file

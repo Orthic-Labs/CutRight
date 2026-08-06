@@ -255,4 +255,4 @@ Test that optimizations worked:
 - **No regressions**: Ensure functionality still works
 - **User perception**: Does it *feel* faster?
 
-When the user-facing numbers move, hand off to `/designer polish` for the final pass.
+When the user-facing numbers move, hand off to `cutright://skill/designer polish` for the final pass.

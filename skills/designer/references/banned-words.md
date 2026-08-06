@@ -1,6 +1,6 @@
 # Banned Words — cross-brand
 
-Single source of truth for banned vocabulary across all brands. Per-brand anti-patterns in `Content/<brand>/anti-patterns.md` are **additions only** — never duplicate.
+Single source of truth for banned vocabulary across all brands. Per-brand anti-patterns in `brand-pack/<brand_code>/anti-patterns.md` are **additions only** — never duplicate.
 
 Every entry has a detection pattern (regex or grep). The build fails when hard-block entries match in built HTML or copy sources.
 
@@ -8,7 +8,7 @@ Every entry has a detection pattern (regex or grep). The build fails when hard-b
 
 ## How to use
 
-`tools/lib/design-gate.mjs` (Phase 5d) runs these patterns against built HTML. Hard-block entries fail the build. Soft-flag entries log a warning but don't block.
+`cutright://capability/designer.design_gate` (Phase 5d) runs these patterns against built HTML. Hard-block entries fail the build. Soft-flag entries log a warning but don't block.
 
 To add a banned word: append to the relevant section with detection regex + reason + severity. Update this file, not per-brand files.
 
@@ -102,6 +102,6 @@ To add a banned word: append to the relevant section with detection regex + reas
 
 ## Build integration
 
-`tools/lib/design-gate.mjs` runs the hard-block patterns against built HTML. Soft-flags appear in `artifacts/qa/banned-words.json` as warnings.
+`cutright://capability/designer.design_gate` runs the hard-block patterns against built HTML. Soft-flags appear in `artifacts/qa/banned-words.json` as warnings.
 
 Override via `--allow-banned=<pattern>` flag with required reason. Waivers logged in `artifacts/qa/waivers.json`.

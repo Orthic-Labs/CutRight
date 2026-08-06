@@ -198,4 +198,4 @@ Test animations thoroughly:
 - **Doesn't block**: Users can interact during/after animations
 - **Adds value**: Makes interface clearer or more delightful
 
-When the motion clarifies state instead of decorating it, hand off to `/designer polish` for the final pass.
+When the motion clarifies state instead of decorating it, hand off to `cutright://skill/designer polish` for the final pass.

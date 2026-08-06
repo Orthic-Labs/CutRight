@@ -172,7 +172,7 @@ Chromium 默认不带彩色 emoji 字体，`page.pdf()` 或 `page.screenshot()` 
 
 ### 2. `export_deck_pdf.mjs` 报错 `Cannot find package 'playwright'`
 
-原因：ESM 模块解析从脚本所在位置向上找 `node_modules`。脚本在 `~/.claude/skills/huashu-design/scripts/`，那里没依赖。
+原因：ESM 模块解析从脚本所在位置向上找 `node_modules`。脚本在 `skills/designer/engine/huashu/scripts/`，那里没依赖。
 
 **对策**：把脚本复制到 deck 项目目录（例如 `brochure/build-pdf.mjs`），在项目根跑 `npm install playwright pdf-lib`，然后 `node build-pdf.mjs --slides slides --out output/deck.pdf`。
 
@@ -222,7 +222,7 @@ moxt philosophy 页第一版用 2×2 = 4 段 + 底部 3 信条 = 7 块内容，�
 1. **CSS 特异性覆盖**：`.emotion-slide { display: grid }` (特异性 10) 干翻 `deck-stage > section { display: none }` (特异性 2)，导致所有页同时渲染叠加。
 2. **Shadow DOM slot 规则被外层 CSS 压制**：`::slotted(section) { display: none }` 挡不住 outer rule 的覆盖，sections 不肯隐藏。
 3. **localStorage + hash 导航竞态**：刷新后不是跳到 hash 位置，而是停在 localStorage 记录的旧位置。
-4. **验证成本高**：必须 `page.evaluate(d => d.goTo(n))` 才能截某页，比直接 `goto(file://.../slides/05-X.html)` 慢一倍，还常报错。
+4. **验证成本高**：必须 `page.evaluate(d => d.goTo(n))` 才能截某页，比直接 `goto(file-scheme.../slides/05-X.html)` 慢一倍，还常报错。
 
 全部根因是**单一全局命名空间**——多文件架构从物理层面把这些问题消除了。
 
@@ -318,7 +318,7 @@ node gen_deck_thumbs.mjs --slides slides --out thumbs --width 1600
 open slides/05-personas.html
 ```
 
-Playwright 截图也是直接 `goto(file://.../slides/05-personas.html)`，不需要 JS 跳页，也不会被别的页的 CSS 干扰。这让「改一点验一点」的工作流成本接近零。
+Playwright 截图也是直接 `goto(file-scheme.../slides/05-personas.html)`，不需要 JS 跳页，也不会被别的页的 CSS 干扰。这让「改一点验一点」的工作流成本接近零。
 
 ### 并行开发
 

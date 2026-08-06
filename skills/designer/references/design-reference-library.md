@@ -4,9 +4,13 @@ Use for taste calibration when a surface needs non-generic layout references, ed
 content hierarchy, palette behavior, case-study framing, motion direction (websites), or restrained
 polish, state hierarchy, density, typography, color discipline, micro-interactions (app UI).
 
-- Master document: `D:\Claude\Content\Brand Identity\Design Reference Library\MASTER.md`
-- Manifest: `D:\Claude\Content\Brand Identity\Design Reference Library\manifest.json`
-- Color cards: `D:\Claude\Content\Brand Identity\Color Bears`
+- Master document: `brand-pack/<brand_code>/design-reference-library/MASTER.md`
+- Manifest: `brand-pack/<brand_code>/design-reference-library/manifest.json`
+- Color cards: `brand-pack/<brand_code>/design-reference-library/color-cards/`
+
+> CutRight v2: upstream these lived in the venture workspace under `Content/Brand Identity/`
+> (Windows paths, not vendored). In CutRight they arrive, when installed, via the optional signed
+> creative data pack of the owning brand (see `cutright://skill/brand`).
 
 ## Guardrails
 

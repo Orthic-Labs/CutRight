@@ -1,6 +1,6 @@
 # Portfolio Site Registry — visual differentiation ledger
 
-The differentiation guard (`/designer` website surface, Phase 3) checks every new/redesigned site against this
+The differentiation guard (`cutright://skill/designer` website surface, Phase 3) checks every new/redesigned site against this
 ledger. **No two sibling sites may share ≥3 of the 5 axes.** When a site is (re)designed, update its
 row. The whole point: a stranger should not be able to tell these four were made by the same person.
 

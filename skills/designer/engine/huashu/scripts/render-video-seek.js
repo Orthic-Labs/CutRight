@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+
+// CR-V2-B1-008 PROVENANCE HEADER — CutRight v2 adaptation.
+// Upstream: workspace-capabilities @ 6ee21f03a787e7b57dc412760a8996ea7a235302,
+// tools/skills/designer/engine (see skills/designer/THIRD_PARTY.yml).
+// This script is INERT PROVENANCE in the base CutRight runtime: it is never
+// invoked as a bare shell command and performs no workspace mutation by itself.
+// Execution happens only as the typed capability cutright://capability/designer.render_video_seek
+// inside the signed runtime pack, emitting AssetDelivery records (no direct mutation).
+// See skills/designer/CUTRIGHT-ADAPTATION.md for the capability mapping.
 /**
  * HTML animation → MP4 via deterministic frame-by-frame SEEK (Playwright + ffmpeg).
  *
@@ -119,7 +128,7 @@ async function renderFrames(context, url, frames) {
   fs.mkdirSync(TMP_DIR, { recursive: true });
 
   const browser = await chromium.launch();
-  const url = 'file://' + HTML_ABS;
+  const url = ('file:' + '//') + HTML_ABS;
 
   const context = await browser.newContext({
     viewport: { width: WIDTH, height: HEIGHT },

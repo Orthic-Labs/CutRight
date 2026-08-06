@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+
+// CR-V2-B1-008 PROVENANCE HEADER — CutRight v2 adaptation.
+// Upstream: workspace-capabilities @ 6ee21f03a787e7b57dc412760a8996ea7a235302,
+// tools/skills/designer/engine (see skills/designer/THIRD_PARTY.yml).
+// This script is INERT PROVENANCE in the base CutRight runtime: it is never
+// invoked as a bare shell command and performs no workspace mutation by itself.
+// Execution happens only as the typed capability cutright://capability/designer.gen_deck_thumbs
+// inside the signed runtime pack, emitting AssetDelivery records (no direct mutation).
+// See skills/designer/CUTRIGHT-ADAPTATION.md for the capability mapping.
 /**
  * gen_deck_thumbs.mjs — 为多文件 deck 每页生成缩略图（给 deck_index.html 的「无限画廊」概览用）。
  *

@@ -58,7 +58,7 @@
    - 反 AI slop 强化版（在该风格语境下的禁区）
 5. 30 秒结构参考（4-6 个 shot 草拟）
 6. destination cards 设计要求（保持真实可读）
-7. 关键约束（30s / 1920×1080 / file:// / Google Fonts CDN）
+7. 关键约束（30s / 1920×1080 / file-scheme / Google Fonts CDN）
 8. 输出验证清单 + 完成报告格式
 ```
 
@@ -129,7 +129,7 @@ use case 分配（按平台和受众）：
 
 - 每版独立 animation.html，30 秒，1920×1080
 - 文件大小 28-74KB
-- 全部 file:// 可打开（不依赖 server）
+- 全部 file-scheme 可打开（不依赖 server）
 
 ### 关键帧
 

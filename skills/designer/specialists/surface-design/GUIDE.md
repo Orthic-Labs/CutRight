@@ -1,6 +1,6 @@
 ---
 name: designer-surface
-description: "THE design/redesign skill for anything rendered in a browser or app window — new builds and redesigns alike. Use when creating, redesigning, or polishing: websites, landing pages, marketing/product pages, brand sites, portfolios, ecommerce front-of-house, content pages, AND product/application UI — desktop apps, SaaS dashboards, tools, editors, inboxes, queues, settings, forms, data tables, workflows, stateful screens. Replaces the retired /website and /app skills (their gates live at the designer skill root: designer/references/website.md and designer/references/app.md). Routes static creative (flyers/OG/banners/print) → /designer static, brand systems → /brand-identity, review-only → /audit-visual."
+description: "THE design/redesign skill for anything rendered in a browser or app window — new builds and redesigns alike. Use when creating, redesigning, or polishing: websites, landing pages, marketing/product pages, brand sites, portfolios, ecommerce front-of-house, content pages, AND product/application UI — desktop apps, SaaS dashboards, tools, editors, inboxes, queues, settings, forms, data tables, workflows, stateful screens. Replaces the retired upstream website and app skills (their gates live at the designer skill root: designer/references/website.md and designer/references/app.md). Routes static creative (flyers/OG/banners/print) → cutright://skill/designer static, brand systems → cutright://skill/brand-identity, review-only → cutright://skill/qa (visual_review mode)."
 ---
 
 # Surface Design — websites and app UI
@@ -19,11 +19,11 @@ running the remaining spine on it. Everything below describes ship mode unless m
 
 Route away first:
 
-- Static creative (flyers, social posts, OG images, banners, print) -> `/designer static`
-- Brand identity system (when none exists) -> `/brand-identity` first
-- Review/critique of an existing surface with no build work -> `/audit-visual`
+- Static creative (flyers, social posts, OG images, banners, print) -> `cutright://skill/designer static`
+- Brand identity system (when none exists) -> `cutright://skill/brand-identity` first
+- Review/critique of an existing surface with no build work -> `cutright://skill/qa {"mode":"visual_review"}`
 - Deep specialist passes and deliverables (PPTX decks, motion renders, voiceover, live in-browser
-  variants) -> `/designer <command>` — this skill is the entry; impeccable is the engine room for
+  variants) -> `cutright://skill/designer <command>` — this skill is the entry; impeccable is the engine room for
   `critique/polish/bolder/quieter/typeset/colorize/layout/delight/live/deck/motion/video/voiceover`.
 
 ## Step 1 — Classify the surface, load its reference
@@ -40,14 +40,14 @@ and accessible without burying the work surface. A website's first viewport must
 product/service reality, not an abstract value-prop hero. Misclassifying the surface fails the
 audit later (lens 0), so classify out loud.
 
-Brand-first: run `/brand <code>` for any branded venture surface before designing. If no brand
-identity exists, run `/brand-identity` or do a lightweight brand-truth/signature pass first.
+Brand-first: run `cutright://skill/brand {"brand_code":"<code>"}` for any branded venture surface before designing. If no brand
+identity exists, run `cutright://skill/brand-identity` or do a lightweight brand-truth/signature pass first.
 
 For per-brand operational material, also load (when the brand project starts):
-- `Content/<brand>/copy/bible.md` — 30+ worked copy blocks in voice
-- `Content/<brand>/design/tokens.json` — color / type / space / radius / breakpoints
-- `Content/<brand>/anti-patterns.md` — 8+ brand-specific anti-patterns
-- `Content/<brand>/patterns/above-the-fold/` — 5-8 above-the-fold patterns filtered for the brand
+- `brand-pack/<brand_code>/copy/bible.md` — 30+ worked copy blocks in voice
+- `brand-pack/<brand_code>/design/tokens.json` — color / type / space / radius / breakpoints
+- `brand-pack/<brand_code>/anti-patterns.md` — 8+ brand-specific anti-patterns
+- `brand-pack/<brand_code>/patterns/above-the-fold/` — 5-8 above-the-fold patterns filtered for the brand
 - `../../references/above-the-fold-patterns.md` — 15 cross-brand above-the-fold patterns
 - `../../references/banned-words.md` — cross-brand banned vocabulary + detection
 - `../../references/reference-capture-template.md` — DESIGN.md format for capturing competitor/aspirational references
@@ -71,7 +71,7 @@ tests.
 | 2.5 | Option Divergence Gate | auto **HARD GATE** |
 | 3 | Surface-specific guard (differentiation registry · IA/state model · SEO surface) | auto **HARD GATE** |
 | 4 | Build (with continuous verification — runtime enforces) | auto |
-| 5 | QA: multi-gate (5a audit-visual · 5b /seo · 5c judge [deferred] · 5d design-gate.mjs) | auto **HARD GATE** — fail -> fix -> re-run |
+| 5 | QA: multi-gate (5a visual review · 5b SEO technical checklist (upstream `/seo` skill excluded from the CutRight corpus; run as a manual audit) · 5c judge [deferred] · 5d design-gate.mjs) | auto **HARD GATE** — fail -> fix -> re-run |
 | 6 | Human eyes — Adrian's taste gate | render screenshots, then **PARK** |
 | 7 | Handoff (docs, tokens, registry row for websites) | auto |
 
@@ -85,7 +85,7 @@ Output: `artifacts/competitor-analysis.md`. Required content: 5 direct competito
 
 ### Phase 0.6 — Reference set capture (HARD GATE)
 
-Output: `Content/<brand>/references/{competitors,aspirational}/`. Per-site, all 6 capture items per `../../references/reference-capture-template.md` (DESIGN.md format). Scope: 3 competitors + 2 aspirational per brand, captured once per brand, refreshed when site materially changes.
+Output: `brand-pack/<brand_code>/references/{competitors,aspirational}/`. Per-site, all 6 capture items per `../../references/reference-capture-template.md` (DESIGN.md format). Scope: 3 competitors + 2 aspirational per brand, captured once per brand, refreshed when site materially changes.
 
 ### Phase 0.75 — Page inventory (HARD GATE)
 
@@ -96,7 +96,7 @@ Output: `artifacts/page-inventory.md`. Every page in the build, with: URL, prima
 Output: `artifacts/motion-plan.md` only at this phase. **`motion-gate.json` may NOT be written here** —
 its verdict requires prototype evidence (see Phase 4 inner loop). A gate self-graded before any
 pixel renders is theater; that failure mode shipped a dead pin on 2026-07-17. Routing contract:
-`docs/ARCHITECTURE-MOTION.md` §9.
+`the motion routing contract (specialists/motion/GUIDE.md; upstream docs/ARCHITECTURE-MOTION.md not vendored)` §9.
 
 ### Phase 4 — the build inner loop (HARD, per section — this is where quality lives)
 
@@ -130,10 +130,10 @@ else. Building at the tail of a long operational session measurably degrades gen
 
 Four sub-gates, all must pass before Phase 6:
 
-- **5a** — `/audit-visual` (impeccable detector incl. website-structure rules + 16 lenses + motion lens).
-- **5b** — `/seo` technical audit (meta, schema, OG, sitemap, robots, semantic HTML, CWV).
-- **5c** — Fresh-context judge agent (deferred; no-op in v1 — see `D:\Claude\docs\ARCHITECTURE-DESIGNER.md` §11).
-- **5d** — `tools/lib/design-gate.mjs` deterministic runner. Verifies motion-plan.md + motion-gate.json exist and pass, runs 14 deterministic checks, outputs `artifacts/qa/gate.json` with motion + design-system results aggregated into one top-level verdict.
+- **5a** — `cutright://skill/qa {"mode":"visual_review"}` (impeccable detector incl. website-structure rules + 16 lenses + motion lens).
+- **5b** — SEO technical checklist (upstream `/seo` skill excluded from the CutRight corpus; run as a manual audit): technical audit (meta, schema, OG, sitemap, robots, semantic HTML, CWV).
+- **5c** — Fresh-context judge agent (deferred; no-op in v1 — see upstream `docs/ARCHITECTURE-DESIGNER.md` §11, not vendored into the CutRight corpus).
+- **5d** — `cutright://capability/designer.design_gate` deterministic runner. Verifies motion-plan.md + motion-gate.json exist and pass, runs 14 deterministic checks, outputs `artifacts/qa/gate.json` with motion + design-system results aggregated into one top-level verdict.
 
 `verdict: pass` requires every check green or explicitly waived with reason. `fail` requires fix + re-run.
 
@@ -157,14 +157,14 @@ state, selection); color is never the only indicator of state; all text/control 
 accessible contrast. Default pale blue, generic SaaS blue, purple-blue gradients, and mood-only
 palettes are rejected unless product-truth demands them.
 
-**QA gate (phase 5).** Run `/audit-visual` — its lenses, floors, coverage matrix, and detector scan
-are canonical; do not restate them. Route pixel evidence through `/qa` (project `qa:browser`
+**QA gate (phase 5).** Run `cutright://skill/qa {"mode":"visual_review"}` — its lenses, floors, coverage matrix, and detector scan
+are canonical; do not restate them. Route pixel evidence through `cutright://skill/qa` (project `qa:browser`
 contract, `qa-shot.mjs`, `qa-functional.mjs`); never foreground desktop screenshots for routine QA.
 Pass surface context to the audit: website = first-impression + conversion weighting; app =
 repeated-use weighting (action count, keyboard/focus, state completeness over drama).
 
 **Human eyes (phase 6).** Adrian approves with his eyes before final. Open what he should review
-via `node tools/lib/open-for-review.mjs <path>`.
+via `node `cutright://capability/designer.open_for_review` <path>`.
 
 ## Craft rules (absorbed from Anthropic's frontend-design — apply while building)
 
@@ -204,16 +204,16 @@ via `node tools/lib/open-for-review.mjs <path>`.
   motion respected.
 - **CSS discipline:** mind selector specificity (type-based vs element-based rules cancelling
   each other's spacing); test heading copy at every breakpoint — the viewport is part of the design.
-- Anti-slop is canonical in `tools/skills/audit-visual/references/design-slop.md` (absolute bans, the three
+- Anti-slop is canonical in `cutright://skill/qa {"mode":"visual_review","reference":"design-slop"}` (absolute bans, the three
   AI-look clusters, category-reflex check) — design against it, don't rediscover it at QA.
-- Motion bar is canonical in `tools/skills/audit-visual/references/motion-standards.md` (frequency table,
+- Motion bar is canonical in `cutright://skill/qa {"mode":"visual_review","reference":"motion-standards"}` (frequency table,
   easing/duration values, physicality) — build motion to it, don't wait for review to learn it.
-- Native app feedback is canonical in `tools/skills/audit-visual/references/native-feedback.md` (haptic
+- Native app feedback is canonical in `cutright://skill/qa {"mode":"visual_review","reference":"native-feedback"}` (haptic
   semantics, 0.1s/1s/10s response budgets, per-platform target minimums, per-OS reduced-motion
   APIs, Fluent 2 + Material 3 tokens, SwiftUI spring defaults) — for any desktop or mobile app
   surface, build to it. `motion-standards.md` is the **web** bar; it does not cover haptics or
   native OS motion settings.
-- **Motion craft → `../motion/GUIDE.md`. Motion review → `tools/skills/audit-visual/references/motion-standards.md`.** Contract: `docs/ARCHITECTURE-MOTION.md` §9.
+- **Motion craft → `../motion/GUIDE.md`. Motion review → `cutright://skill/qa {"mode":"visual_review","reference":"motion-standards"}`.** Contract: `the motion routing contract (specialists/motion/GUIDE.md; upstream docs/ARCHITECTURE-MOTION.md not vendored)` §9.
 
 ## Completion checklist
 
@@ -222,5 +222,5 @@ via `node tools/lib/open-for-review.mjs <path>`.
 - Three directions/registers explored for major work; divergence gate passed; user picked.
 - Surface guard passed (registry diff for websites; IA/state model for apps).
 - Built with the craft rules; all states designed (apps: the hard-stop state list in `../../references/app.md`).
-- `/audit-visual` passed with pixel evidence via `/qa`.
+- `cutright://skill/qa {"mode":"visual_review"}` passed with pixel evidence via `cutright://skill/qa`.
 - Human eyes approved. Registry/docs updated (websites: `../../references/portfolio-registry.md`).

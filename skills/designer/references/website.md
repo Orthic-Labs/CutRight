@@ -19,7 +19,7 @@ If two appear, the site has failed:
 - Stock photos, abstract tech renders, AI screenshots with garbled text.
 - CTA color sprinkled everywhere with no attention logic.
 
-(Full anti-slop catalog + the three AI-look clusters: `audit-visual/references/design-slop.md`.)
+(Full anti-slop catalog + the three AI-look clusters: cutright://skill/qa {"mode":"visual_review","reference":"design-slop"}.)
 
 ## Phase 0 — Site truth
 
@@ -97,7 +97,7 @@ per option plus an index linking all of them — never collapsed into one page w
 gallery was explicitly requested. **Build exemplar-first:** start each section from the nearest
 exemplar in `components/_index.md` (retheme via tokens, rewrite copy in brand voice); the exemplars
 carry the motion and accessibility floor so the build effort goes into brand identity and the
-signature mechanism. Apply the audit-visual gates as build checklist items while constructing each
+signature mechanism. Apply the visual review gates as build checklist items while constructing each
 section. `references/design-reference-library.md` is taste calibration only — never a substitute
 for site truth, signature, or differentiation.
 
@@ -107,28 +107,28 @@ for site truth, signature, or differentiation.
 website-structure scan against the rendered page at both viewports:
 
 ```text
-node D:/Claude/tools/skills/designer/engine/scripts/detect.mjs --json --viewport=1440x900 <url>
-node D:/Claude/tools/skills/designer/engine/scripts/detect.mjs --json --tablet <url>
-node D:/Claude/tools/skills/designer/engine/scripts/detect.mjs --json --mobile <url>
-node D:/Claude/tools/skills/designer/engine/scripts/detect.mjs --json --site --site-type=<app|ecommerce|content> <homepage-url>
+cutright://capability/designer.detect --json --viewport=1440x900 <url>
+cutright://capability/designer.detect --json --tablet <url>
+cutright://capability/designer.detect --json --mobile <url>
+cutright://capability/designer.detect --json --site --site-type=<app|ecommerce|content> <homepage-url>
 ```
 
 Any `structure` hit (`cta-below-fold`, `hero-cta-competition`, `headline-word-wall`,
 `one-word-lines`, `hero-viewport-hog`, `hover-contrast`, `oversized-header`,
 `broken-internal-link`, `missing-required-page`; advisory `missing-hero-media`) is a build
 defect — fix and re-scan before proceeding. These are measured viewport geometry, not taste; do not rationalize
-them. Thresholds and the hero contract: `../../audit-visual/references/website-conversion-standards.md`.
+them. Thresholds and the hero contract: `cutright://skill/qa {"mode":"visual_review","reference":"website-conversion-standards"}`.
 The same contract applies while building: primary CTA inside the first viewport on desktop AND
 mobile, h1 ≤ ~10 words, one primary action, a visual anchor (or a deliberately defended type-only
 hero), hero ≤ ~1 viewport.
 
-Then run `/audit-visual` (it runs the impeccable detector as its scan stage). Block completion on:
+Then run `cutright://skill/qa {"mode":"visual_review"}` (it runs the impeccable detector as its scan stage). Block completion on:
 design-law failures, generic AI tells, color-gate failures (default blue, one-note palette, low
 contrast, trend-only palette, accents with no job), weak hierarchy, bad responsive behavior,
 inaccessible contrast/focus/hit targets, missing loading/error/success states for interactive
 pages, AI imagery with garbled text.
 
 For redesign follow-ups, also apply
-`../../audit-visual/references/website-regression-gotchas.md`. In particular: capture section
+`cutright://skill/qa {"mode":"visual_review","reference":"website-regression-gotchas"}`. In particular: capture section
 boundaries, audit dark/light cadence by viewport count, preserve one-to-one example semantics,
 separate wide feature canvases from prose measure, and prove motion from rendered state changes.

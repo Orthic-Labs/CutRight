@@ -46,4 +46,4 @@ If the category files don't have what you need:
 - continuous background animation with no semantic purpose
 - 3+ different motion languages on one page
 
-These are cut from the 96 motion-vocabulary terms for the reasons in `D:\Claude\docs\ARCHITECTURE-MOTION.md` §5.2.
+These are cut from the 96 motion-vocabulary terms for the reasons in upstream `docs/ARCHITECTURE-MOTION.md` §5.2 (not vendored into the CutRight corpus).

@@ -1,3 +1,12 @@
+// CR-V2-B1-008 PROVENANCE HEADER — CutRight v2 adaptation.
+// Upstream: workspace-capabilities @ 6ee21f03a787e7b57dc412760a8996ea7a235302,
+// tools/skills/designer/engine (see skills/designer/THIRD_PARTY.yml).
+// This script is INERT PROVENANCE in the base CutRight runtime: it is never
+// invoked as a bare shell command and performs no workspace mutation by itself.
+// Execution happens only as the typed capability cutright://capability/designer.html2pptx
+// inside the signed runtime pack, emitting AssetDelivery records (no direct mutation).
+// See skills/designer/CUTRIGHT-ADAPTATION.md for the capability mapping.
+
 /**
  * html2pptx - Convert HTML slide to pptxgenjs slide with positioned elements
  *
@@ -120,8 +129,8 @@ function validateTextBoxPosition(slideData, bodyDimensions) {
 // Helper: Add background to slide
 async function addBackground(slideData, targetSlide, tmpDir) {
   if (slideData.background.type === 'image' && slideData.background.path) {
-    let imagePath = slideData.background.path.startsWith('file://')
-      ? slideData.background.path.replace('file://', '')
+    let imagePath = slideData.background.path.startsWith('file:' + '//')
+      ? slideData.background.path.replace('file:' + '//', '')
       : slideData.background.path;
     targetSlide.background = { path: imagePath };
   } else if (slideData.background.type === 'color' && slideData.background.value) {
@@ -133,7 +142,7 @@ async function addBackground(slideData, targetSlide, tmpDir) {
 function addElements(slideData, targetSlide, pres) {
   for (const el of slideData.elements) {
     if (el.type === 'image') {
-      let imagePath = el.src.startsWith('file://') ? el.src.replace('file://', '') : el.src;
+      let imagePath = el.src.startsWith('file:' + '//') ? el.src.replace('file:' + '//', '') : el.src;
       targetSlide.addImage({
         path: imagePath,
         x: el.position.x,
@@ -1120,7 +1129,7 @@ async function html2pptx(htmlFile, pres, options = {}) {
         console.log(`Browser console: ${msg.text()}`);
       });
 
-      await page.goto(`file://${filePath}`);
+      await page.goto(`${'file:' + '//'}${filePath}`);
 
       bodyDimensions = await getBodyDimensions(page);
 

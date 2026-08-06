@@ -2,7 +2,7 @@
 
 15 vetted hero patterns. Phase 1 must specify which pattern the hero uses. Phase 2 must propose variants within the chosen pattern family (same structure, different register). Breaking the pattern requires explicit justification.
 
-Each brand filters 5-8 patterns to its idiom via `Content/<brand>/patterns/above-the-fold/`.
+Each brand filters 5-8 patterns to its idiom via `brand-pack/<brand_code>/patterns/above-the-fold/`.
 
 ---
 
@@ -130,7 +130,7 @@ Each brand filters 5-8 patterns to its idiom via `Content/<brand>/patterns/above
 
 ## Per-brand filter
 
-Each active brand picks 5-8 from these 15 for its idiom. Saved at `Content/<brand>/patterns/above-the-fold/<pattern>.md` with brand-specific notes.
+Each active brand picks 5-8 from these 15 for its idiom. Saved at `brand-pack/<brand_code>/patterns/above-the-fold/<pattern>.md` with brand-specific notes.
 
 Suggested starting filters:
 - **DD** — 1, 5, 8, 9, 11, 15

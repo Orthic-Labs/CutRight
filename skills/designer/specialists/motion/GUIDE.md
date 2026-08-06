@@ -174,7 +174,7 @@ without a persistent object is a slideshow of effects, which fails this test.
 
 ## Output format — contract-bound
 
-Every motion task produces (consumed by `/designer` + `/audit-visual`'s motion lens):
+Every motion task produces (consumed by `cutright://skill/designer` + `cutright://skill/qa {"mode":"visual_review"}`'s motion lens):
 
 1. **`artifacts/motion-plan.md`** — steps 1-7 of the workflow, 1 page max. Required fields: register, motion language, persistent objects, scene breakdown, patterns used, engine per scene, restraint test (product) or choreography test (showpiece) applied.
 2. **`artifacts/motion-gate.json`** — per-check pass/fail, schema in `reviews.md`. Verdict must be
@@ -184,7 +184,7 @@ Every motion task produces (consumed by `/designer` + `/audit-visual`'s motion l
    failure: verdict said pass, the page had zero working motion. Plans don't animate; prototypes do.
 3. **Implementation** — code in repo with comments explaining each animation's purpose.
 4. **`lighthouse.json`, `axe.json`, `bundle-delta.json`** — performance evidence.
-5. **Browser/device matrix** — `/qa` screenshots at 5 breakpoints (375, 414, 768, 1024, 1440).
+5. **Browser/device matrix** — `cutright://skill/qa` screenshots at 5 breakpoints (375, 414, 768, 1024, 1440).
 6. **`reduced-variant.png`** — the `prefers-reduced-motion: reduce` state captured.
 
 Without `motion-plan.md` and `motion-gate.json` (verdict: pass), the build cannot advance.
@@ -193,6 +193,6 @@ Without `motion-plan.md` and `motion-gate.json` (verdict: pass), the build canno
 
 ## Cross-references
 
-- **Producer/reviewer split:** for reviewer-side motion bar, see `tools/skills/audit-visual/references/motion-standards.md`. This guide is producer bar.
-- **Regression reality:** use `audit-visual/references/website-regression-gotchas.md`. Motion code is not evidence; capture timed state changes, scroll-position changes, the reduced variant, and any explicit opt-in propagation.
-- **Routing contract with /designer:** `/designer` invokes this skill when the primary need is an animation language or motion system. See `docs/ARCHITECTURE-MOTION.md` §9 for the contract, §8 for the producer/reviewer handoff.
+- **Producer/reviewer split:** for reviewer-side motion bar, see `cutright://skill/qa {"mode":"visual_review","reference":"motion-standards"}`. This guide is producer bar.
+- **Regression reality:** use cutright://skill/qa {"mode":"visual_review","reference":"website-regression-gotchas"}. Motion code is not evidence; capture timed state changes, scroll-position changes, the reduced variant, and any explicit opt-in propagation.
+- **Routing contract with cutright://skill/designer:** `cutright://skill/designer` invokes this skill when the primary need is an animation language or motion system. See `the motion routing contract (specialists/motion/GUIDE.md; upstream docs/ARCHITECTURE-MOTION.md not vendored)` §9 for the contract, §8 for the producer/reviewer handoff.

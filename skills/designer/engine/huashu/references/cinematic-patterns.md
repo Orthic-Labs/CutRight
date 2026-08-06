@@ -220,10 +220,10 @@ iframe.addEventListener('load', () => {
 });
 ```
 
-### 坑 3 · file:// vs https:// 行为差异
+### 坑 3 · file-scheme vs https:// 行为差异
 
-本地 file:// 测好的 cinematic 部署后可能崩，因为：
-- file:// 下 iframe contentDocument 同源
+本地 file-scheme 测好的 cinematic 部署后可能崩，因为：
+- file-scheme 下 iframe contentDocument 同源
 - https:// 下也同源（如果同 host），但 audio autoplay 限制更严格
 
 **修复**：

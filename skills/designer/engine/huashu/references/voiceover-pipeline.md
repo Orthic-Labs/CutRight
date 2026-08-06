@@ -362,6 +362,11 @@ DOUBAO_TTS_ENDPOINT=https://openspeech.bytedance.com/api/v1/tts
 
 参考 `.env.example` 模板。豆包语音克隆音色 ID 在火山引擎控制台获取。
 
+> **CutRight v2 适配说明：** hosted TTS（豆包/火山引擎云 API）不属于 CutRight 基础运行时；上述脚本
+> （`tts-doubao.mjs` 等）在本仓库中作为惰性 provenance 保留，仅在安装了对应的可选 signed
+> runtime pack（提供 TTS 凭据与网络能力）后，经 typed capability `cutright://capability/designer.tts_doubao`
+> 调用。未安装 runtime pack 时，改用上文「真人录音替换 TTS」路径。
+
 ## 标准工作流（10 步）
 
 1. **写解说稿**：解说稿是源代码。先把整段口播写完整，标段标题 `## scene-id`，关键句前加 `[[cue:xx]]`

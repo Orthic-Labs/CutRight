@@ -139,7 +139,7 @@ Test that colorization improves the experience:
 - **Still accessible**: Do all color combinations meet WCAG standards?
 - **Not overwhelming**: Is color balanced and purposeful?
 
-When the palette earns its place, hand off to `/designer polish` for the final pass.
+When the palette earns its place, hand off to `cutright://skill/designer polish` for the final pass.
 
 ## Live-mode signature params
 

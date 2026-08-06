@@ -8,16 +8,16 @@ The capture methodology is ours. The format is open. We use it natively.
 
 ## Per-site capture pipeline
 
-1. **Visit URL, capture at 5 breakpoints** via `/qa`: `qa-shot.mjs --url <url> --breakpoints 375,414,768,1024,1440 --out <dir>/screenshots/`
+1. **Visit URL, capture at 5 breakpoints** via `cutright://skill/qa`: `qa-shot.mjs --url <url> --breakpoints 375,414,768,1024,1440 --out <dir>/screenshots/`
 2. **Extract tokens** by inspecting the live DOM (computed styles via DevTools or Playwright). Output to `<dir>/design.md`.
-3. **Extract copy samples** by curling the rendered HTML or via /content transcribe. 5-10 real blocks. Output to `<dir>/copy-samples.md`.
+3. **Extract copy samples** by curling the rendered HTML or via cutright://skill/content {"mode":"transcribe"}. 5-10 real blocks. Output to `<dir>/copy-samples.md`.
 4. **Map sitemap** by crawling or reading navigation. Output to `<dir>/sitemap.md`.
 5. **Judgment notes:**
    - `borrow.md` — 3-5 specific things to take, each with a citation to the live DOM
    - `avoid.md` — 2-3 specific things NOT to take, each with reason
 6. **Document URLs and reasoning** — what's the 1-line takeaway from this site for our brand?
 
-**Per-site effort:** 30-45 min via /qa + curl/playwright + judgment notes.
+**Per-site effort:** 30-45 min via cutright://skill/qa + the `cutright://skill/qa {"mode":"capture"}` action + judgment notes.
 
 **Refresh:** per brand, refresh when the brand's project changes. Quarterly check that captured sites haven't themselves redesigned.
 
@@ -26,7 +26,7 @@ The capture methodology is ours. The format is open. We use it natively.
 ## Per-site directory structure
 
 ```
-Content/<brand>/references/competitors/<competitor-name>/
+brand-pack/<brand_code>/references/competitors/<competitor-name>/
 ├── url.txt
 ├── screenshots/
 │   ├── 375.png
@@ -41,7 +41,7 @@ Content/<brand>/references/competitors/<competitor-name>/
 └── avoid.md
 ```
 
-Aspirational references live at `Content/<brand>/references/aspirational/<reference-name>/` with the same structure.
+Aspirational references live at `brand-pack/<brand_code>/references/aspirational/<reference-name>/` with the same structure.
 
 ---
 

@@ -110,7 +110,7 @@ and the CSS-side implementation; this section is the native-API entry point to i
 // Chrome — adapts to light/dark, increased contrast, and accent tinting automatically
 Color(nsColor: .windowBackgroundColor)   // .controlBackgroundColor, .separatorColor
 .foregroundStyle(.secondary)             // not a hardcoded grey
-// Brand — hardcoded per .claude/rules/brands.md, intentionally
+// Brand — hardcoded per brand-pack/<brand_code>/restrictions.md (upstream workspace file .claude/rules/brands.md), intentionally
 Color(hex: "#FF5630")                    // HeardRight ember
 ```
 
@@ -134,7 +134,7 @@ face substituted into controls, labels, list rows, and menus loses all of that a
 non-native app.
 
 This collides with the Right Suite brand lock, so state it precisely: **Tanker is the suite-wide
-display and wordmark face** (`.claude/rules/brands.md`, locked 2026-07-20). In a *native app* that
+display and wordmark face** (`brand-pack/<brand_code>/restrictions.md (upstream workspace file .claude/rules/brands.md)`, locked 2026-07-20). In a *native app* that
 means Tanker appears in the wordmark, onboarding/hero moments, and empty-state headlines — not in
 toolbars, sidebars, inspectors, list rows, form labels, or menus. Per-app body faces (Hanken
 Grotesk, Geist, Author, General Sans, Sentient) are website faces; in-app body text uses the system

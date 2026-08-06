@@ -3,18 +3,18 @@ name: design-marketing
 description: >
   Top-level skill for SOCIAL/PRINT/MARKETING design — flyers, social posts, OG images, banners, ad creatives,
   posters, postcards, gift cards, packaging inserts, lookbook spreads. NOT for web/app interfaces (use
-  /designer). Routes to canvas-design, algorithmic-art, ads-photoshoot, ads-generate, slack-gif-creator,
-  nano-banana MCP. Use when user says "/designer static", "flyer", "social post", "Instagram graphic",
+  cutright://skill/designer). Routes to canvas-design, algorithmic-art, ads-photoshoot, ads-generate, slack-gif-creator,
+  nano-banana MCP. Use when user says "cutright://skill/designer static", "flyer", "social post", "Instagram graphic",
   "OG image", "banner", "poster", "ad creative", "lookbook", "promo image".
 ---
 
 # Marketing Design (Static / Social / Print)
 
-For one-off graphics that live on social, in email, in print, or as ad creatives. Web pages use `/designer`.
+For one-off graphics that live on social, in email, in print, or as ad creatives. Web pages use `cutright://skill/designer`.
 
 ## Always start with
 
-1. **`/brand <DD|RH|SS>`** — load palette, fonts, restrictions
+1. **`cutright://skill/brand {"brand_code":"<DD|RH|SS>"}`** — load palette, fonts, restrictions
 2. **Identify medium + dimensions** (table below)
 3. **Identify purpose:** awareness, click, save, share, screenshot
 
@@ -59,7 +59,7 @@ For one-off graphics that live on social, in email, in print, or as ad creatives
 4. **Generate 3 variants** unless user asks for one — A/B options matter
 5. **Review against brand restrictions** — no stock/generic look, no hardcoded competitor colors, no fabricated content (testimonials, stats)
 6. **Output naming:** `<brand>_<medium>_<topic>_<date>_v<n>.png`
-7. **File location:** `D:\Claude\assets\<brand>\<year>\<month>\` (create if missing)
+7. **File location:** `assets/<brand>/<year>/<month>/` under the CutRight asset root (create if missing)
 
 ## Brand cheat-sheets
 
@@ -104,14 +104,16 @@ Always output:
 
 ## Optional external jury (explicit opt-in only)
 
-Run this external jury only when Adrian explicitly requests it.
+Run this jury review only when the user explicitly requests it.
 
-```bash
-node -e "import('file:///D:/Claude/tools/lib/auto-jury.mjs').then(m=>m.runAutoJury({
-  kind: 'design',
-  artifactPath: '<absolute path to output>',
-  context: { brand: '<DD|RH|HR|TS>', notes: 'design-marketing output' },
-  failHard: true
-}).then(v=>console.log('verdict:', v.final_verdict||v.verdict||v.decision)).catch(e=>{console.error(e.message);process.exit(1)})"
+CutRight adaptation: the workspace ran an opt-in jury through the workspace
+tool `tools/lib/auto-jury.mjs`, which is not vendored into CutRight. The
+CutRight-local equivalent is the typed visual-review action:
+
 ```
+cutright://skill/qa {"mode":"visual_review","kind":"design","artifact":"<artifact path>","brand_code":"<code>","fail_hard":true,"notes":"design-marketing output"}
+```
+
+The verdict is returned as a `VisualReviewResult` typed artefact. No external
+jury script ships with this skill.
 
