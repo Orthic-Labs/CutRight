@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "root": "/Volumes/D/claude/cutright/vendor/heardright",
+  "asset_count": 1,
+  "policy": "Every asset needs an explicit licence row in imports/v2/dispositions.json before entering a signed pack; assets never inherit a repository licence.",
+  "assets": [
+    {
+      "path": "engine/src/whisper_mel_128.bin",
+      "asset_class": "dataset",
+      "sha256": "2a5f9822897750e047c85dea37cc268d3be0ecfd23c28a5f10da129d99d05afe",
+      "bytes": 102912,
+      "licence_status": "audited_separately",
+      "asset_id": "whisper-mel-128-filterbank",
+      "source": "openai/whisper mel filterbank (128x201 f32 LE), generated upstream by HeardRight with whisper's mel script; upstream notice vendored at engine/legal/third-party/WHISPER_MIT.txt",
+      "redistribution": "MIT-derived per upstream WHISPER_MIT notice; pack-manifest row must close it before entering the signed speech pack",
+      "generated_from_source_model": true,
+      "pack": "speech"
+    }
+  ],
+  "referenced_external_assets": [
+    {
+      "asset_id": "parakeet-tdt-primary",
+      "asset_class": "model_weights",
+      "referenced_by": [
+        "engine/src/asr_sections/section01.rs (TDT_MODEL_SUBDIR = parakeet_tdt_v3_static1500_qint8_20260722)",
+        "engine/src/asr_sections/section02.rs (try_load_coreml_parakeet; COREML_TDT_MODEL_SUBDIR = parakeet-tdt-v3)"
+      ],
+      "source": "NVIDIA Parakeet TDT 0.6B-family ASR model, Hugging Face nvidia/parakeet-tdt-*; exact upstream revision NOT verified at this pin - licence closure must fetch and hash the exact bytes",
+      "licence_evidence": "upstream-vendored NVIDIA_OPEN_MODEL_LICENSE_2025-10-24.pdf at engine/legal/third-party/ (HeardRight's copy, not a CutRight redistribution grant)",
+      "sha256": null,
+      "license_status": "blocked_unresolved",
+      "redistribution": null,
+      "modification": "upstream conversions exist as CoreML bundle (parakeet-tdt-v3) and quantized ONNX static1500 qint8 layout; conversions are generated artifacts",
+      "generated_from_source_model": true,
+      "pack": "speech"
+    },
+    {
+      "asset_id": "parakeet-rnnt-unified",
+      "asset_class": "model_weights",
+      "referenced_by": [
+        "engine/src/asr_sections/section01.rs (UNIFIED_MODEL_SUBDIR = unified_static15_b128_sym_bits4_timestamp_hybrid; COREML_UNIFIED_MODEL_SUBDIR = parakeet-unified-en-0.6b)"
+      ],
+      "source": "NVIDIA Parakeet RNNT 0.6B-family ASR model, Hugging Face nvidia/parakeet-rnnt-0.6b; exact upstream revision NOT verified at this pin",
+      "licence_evidence": "upstream-vendored NVIDIA_OPEN_MODEL_LICENSE_2025-10-24.pdf at engine/legal/third-party/ (HeardRight's copy, not a CutRight redistribution grant)",
+      "sha256": null,
+      "license_status": "blocked_unresolved",
+      "redistribution": null,
+      "modification": "upstream conversions exist as CoreML bundle (parakeet-unified-en-0.6b) and quantized ONNX layout; conversions are generated artifacts",
+      "generated_from_source_model": true,
+      "pack": "speech"
+    },
+    {
+      "asset_id": "silero-vad-onnx-16k",
+      "asset_class": "model_weights",
+      "referenced_by": [
+        "engine/src/vad.rs contract tests (MODEL_FILE = silero_vad_16k_op15.onnx)",
+        "engine/tests/macos_vad_isolation_contract.rs (resources/vad/silero_vad_16k_op15.onnx)",
+        "engine/examples/vad_parity_check.rs"
+      ],
+      "source": "Silero VAD, https://github.com/snakers4/silero-vad - corpus row silero-vad (revision 76e3dc408eb2a5c655c34e230d2d5459b4439daa, allowed_paths src/silero_vad/data/*.onnx and files/silero_vad.onnx); HeardRight references an opset-15 variant named silero_vad_16k_op15.onnx whose exact upstream byte identity is NOT verified",
+      "licence_evidence": "corpus/dispositions silero-vad row: MIT; upstream repository licence MIT",
+      "sha256": null,
+      "license_status": "licensed_for_redistribution",
+      "redistribution": "MIT permits redistribution; exact byte SHA-256 must be frozen by the pack builder from the pinned silero-vad source before the row closes",
+      "modification": "none planned - CutRight ships exact upstream ONNX bytes per corpus row",
+      "generated_from_source_model": false,
+      "pack": "speech"
+    },
+    {
+      "asset_id": "silero-vad-coreml-16k",
+      "asset_class": "model_weights",
+      "referenced_by": [
+        "engine/tests/macos_vad_isolation_contract.rs (Resources/vad/silero_vad_16k.mlmodelc)",
+        "engine/examples/vad_parity_check.rs"
+      ],
+      "source": "HeardRight-generated CoreML conversion of Silero VAD (silero_vad_16k.mlmodelc); converter provenance and output bytes NOT verified",
+      "licence_evidence": "none in CutRight; underlying Silero weights are MIT but the conversion artifact has no recorded licence row",
+      "sha256": null,
+      "license_status": "blocked_unresolved",
+      "redistribution": null,
+      "modification": "generated CoreML conversion of the MIT Silero VAD ONNX model",
+      "generated_from_source_model": true,
+      "pack": "speech"
+    },
+    {
+      "asset_id": "whisper-large-v3-turbo-coreml",
+      "asset_class": "model_weights",
+      "referenced_by": [
+        "engine/src/whisper_coreml_sections/section01.rs (AudioEncoder.mlmodelc + TextDecoder.mlmodelc, fp16 large-v3-turbo)",
+        "engine/src/asr_sections/section02.rs (whisper_coreml_dir = models_dir/coreml/whisper-multi)"
+      ],
+      "source": "openai/whisper large-v3-turbo weights converted by HeardRight to a 2-stage CoreML bundle; upstream whisper weights are MIT (engine/legal/third-party/WHISPER_MIT.txt), conversion bytes NOT verified",
+      "licence_evidence": "WHISPER_MIT.txt vendored upstream covers the source weights only",
+      "sha256": null,
+      "license_status": "blocked_unresolved",
+      "redistribution": null,
+      "modification": "generated CoreML conversion plus a WhisperKit-ported greedy decode loop",
+      "generated_from_source_model": true,
+      "pack": "speech"
+    },
+    {
+      "asset_id": "whisper-tokenizer-json",
+      "asset_class": "dataset",
+      "referenced_by": [
+        "engine/src/whisper_coreml_sections/section02.rs (model_dir.join(\"tokenizer.json\"), HR_WHISPER_TOKENIZER override)"
+      ],
+      "source": "Whisper tokenizer.json bundled beside the upstream CoreML bundle; exact bytes NOT verified",
+      "licence_evidence": "whisper tokenizer ships with MIT openai/whisper, but byte identity is unverified",
+      "sha256": null,
+      "license_status": "blocked_unresolved",
+      "redistribution": null,
+      "modification": "none known",
+      "generated_from_source_model": false,
+      "pack": "speech"
+    },
+    {
+      "asset_id": "whisper-win-ggml-bin",
+      "asset_class": "model_weights",
+      "referenced_by": [
+        "engine/src/whisper_win.rs (resolve_whisper_model: models_dir/whisper-win/*.{bin,gguf}; locked whisper_turbo_q5_k.bin via whisper-cli.exe)"
+      ],
+      "source": "whisper.cpp GGML quantized model (whisper_turbo_q5_k.bin) resolved at runtime from app-data; third-party quantized conversion, bytes NOT verified",
+      "licence_evidence": "whisper.cpp runtime is MIT (corpus whisper-cpp row); the quantized model bytes carry no recorded licence row",
+      "sha256": null,
+      "license_status": "blocked_unresolved",
+      "redistribution": null,
+      "modification": "q5_k quantization of whisper large-v3-turbo by an unrecorded converter",
+      "generated_from_source_model": true,
+      "pack": "speech"
+    },
+    {
+      "asset_id": "sherpa-kws-wakeword-transducer",
+      "asset_class": "model_weights",
+      "referenced_by": [
+        "engine/src/sherpa_kws.rs (encoder/decoder/joiner-epoch-13-avg-2-chunk-16-left-64 *.onnx + tokens.txt)"
+      ],
+      "source": "wake-word keyword-spotting transducer (sherpa-onnx) referenced by the upstream engine; wake-word lane is NOT adopted by CutRight v2",
+      "licence_evidence": "none gathered - excluded before audit",
+      "sha256": null,
+      "license_status": "excluded",
+      "redistribution": "not applicable - wake-word material excluded by dispatch and by the heardright-source selection exclusions",
+      "modification": "n/a",
+      "generated_from_source_model": true,
+      "pack": null
+    },
+    {
+      "asset_id": "kws-owner-manifests",
+      "asset_class": "configuration",
+      "referenced_by": [
+        "engine tests referencing ../src-tauri/resources/kws/manifest.json and owner/{mac,windows}/owner-kws-manifest.json"
+      ],
+      "source": "wake-word manifests inside the excluded tauri-app-next/src-tauri app tree",
+      "licence_evidence": "none gathered - excluded with the app tree",
+      "sha256": null,
+      "license_status": "excluded",
+      "redistribution": "not applicable",
+      "modification": "n/a",
+      "generated_from_source_model": false,
+      "pack": null
+    }
+  ],
+  "policy_notes": [
+    "Model bytes were NOT copied by CR-V2-B1-012/013; every referenced_external_assets row with sha256=null must obtain the exact byte hash from the signed pack builder before closure.",
+    "blocked_unresolved rows are release-blocking per docs/legal/V2-IMPORT-POLICY.md section 3.",
+    "No licence is inferred from filenames or repository ownership; rows record only evidence actually present in the vendored tree or the frozen corpus."
+  ]
+}
