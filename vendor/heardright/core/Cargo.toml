@@ -1,0 +1,18 @@
+[package]
+name = "heardright_core"
+version = "0.1.1"
+publish = false
+edition = "2021"
+
+# Pure, GUI-free logic shared by the Heard Right app. Deliberately has NO
+# `tauri` dependency so its unit tests link a plain console harness and run.
+# The app crate (`heardright_next`) links Common Controls v6 via tauri
+# (`comctl32!TaskDialogIndirect`), which the loader can't resolve in a bare
+# `cargo test` binary without the app's manifest activation context — so the
+# app crate's own unit tests can't launch. Pure logic belongs here instead.
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+base64 = "0.22"

@@ -1,0 +1,12 @@
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/capture_sections/section01.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/capture_sections/section02.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/capture_sections/section03.rs"
+));

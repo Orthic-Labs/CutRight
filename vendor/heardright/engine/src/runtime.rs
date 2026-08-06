@@ -1,0 +1,20 @@
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/runtime_sections/section01.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/runtime_sections/section02.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/runtime_sections/finalize_transcript.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/runtime_sections/delivery_history.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/runtime_sections/section03.rs"
+));

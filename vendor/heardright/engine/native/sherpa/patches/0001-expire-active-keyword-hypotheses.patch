@@ -1,0 +1,100 @@
+diff --git a/sherpa-onnx/csrc/hypothesis.h b/sherpa-onnx/csrc/hypothesis.h
+index 52569e4..817c3cb 100644
+--- a/sherpa-onnx/csrc/hypothesis.h
++++ b/sherpa-onnx/csrc/hypothesis.h
+@@ -147,6 +147,17 @@ class Hypotheses {
+ 
+   void Clear() { hyps_dict_.clear(); }
+ 
++  template <typename Predicate>
++  void RemoveIf(Predicate predicate) {
++    for (auto it = hyps_dict_.begin(); it != hyps_dict_.end();) {
++      if (predicate(it->second)) {
++        it = hyps_dict_.erase(it);
++      } else {
++        ++it;
++      }
++    }
++  }
++
+   // Return a list of hyps contained in this object.
+   std::vector<Hypothesis> Vec() const {
+     std::vector<Hypothesis> ans;
+diff --git a/sherpa-onnx/csrc/transducer-keyword-decoder.cc b/sherpa-onnx/csrc/transducer-keyword-decoder.cc
+index 62607dd..779e540 100644
+--- a/sherpa-onnx/csrc/transducer-keyword-decoder.cc
++++ b/sherpa-onnx/csrc/transducer-keyword-decoder.cc
+@@ -16,6 +16,29 @@
+ 
+ namespace sherpa_onnx {
+ 
++namespace {
++
++// Keyword timestamps use 40 ms subsampled frames. Production phrases finish
++// within 1.12 seconds; 38 frames retain 1.52 seconds while preventing an old
++// partial context path from surviving into a later command attempt.
++constexpr int32_t kMaxKeywordActiveFrames = 38;
++
++bool KeywordPathExpired(const Hypothesis &hyp, int32_t current_frame) {
++  if (hyp.context_state == nullptr || hyp.context_state->level <= 0) {
++    return false;
++  }
++
++  auto level = static_cast<size_t>(hyp.context_state->level);
++  if (hyp.timestamps.size() < level) {
++    return false;
++  }
++
++  int32_t first_frame = hyp.timestamps[hyp.timestamps.size() - level];
++  return current_frame - first_frame > kMaxKeywordActiveFrames;
++}
++
++}  // namespace
++
+ TransducerKeywordResult TransducerKeywordDecoder::GetEmptyResult() const {
+   int32_t context_size = model_->ContextSize();
+   int32_t blank_id = 0;  // always 0
+@@ -57,6 +80,16 @@ void TransducerKeywordDecoder::Decode(
+   std::vector<Hypothesis> prev;
+ 
+   for (int32_t t = 0; t != num_frames; ++t) {
++    for (int32_t b = 0; b != batch_size; ++b) {
++      int32_t current_frame = (*result)[b].frame_offset + t;
++      cur[b].RemoveIf([current_frame](const Hypothesis &hyp) {
++        return KeywordPathExpired(hyp, current_frame);
++      });
++      if (cur[b].Size() == 0) {
++        cur[b].Add(Hypothesis(blanks, 0, ss[b]->GetContextGraph()->Root()));
++      }
++    }
++
+     // Due to merging paths with identical token sequences,
+     // not all utterances have "num_active_paths" paths.
+     auto hyps_row_splits = GetHypsRowSplits(cur);
+diff --git a/sherpa-onnx/csrc/keyword-spotter-transducer-impl.h b/sherpa-onnx/csrc/keyword-spotter-transducer-impl.h
+index c8cb18d..790ba95 100644
+--- a/sherpa-onnx/csrc/keyword-spotter-transducer-impl.h
++++ b/sherpa-onnx/csrc/keyword-spotter-transducer-impl.h
+@@ -194,22 +194,7 @@ class KeywordSpotterTransducerImpl : public KeywordSpotterImpl {
+   void Reset(OnlineStream *s) const override { InitOnlineStream(s); }
+ 
+   void DecodeStreams(OnlineStream **ss, int32_t n) const override {
+-    for (int32_t i = 0; i < n; ++i) {
+-      auto s = ss[i];
+-      auto r = s->GetKeywordResult(true);
+-      int32_t num_trailing_blanks = r.num_trailing_blanks;
+-      // assume subsampling_factor is 4
+-      // assume frameshift is 0.01 second
+-      float trailing_silence = num_trailing_blanks * 4 * 0.01;
+-
+-      // it resets automatically after detecting 1.5 seconds of silence
+-      float threshold = 1.5;
+-      if (trailing_silence > threshold) {
+-        Reset(s);
+-      }
+-    }
+-
+     int32_t chunk_size = model_->ChunkSize();
+     int32_t chunk_shift = model_->ChunkShift();
+ 
+     int32_t feature_dim = ss[0]->FeatureDim();

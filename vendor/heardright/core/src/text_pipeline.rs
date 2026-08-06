@@ -1,0 +1,24 @@
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/text_pipeline_sections/section01.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/text_pipeline_sections/section02.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/text_pipeline_sections/section03.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/text_pipeline_sections/section04.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/text_pipeline_sections/section05.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/text_pipeline_sections/section06.rs"
+));

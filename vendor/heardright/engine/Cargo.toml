@@ -1,0 +1,117 @@
+[package]
+name = "heardright-engine"
+version = "0.1.1"
+publish = false
+edition = "2021"
+authors = ["Heard Right"]
+description = "Heard Right dictation engine sidecar — resident binary that owns mic capture, ASR, focus tracking, and delivery."
+license = "Proprietary"
+
+[[bin]]
+name = "heardright-engine"
+path = "src/main.rs"
+
+[lib]
+name = "heardright_engine"
+path = "src/lib.rs"
+
+[features]
+default = []
+cuda-bench = ["parakeet-rs/cuda", "ort/cuda"]
+
+[dependencies]
+# Pure logic (settings + delivery + command + audio conditioning + the shared
+# engine IPC frame schema) — the sidecar uses the same `EngineFrame` as the
+# shell so the JSON-RPC contract lives in one place.
+heardright_core = { path = "../heardright_core" }
+heardright_platform = { path = "../heardright_platform" }
+# Pure-Rust capture core (cpal). No Python. The Tauri shell links the same
+# crate with default-features=false; this binary does the same.
+heardright_capture = { path = "../heardright_capture", default-features = false }
+# Parakeet RNN-T/TDT decode. Platform-conditional EPs (DirectML on Windows,
+# CoreML on macOS) live in the per-target tables below.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+unicode-normalization-alignments = "0.1"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+ureq = { version = "3", features = ["json"] }
+parking_lot = "0.12"
+chrono = "0.4"
+iana-time-zone = "0.1"
+sys-locale = "0.3"
+hound = "3.5"
+image = { version = "0.25", default-features = false, features = ["png"] }
+ring = "0.17"
+libloading = "0.9"
+[target.'cfg(target_os = "windows")'.dependencies]
+parakeet-rs = { path = "../parakeet-rs-bench/vendor/parakeet-rs", features = ["directml", "load-dynamic"] }
+ort = { version = "2.0.0-rc.12", default-features = false, features = ["std", "ndarray", "api-24", "load-dynamic", "directml"] }
+windows-sys = { version = "0.61.2", features = [
+  "Win32_Foundation",
+  "Win32_System_Diagnostics_Debug",
+  "Win32_System_Kernel",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_Threading",
+  "Win32_System_Com",
+  "Win32_System_DataExchange",
+  "Win32_Graphics_Gdi",
+  "Win32_Storage_FileSystem",
+] }
+# COM UI Automation (IUIAutomation::GetFocusedElement) — reads the ACTUAL focused
+# element's control type/patterns so a Chromium window that ISN'T in a text box
+# is not blind-pasted into (the Windows analog of the macOS AX probe). Matches
+# the shell's windows crate version to avoid a duplicate in the lockfile.
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Dxgi",
+  "Win32_Graphics_Dxgi_Common",
+  "Win32_System_Com",
+  "Win32_UI_Accessibility",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-av-foundation = { version = "0.3", features = ["AVAsset", "AVAssetReader", "AVAssetReaderOutput", "AVMediaFormat", "AVAssetTrack", "objc2-core-media"] }
+objc2-core-media = "0.3"
+parakeet-rs = { path = "../parakeet-rs-bench/vendor/parakeet-rs", features = ["coreml", "load-dynamic"] }
+ort = { version = "2.0.0-rc.12", default-features = false, features = ["std", "ndarray", "api-24", "load-dynamic", "coreml"] }
+core-foundation = "0.10"
+core-graphics = { version = "0.24", features = ["highsierra"] }
+objc2 = "0.6"
+objc2-app-kit = "0.3"
+objc2-core-ml = "0.3"
+objc2-foundation = "0.3"
+half = "2"
+realfft = "3.5"
+tokenizers = { version = "0.23", default-features = false, features = ["onig"] }
+ndarray = "0.17"
+
+[target.'cfg(target_os = "macos")'.build-dependencies]
+cc = "1"
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
+embed-resource = "=3.0.11"
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+parakeet-rs = { path = "../parakeet-rs-bench/vendor/parakeet-rs", features = ["cpu", "load-dynamic"] }
+ort = { version = "2.0.0-rc.12", default-features = false, features = ["std", "ndarray", "api-24", "load-dynamic"] }
+
+[profile.release]
+codegen-units = 4
+lto = "thin"
+opt-level = "s"
+panic = "abort"
+
+# heardright_core carries the hot per-utterance text pipeline (deterministic
+# polish, vocab/replacement regex) and per-frame DSP helpers. Size-first ("s")
+# taxes that latency for no shell benefit — build it speed-first. (Perf audit L15.)
+[profile.release.package.heardright_core]
+opt-level = 3
+
+[profile.dev]
+incremental = true

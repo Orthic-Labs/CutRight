@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "source_id": "heardright",
+  "revision_type": "commit",
+  "revision": "b60bff947f12ffa9d25e94ad27e8ff30db006a24",
+  "destination": "vendor/heardright/",
+  "file_count": 238,
+  "total_bytes": 3603234,
+  "sha256_of_sorted_path_list": "cf539c98cb8372821a6dfda906c4d6cf3c80ea64cb98318c60362a71a5c9f436",
+  "imported_by_task": "CR-V2-B1-012",
+  "imported_at": "2026-08-06T23:09:08Z",
+  "selection": {
+    "selection_id": "heardright-source",
+    "source_repo": "/Volumes/D/claude/heardright",
+    "include_paths": [
+      "tauri-app-next/heardright-engine",
+      "tauri-app-next/heardright_core",
+      "tauri-app-next/heardright_platform",
+      "tauri-app-next/heardright_capture",
+      "tauri-app-next/legal"
+    ],
+    "strip_prefix": "tauri-app-next"
+  },
+  "path_mapping": {
+    "note": "V-2 deviation: corpus allowed_paths engine/**, core/**, platform/**, models/** do not exist literally at the HeardRight repo top level. The actual crates live under tauri-app-next/ at the pinned revision and are mapped as follows.",
+    "tauri-app-next/heardright-engine": "vendor/heardright/engine",
+    "tauri-app-next/heardright_core": "vendor/heardright/core",
+    "tauri-app-next/heardright_platform": "vendor/heardright/platform",
+    "tauri-app-next/heardright_capture": "vendor/heardright/engine/heardright_capture",
+    "tauri-app-next/legal": "vendor/heardright/engine/legal"
+  },
+  "excluded_with_reason": [
+    {
+      "path": "tauri-app-next/src",
+      "reason": "Standalone HeardRight web app UI; not part of the engine/core/platform crates."
+    },
+    {
+      "path": "tauri-app-next/src-tauri",
+      "reason": "Tauri application shell crate, app resources (fonts/icons/kws wake-word resources), generated gen/ tree and caches; excluded app UI/user data/wake-word training."
+    },
+    {
+      "path": "tauri-app-next/public",
+      "reason": "Web app static assets (app UI)."
+    },
+    {
+      "path": "tauri-app-next/artifacts",
+      "reason": "Generated artifacts."
+    },
+    {
+      "path": "tauri-app-next/.cache",
+      "reason": "Local caches."
+    },
+    {
+      "path": "tauri-app-next/.cargo",
+      "reason": "Local cargo configuration."
+    },
+    {
+      "path": "tauri-app-next/parakeet-rs-bench",
+      "reason": "Third-party parakeet-rs benchmark vendor tree; only a Windows-only path dependency of the upstream engine, resolved from signed runtime packs in CutRight instead."
+    },
+    {
+      "path": "tauri-app-next/ios-native",
+      "reason": "iOS app; unrelated to the vendored crates."
+    },
+    {
+      "path": "tauri-app-next/macos-native",
+      "reason": "macOS app shell; unrelated to the vendored crates."
+    },
+    {
+      "path": "tauri-app-next/bakeoff",
+      "reason": "Evaluation bake-off data; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/qa",
+      "reason": "App QA harness; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/quality",
+      "reason": "Quality tooling; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/verification",
+      "reason": "Verification tooling; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/scripts",
+      "reason": "App-level scripts; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/docs",
+      "reason": "App documentation; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/heardright-engine/check.out",
+      "reason": "Generated profiler artifact checked into the upstream crate; excluded as a generated artifact."
+    }
+  ],
+  "deviations": [
+    "V-2: corpus allowed_paths (engine/**, core/**, platform/**, models/**) do not exist literally at the HeardRight repo top level; actual crates live under tauri-app-next/ and were mapped per path_mapping above.",
+    "heardright_capture is an unconditional path dependency of the upstream engine crate (path = \"../heardright_capture\"). It is vendored at engine/heardright_capture/ to keep the lane_b vendor glob; the upstream relative path will need a manifest topology adjustment by the serial merge task before a local cargo build.",
+    "The upstream engine's Windows-only parakeet-rs path dependency (../parakeet-rs-bench/vendor/parakeet-rs) is not vendored; see excluded_with_reason. CutRight resolves Parakeet inference from signed runtime packs.",
+    "models/**: no model bytes exist inside the selected crates except engine/src/whisper_mel_128.bin (mel filterbank, hash-bound in the graph); model weights are never vendored and are tracked by CR-V2-B1-013's asset ledger.",
+    "Receipt lives at imports/v2/receipts/heardright-source.json per the dispatch task manifest rather than the interface-freeze default <destination>/.import-receipts/ location."
+  ]
+}

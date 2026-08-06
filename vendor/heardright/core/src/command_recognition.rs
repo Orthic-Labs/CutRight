@@ -1,0 +1,16 @@
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/command_recognition_sections/section01.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/command_recognition_sections/section02.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/command_recognition_sections/section03.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/command_recognition_sections/section04.rs"
+));

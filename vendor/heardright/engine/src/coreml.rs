@@ -1,0 +1,9 @@
+#![allow(deprecated)]
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/coreml_sections/section01.rs"
+));
+include!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/coreml_sections/section02.rs"
+));

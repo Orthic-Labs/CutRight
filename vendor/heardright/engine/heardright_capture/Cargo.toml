@@ -1,0 +1,44 @@
+[package]
+name = "heardright_capture"
+version = "0.1.0"
+publish = false
+edition = "2021"
+authors = ["Heard Right"]
+description = "Low-latency audio capture for Heard Right (cpal + rubato)"
+license = "Proprietary"
+
+[lib]
+name = "heardright_capture"
+# rlib: linked directly by the sidecar ASR worker — NO Python.
+# cdylib: the PyO3 extension module consumed by the legacy Python path. The
+# `python` feature gates everything pyo3.
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+# pyo3 is OPTIONAL and behind the default `python` feature, so sidecar/shell
+# rlib consumers built with default-features=false never compile or link Python.
+pyo3 = { version = "0.28", features = ["extension-module", "abi3-py311"], optional = true }
+cpal = "0.18.1"
+rubato = "3"
+ringbuf = "0.5"
+crossbeam-channel = "0.5"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+once_cell = "1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-core-audio = "0.3.2"
+objc2-core-foundation = "0.3.2"
+
+[features]
+# Default-on so the existing maturin/Python build (and `cargo build`) is unchanged.
+# Rust app/sidecar consumers opt out via default-features=false to get a
+# Python-free rlib.
+default = ["python"]
+python = ["dep:pyo3"]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = 3

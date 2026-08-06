@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "selection_id": "heardright-source",
+  "source_id": "heardright",
+  "revision_type": "commit",
+  "source_repo": "/Volumes/D/claude/heardright",
+  "revision": "b60bff947f12ffa9d25e94ad27e8ff30db006a24",
+  "include_paths": [
+    "tauri-app-next/heardright-engine",
+    "tauri-app-next/heardright_core",
+    "tauri-app-next/heardright_platform",
+    "tauri-app-next/heardright_capture",
+    "tauri-app-next/legal"
+  ],
+  "strip_prefix": "tauri-app-next",
+  "dest": "vendor/heardright",
+  "graph": "imports/v2/graphs/heardright-source.json",
+  "receipt": "imports/v2/receipts/heardright-source.json",
+  "imported_by_task": "CR-V2-B1-012",
+  "path_mapping": {
+    "note": "V-2 deviation: corpus allowed_paths engine/**, core/**, platform/**, models/** do not exist literally at the HeardRight repo top level. The actual crates live under tauri-app-next/ at the pinned revision and are mapped as follows.",
+    "tauri-app-next/heardright-engine": "vendor/heardright/engine",
+    "tauri-app-next/heardright_core": "vendor/heardright/core",
+    "tauri-app-next/heardright_platform": "vendor/heardright/platform",
+    "tauri-app-next/heardright_capture": "vendor/heardright/engine/heardright_capture",
+    "tauri-app-next/legal": "vendor/heardright/engine/legal"
+  },
+  "excluded_with_reason": [
+    {
+      "path": "tauri-app-next/src",
+      "reason": "Standalone HeardRight web app UI; not part of the engine/core/platform crates."
+    },
+    {
+      "path": "tauri-app-next/src-tauri",
+      "reason": "Tauri application shell crate, app resources (fonts/icons/kws wake-word resources), generated gen/ tree and caches; excluded app UI/user data/wake-word training."
+    },
+    {
+      "path": "tauri-app-next/public",
+      "reason": "Web app static assets (app UI)."
+    },
+    {
+      "path": "tauri-app-next/artifacts",
+      "reason": "Generated artifacts."
+    },
+    {
+      "path": "tauri-app-next/.cache",
+      "reason": "Local caches."
+    },
+    {
+      "path": "tauri-app-next/.cargo",
+      "reason": "Local cargo configuration."
+    },
+    {
+      "path": "tauri-app-next/parakeet-rs-bench",
+      "reason": "Third-party parakeet-rs benchmark vendor tree; only a Windows-only path dependency of the upstream engine, resolved from signed runtime packs in CutRight instead."
+    },
+    {
+      "path": "tauri-app-next/ios-native",
+      "reason": "iOS app; unrelated to the vendored crates."
+    },
+    {
+      "path": "tauri-app-next/macos-native",
+      "reason": "macOS app shell; unrelated to the vendored crates."
+    },
+    {
+      "path": "tauri-app-next/bakeoff",
+      "reason": "Evaluation bake-off data; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/qa",
+      "reason": "App QA harness; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/quality",
+      "reason": "Quality tooling; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/verification",
+      "reason": "Verification tooling; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/scripts",
+      "reason": "App-level scripts; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/docs",
+      "reason": "App documentation; not required by the selected crates."
+    },
+    {
+      "path": "tauri-app-next/heardright-engine/check.out",
+      "reason": "Generated profiler artifact checked into the upstream crate; excluded as a generated artifact."
+    }
+  ]
+}

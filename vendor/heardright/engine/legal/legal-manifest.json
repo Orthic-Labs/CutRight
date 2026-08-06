@@ -1,0 +1,169 @@
+{
+  "schema": 2,
+  "suite": "right-suite-desktop",
+  "appKey": "heardright",
+  "productName": "HeardRight",
+  "licensor": "Damned Ventures LLC",
+  "effectiveDate": "2026-07-16",
+  "acceptanceVersion": "heardright-2026-07-16-v2",
+  "documents": [
+    {
+      "id": "right-suite-desktop-license",
+      "role": "license",
+      "title": "Right Suite Desktop License v1.0 Ownership Notice",
+      "version": "1.0",
+      "sha256": "3a95c6f1d2cce8e374a4346026c3ce120dbffa07dcc6bac4b5f6c7e727d11360",
+      "path": "LICENSE.md",
+      "publicUrl": "https://heardright.app/legal/license/",
+      "treatment": "agree",
+      "material": true
+    },
+    {
+      "id": "right-suite-desktop-eula",
+      "role": "eula",
+      "title": "Right Suite End User License Agreement",
+      "version": "1.1",
+      "sha256": "ad3aab9f998921063377a5e656b870b42456fc8305fdfae14d64036325c0d63c",
+      "path": "EULA.md",
+      "publicUrl": "https://heardright.app/legal/eula/",
+      "treatment": "agree",
+      "material": true
+    },
+    {
+      "id": "right-suite-desktop-acceptable-use",
+      "role": "acceptable_use",
+      "title": "Right Suite Acceptable Use Policy",
+      "version": "1.0",
+      "sha256": "2fa8470434259ba4ef182999c8ca9212185424991a6dbae16ffd60471baa41c9",
+      "path": "ACCEPTABLE_USE.md",
+      "publicUrl": "https://heardright.app/legal/acceptable-use/",
+      "treatment": "agree",
+      "material": true
+    },
+    {
+      "id": "heardright-product-schedule",
+      "role": "product_schedule",
+      "title": "HeardRight Product Schedule",
+      "version": "1.0",
+      "sha256": "6afb75b0b381008e038fe1a09422e4160daa2f5ab7cf59a799260a8aae20c4c5",
+      "path": "PRODUCT_SCHEDULE.md",
+      "publicUrl": "https://heardright.app/legal/product-schedule/",
+      "treatment": "agree",
+      "material": true
+    },
+    {
+      "id": "heardright-privacy-notice",
+      "role": "privacy_notice",
+      "title": "HeardRight Privacy Notice",
+      "version": "1.0",
+      "sha256": "c9368cd2a540c3cd50addd66cf42cec24422ce5b9b9ab213c5624dcf953def5f",
+      "path": "PRIVACY_NOTICE.md",
+      "publicUrl": "https://heardright.app/privacy/",
+      "treatment": "acknowledge",
+      "material": false
+    },
+    {
+      "id": "heardright-third-party-notices",
+      "role": "third_party_notices",
+      "title": "HeardRight Third-Party Notices",
+      "version": "1.0",
+      "sha256": "9b15a24bc7f55ba98729f2064f90c7a9106fcd1c512620834831d53095fd6f8a",
+      "path": "THIRD_PARTY_NOTICES.md",
+      "publicUrl": "https://heardright.app/legal/third-party/",
+      "treatment": "notice",
+      "material": false
+    }
+  ],
+  "appendices": [
+    {
+      "id": "rust-licenses",
+      "title": "Rust dependency licenses",
+      "path": "THIRD_PARTY_RUST_LICENSES.html",
+      "sha256": "0dc531989df38634b596c02435b0adfe99d569650ed5c8e13246a967147640fb"
+    },
+    {
+      "id": "npm-licenses",
+      "title": "npm dependency licenses",
+      "path": "THIRD_PARTY_NPM_LICENSES.html",
+      "sha256": "410995d484052b387eedf8ca50476feee77296fcaca63eed7f9828fce9a60124"
+    },
+    {
+      "id": "nvidia-open-model-license",
+      "title": "NVIDIA Open Model License",
+      "path": "third-party/NVIDIA_OPEN_MODEL_LICENSE_2025-10-24.pdf",
+      "sha256": "4d2fb590aa9b30c47f2058bff17291df7fa2aa0c1bd775a20703da9bb267cfab"
+    },
+    {
+      "id": "cc-by-4",
+      "title": "Creative Commons Attribution 4.0",
+      "path": "third-party/CC-BY-4.0.txt",
+      "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411"
+    },
+    {
+      "id": "whisper-mit",
+      "title": "OpenAI Whisper MIT License",
+      "path": "third-party/WHISPER_MIT.txt",
+      "sha256": "b5d65a59060e68c4ff940e1eddfa6f94b2d68fdf58ed7f4dd57721c997e35e9d"
+    },
+    {
+      "id": "whisperkit-mit",
+      "title": "WhisperKit MIT License",
+      "path": "third-party/WHISPERKIT_MIT.txt",
+      "sha256": "b8673adf319f1d6905c5c38cf69513f8857930fb3445566fa9839c6948bb85c4"
+    },
+    {
+      "id": "whisper-cpp-mit",
+      "title": "whisper.cpp MIT License",
+      "path": "third-party/WHISPER_CPP_MIT.txt",
+      "sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d"
+    },
+    {
+      "id": "onnx-runtime-mit",
+      "title": "ONNX Runtime MIT License",
+      "path": "third-party/ONNX_RUNTIME_MIT.txt",
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+    },
+    {
+      "id": "directml-license",
+      "title": "DirectML Redistributable License",
+      "path": "third-party/DIRECTML_LICENSE.txt",
+      "sha256": "a05138e3a085ff60a44881eedfa58dccb03ecc1d7b1f6ae888418e8c2fec4b8d"
+    },
+    {
+      "id": "directml-notices",
+      "title": "DirectML Third-Party Notices",
+      "path": "third-party/DIRECTML_THIRD_PARTY_NOTICES.txt",
+      "sha256": "2c95795c13ff48a58b6ed916f37901c23d964b5d9d601af422f17ad2172e7950"
+    },
+    {
+      "id": "sqlcipher-license",
+      "title": "SQLCipher License",
+      "path": "third-party/SQLCIPHER_LICENSE.txt",
+      "sha256": "2a2826f6acf46fa650730cf42cbb22a642be33a7ef119c9c4f4bf6daf3bef48e"
+    },
+    {
+      "id": "wavlm-mit",
+      "title": "WavLM/UniLM MIT License",
+      "path": "third-party/WAVLM_MIT.txt",
+      "sha256": "904dc4d8749877f1dba1cda48200d2462dccbeb7c134d5e4ef6fa75e0198c8fe"
+    },
+    {
+      "id": "hanken-grotesk-ofl",
+      "title": "Hanken Grotesk OFL",
+      "path": "third-party/HANKEN_GROTESK_OFL.txt",
+      "sha256": "a76abf002c49097d146e86740a3105a5d00450b1592e820a1109a8c5680cd697"
+    },
+    {
+      "id": "spline-sans-mono-ofl",
+      "title": "Spline Sans Mono OFL",
+      "path": "third-party/SPLINE_SANS_MONO_OFL.txt",
+      "sha256": "4abb88162e4c0c5f9fc6c2f15d7085f7b7e27fd89f541a13488e1bcb829bde3f"
+    },
+    {
+      "id": "fontshare-itf-ffl",
+      "title": "Fontshare ITF Free Font License",
+      "path": "third-party/FONTSHARE_ITF_FFL.html",
+      "sha256": "39fa3060200bbc04cf7164227f61b1d6d02c5fa4ae51a641bd7a0bf69fe48ea9"
+    }
+  ]
+}

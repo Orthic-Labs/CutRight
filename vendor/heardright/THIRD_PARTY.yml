@@ -1,0 +1,22 @@
+schema_version: 1
+source_id: heardright
+name: HeardRight
+canonical_url: https://github.com/bogusyogi/heardright
+revision: b60bff947f12ffa9d25e94ad27e8ff30db006a24
+license: user_owned_with_third_party_notices
+notice: |
+  Copyright (c) 2026 Damned Ventures LLC. All rights reserved.
+
+  Vendored HeardRight engine/core/platform source from the Right Suite
+  desktop codebase, adapted into CutRight under the user-owned
+  third-party-notices licence row of imports/v2/dispositions.json
+  (source_id "heardright", disposition adapt_with_notice).
+
+  Upstream engine crate declares license = "Proprietary" in its Cargo
+  manifest; upstream third-party component notices are preserved verbatim
+  under engine/legal/ (upstream path tauri-app-next/legal/), including
+  notices for whisper.cpp, WhisperKit, ONNX Runtime, DirectML, WavLM,
+  SQLCipher, and font OFL notices. Model weights never inherit this
+  notice: every model asset requires its own licence row in the CutRight
+  asset ledger (docs/legal/HEARDRIGHT-ASSET-LEDGER.md) before entering a
+  signed runtime pack.
