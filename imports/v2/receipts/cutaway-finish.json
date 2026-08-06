@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "source_id": "attached-cutaway-finish-material",
+  "revision_type": "attachment_hash",
+  "revision": "attachment-manifest:imports/provenance/cutaway-finish/hash-manifest.json",
+  "destination": "imports/provenance/cutaway-finish/",
+  "file_count": 15,
+  "total_bytes": 54364,
+  "sha256_of_sorted_path_list": "248e9aa4b2021a011c29f4fe0e2fef6bbd499711190782acc1f1c3b488ef430e",
+  "imported_by_task": "CR-V2-B1-014",
+  "imported_at": "2026-08-06T23:14:14Z",
+  "files": [
+    {
+      "path": "cutaway/SKILL.md",
+      "sha256": "b212dec40199872bea4ad3c50d16769015d7c60cf8026322bcfe427221894e16",
+      "bytes": 9939
+    },
+    {
+      "path": "cutaway/examples/beats.example.txt",
+      "sha256": "bcd9c150c1169f7ee002e6d1e9d6f8e35a9e98ffba504add9df1473da13c9bbf",
+      "bytes": 435
+    },
+    {
+      "path": "cutaway/scripts/build_clipinfos.py",
+      "sha256": "9b61ed72da6c119af587ddc536dd08fc305b9bcc2ee1bc20cda2fff5e1c7d52d",
+      "bytes": 2140
+    },
+    {
+      "path": "cutaway/scripts/build_cut.py",
+      "sha256": "dc50ddf94162f890a3bc36038b97ae80a2fe6758ffb6a4105688650b8d745578",
+      "bytes": 3329
+    },
+    {
+      "path": "cutaway/scripts/build_wordcut.py",
+      "sha256": "2903613cadc560cb63c7c2a540053cffb7bbd5387a5e00fa5a580739cbddbae4",
+      "bytes": 2609
+    },
+    {
+      "path": "cutaway/scripts/build_wx.py",
+      "sha256": "55773e89ce8d3f417d16a887ea04cb0231e1f577f77c68e7a0d1bccd9d5e55d4",
+      "bytes": 2823
+    },
+    {
+      "path": "cutaway/scripts/flow_cut.py",
+      "sha256": "b44ec266c2cd82196772d11854ad29338387ad4c7d0dc62a1d575b2547186f8f",
+      "bytes": 3395
+    },
+    {
+      "path": "cutaway/scripts/motion_score.py",
+      "sha256": "39053a2007b83f60f1b1e5aca8006f21b229f2bb0bd7b7b50559314b6f70a5e8",
+      "bytes": 2405
+    },
+    {
+      "path": "cutaway/scripts/preview.sh",
+      "sha256": "4e5c7a3ceb444d809d2ef5cded8beec1f8b765e445278529221cefa27bb736a8",
+      "bytes": 1666
+    },
+    {
+      "path": "cutaway/scripts/storyboard.sh",
+      "sha256": "95b4e10d7e1cfca63b05a6c1cd97090abbbd1682646629e8d9e2b753dacd91c2",
+      "bytes": 1389
+    },
+    {
+      "path": "cutaway/scripts/transcribe.py",
+      "sha256": "28b1326ed32438ee9c9880ef78730cc63e6ce3fd536b585979dcb932d14ecc2e",
+      "bytes": 977
+    },
+    {
+      "path": "cutaway/scripts/whisperx_align.py",
+      "sha256": "4d6a4cc553e13fd7971c1a6174ffc749c0f48a46df6f1a38fad906c8055c11a3",
+      "bytes": 1550
+    },
+    {
+      "path": "finish/SKILL.md",
+      "sha256": "952daf0df24c9583cc4f47fc008ba2b3e068c00e2892fdc75d68116e939cbfdf",
+      "bytes": 15575
+    },
+    {
+      "path": "finish/scripts/reverb_throw.sh",
+      "sha256": "0b9af4c19c2b96c3091f2dad8cbe7733c228a7f24d9b290462a2b7b2429fec4f",
+      "bytes": 2329
+    },
+    {
+      "path": "hash-manifest.json",
+      "sha256": "8e2cb690310031d9c3c3af9da0968d64480944c59267d4b318b49494cd205148",
+      "bytes": 3803
+    }
+  ],
+  "notes": [
+    "Known gap per dispatch: scripts/import-conversation-files.py does not exist; the cutaway/ and finish/ trees were copied verbatim (diff -r clean) and both artifacts were produced from tools/import-closure/hash_tree.py output.",
+    "hash-manifest.json hashes the supplied material only (cutaway + finish trees); this receipt additionally binds the manifest file itself within the provenance root.",
+    "Provenance-only material: no script here may be invoked by release code; live behavior migrates per docs/migrations/CUTAWAY-FINISH-GOLDEN-BEHAVIOR.md."
+  ]
+}
