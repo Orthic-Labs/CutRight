@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "frozen_by": "CR-V2-B1-006",
+  "corpus_date": "2026-08-06",
+  "rules": [
+    "Every parallel output path has exactly one lane owner.",
+    "No lane owns root workspace manifests (Cargo.toml, package.json, pnpm-lock files), scripts/gate.sh, AGENTS.md, or release manifests; serial merge tasks own integration files.",
+    "A lane writes only inside its own glob set; cross-lane reads are allowed, cross-lane writes are not."
+  ],
+  "lane_a": ["skills/**"],
+  "lane_b": ["vendor/**", "imports/provenance/**", "runtime/source/**"],
+  "lane_c": ["tools/import-closure/**", "tools/v2-evals/**", "docs/legal/**", "third_party/**"]
+}

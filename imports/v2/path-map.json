@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "frozen_by": "CR-V2-B1-006",
+  "corpus_date": "2026-08-06",
+  "destination_roots": [
+    {
+      "path": "skills/",
+      "owner_lane": "lane_a",
+      "sources": ["workspace-capabilities"],
+      "purpose": "CutRight-owned capability skills adapted from workspace material with per-file notices."
+    },
+    {
+      "path": "vendor/heardright/",
+      "owner_lane": "lane_b",
+      "sources": ["heardright"],
+      "purpose": "Adapted HeardRight engine/core/platform source; model assets resolve only from signed pack provenance."
+    },
+    {
+      "path": "imports/provenance/",
+      "owner_lane": "lane_b",
+      "sources": ["vox-director", "attached-cutaway-finish-material"],
+      "purpose": "Provenance-only material: MIT-noticed Vox snapshots, cutaway/finish hash manifests and golden scripts."
+    },
+    {
+      "path": "runtime/source/",
+      "owner_lane": "lane_b",
+      "sources": ["llama-cpp", "whisper-cpp", "silero-vad", "ffmpeg"],
+      "purpose": "Pinned runtime sources from which CutRight builds its own signed platform packs."
+    },
+    {
+      "path": "third_party/",
+      "owner_lane": "lane_c",
+      "sources": [],
+      "purpose": "Aggregated dependency and redistribution notices generated from ledger rows."
+    },
+    {
+      "path": "docs/legal/notices/",
+      "owner_lane": "lane_c",
+      "sources": [],
+      "purpose": "Release-facing notice aggregation built from imports/v2/dispositions.json."
+    }
+  ]
+}
