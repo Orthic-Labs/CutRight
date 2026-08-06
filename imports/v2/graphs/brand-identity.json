@@ -1,0 +1,46 @@
+{
+  "root": "/Volumes/D/claude/cutright/skills/brand-identity",
+  "file_count": 7,
+  "total_bytes": 52011,
+  "sha256_of_sorted_path_list": "a5b1309558974c2a7bc3349c53d7231f8b1c923fc00b0f03116c55071c14840b",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "ba7483362f0e7bedc1d7cb8978f8965344aea0f7a69a9aa2a108f53806069bdc",
+      "bytes": 1441
+    },
+    {
+      "path": "THIRD_PARTY.yml",
+      "sha256": "ba66ab6baec0e7f13591c786b6d8dcac5fb7a85d206d923f99842632b4cd3c95",
+      "bytes": 873
+    },
+    {
+      "path": "evals/evals.json",
+      "sha256": "98faec0457dbb01ab097148083365f22333b214f0b53bce8596781eeb605e49c",
+      "bytes": 7425
+    },
+    {
+      "path": "references/brand-registry.md",
+      "sha256": "9ac983ff99d87c6e6e21c628308a770381c9d909f1a9ed238aa43f50f601b4d7",
+      "bytes": 3407
+    },
+    {
+      "path": "references/manual.md",
+      "sha256": "128d0540304554e8e8a6226d2322f5f38d18008d6f069deeaced8f687763d55b",
+      "bytes": 32376
+    },
+    {
+      "path": "references/visual-reference-libraries.md",
+      "sha256": "67e21029a6e2c34f915765fd7eb6be48dc097fb2fe435c9f2944172fe256fd1d",
+      "bytes": 1557
+    },
+    {
+      "path": "scripts/color-check.mjs",
+      "sha256": "3741ba6c66a7417829252c22ff206e445ff345e448e77be5dc6278d511a3ab58",
+      "bytes": 4932
+    }
+  ],
+  "selection_id": "brand-identity",
+  "source_id": "workspace-capabilities",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302"
+}

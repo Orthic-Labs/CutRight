@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "source_id": "workspace-capabilities",
+  "revision_type": "commit",
+  "source_repo": "/Volumes/D/claude",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "strip_prefix": "tools/skills",
+  "dest": "skills/",
+  "imported_by_task": "CR-V2-B1-009",
+  "selection_id": "brand-identity",
+  "include_paths": [
+    "tools/skills/brand-identity"
+  ],
+  "graph": "imports/v2/graphs/brand-identity.json",
+  "receipt": "imports/v2/receipts/brand-identity.json"
+}

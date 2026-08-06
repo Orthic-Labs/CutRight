@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "source_id": "workspace-capabilities",
+  "revision_type": "commit",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "destination": "skills/brand",
+  "file_count": 11,
+  "total_bytes": 37153,
+  "sha256_of_sorted_path_list": "0d338e40cb419488044c478b863aebce382e6d5852fa50396dd7336267f38508",
+  "imported_by_task": "CR-V2-B1-009",
+  "imported_at": "2026-08-06T23:39:28Z",
+  "selection": {
+    "selection_id": "brand",
+    "source_repo": "/Volumes/D/claude",
+    "include_paths": [
+      "tools/skills/brand"
+    ],
+    "strip_prefix": "tools/skills"
+  },
+  "omitted_reachable_nodes": 0,
+  "notes": [
+    "Variance V-2: corpus allowed_path maps to tools/skills/brand at the pinned workspace revision.",
+    "Every file present at the pinned revision under the selected root was copied; zero reachable nodes omitted. THIRD_PARTY.yml is the CutRight notice addition.",
+    "brand-identity closure reaches skills/_shared (parametric-design.md, anti-slop.md), already vendored under CR-V2-B1-007.",
+    "Venture-specific brand data referenced by upstream (heardright sibling repo sources, venture Content/Brand Identity assets) is not corpus material; it is separated into optional signed creative data packs by the CR-V2-B1-009 adaptation rather than vendored.",
+    "Graph hashes describe the byte-identical import state (plus notice files); the CR-V2-B1-009 adaptation rewrites references afterwards in the same commit."
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "root": "/Volumes/D/claude/cutright/skills/brand",
+  "file_count": 11,
+  "total_bytes": 37153,
+  "sha256_of_sorted_path_list": "0d338e40cb419488044c478b863aebce382e6d5852fa50396dd7336267f38508",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "dcc00b9f4904aec024d5b21a474101898fa67f815462ae3f71b664e126dd4d04",
+      "bytes": 1674
+    },
+    {
+      "path": "THIRD_PARTY.yml",
+      "sha256": "67cdf99986eb174307fb5f0e617bbcd9404d188561ccf0df21c4fda0186b76ef",
+      "bytes": 787
+    },
+    {
+      "path": "evals/evals.json",
+      "sha256": "8a51d2cb1a0456a8980e1b3f6911b0f389f2d71aff6e0d4a26a7cbaac97fd14d",
+      "bytes": 3766
+    },
+    {
+      "path": "references/cross-brand.md",
+      "sha256": "cf72f49cd71710736f3532ed311da96b1db3e89b97ce9cb5126ed57bb74b456b",
+      "bytes": 821
+    },
+    {
+      "path": "references/damned-designs.md",
+      "sha256": "e818ae2d2f908f1302905bd2626bcc97becb8c2be244b6e1577f6055af9de190",
+      "bytes": 987
+    },
+    {
+      "path": "references/heard-right.md",
+      "sha256": "ca941a7f36ee849b91227052ad077076394e820c5bd3d014521332fdcebc3e57",
+      "bytes": 2475
+    },
+    {
+      "path": "references/manual.md",
+      "sha256": "22b40eb037506c6fc7bdaee9082b79ffcf8f71a0cdecd4eb801344015bacd51c",
+      "bytes": 10830
+    },
+    {
+      "path": "references/right-suite.md",
+      "sha256": "44730b634619d1bbc3011820767824201e4ba477277323aae3a64ab2093e3c4e",
+      "bytes": 9729
+    },
+    {
+      "path": "references/rotten-hand.md",
+      "sha256": "d3b023054ecf00e0f73f413e0600d2c206da7b10cb9f2d8a88354b835a26e2bb",
+      "bytes": 1024
+    },
+    {
+      "path": "references/stunning-strangers.md",
+      "sha256": "403486031eb953623da8f68d97aa5065affc2bd821f05d33bf922303cce16264",
+      "bytes": 1742
+    },
+    {
+      "path": "references/toxic-sundae.md",
+      "sha256": "8e88fe72fbf1a805a7e5786569e21311f3d0b6cf6eab04ae8de49201898209af",
+      "bytes": 3318
+    }
+  ],
+  "selection_id": "brand",
+  "source_id": "workspace-capabilities",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302"
+}
