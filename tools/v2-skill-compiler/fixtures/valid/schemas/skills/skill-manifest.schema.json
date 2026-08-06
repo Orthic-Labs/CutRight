@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cutright://schemas/skills/skill-manifest.v1.json",
+  "title": "CutRightSkillManifestV1",
+  "type": "object"
+}

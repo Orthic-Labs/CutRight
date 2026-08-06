@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "capabilities": [
+    {"name": "render.sample"},
+    {"name": "asset.request"},
+    {"name": "export.enqueue"}
+  ]
+}

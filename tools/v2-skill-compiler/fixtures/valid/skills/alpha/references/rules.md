@@ -1,0 +1,1 @@
+Alpha fixture resource content.

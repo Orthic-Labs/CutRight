@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "source_id": "workspace-capabilities",
+  "revision_type": "commit",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "destination": "tools/v2-skill-compiler + tools/v2-skill-monitor",
+  "file_count": 35,
+  "total_bytes": 67500,
+  "sha256_of_sorted_path_list": "bdd6ca0ac8065bd7476df07bfad2cd01fc7dca285636537d9827f2d8d301b7bc",
+  "imported_by_task": "CR-V2-B1-018",
+  "imported_at": "2026-08-06T23:23:33Z",
+  "notes": "Concept adaptation, not a file copy: bounded-run skill compilation and monitor qualification concepts from the pinned workspace tools/bounded-run closure were reimplemented as two standalone pure-std Rust crates for the CutRight-local skill model (skills/, schemas/skills/, capabilities/registry.json). No workspace file bytes were copied."
+}

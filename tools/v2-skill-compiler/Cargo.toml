@@ -1,0 +1,20 @@
+[package]
+name = "v2-skill-compiler"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Orthic Labs"]
+description = "Deterministic CutRight v2 skill compiler: compiles skills/ against schemas/skills/ and capabilities/registry.json into a byte-identical resource pack."
+publish = false
+
+# Standalone tool: intentionally not a member of the CutRight application
+# workspace (lane C owns this root; zero external dependencies, pure std).
+[workspace]
+
+[lib]
+name = "v2_skill_compiler"
+path = "src/lib.rs"
+
+[[bin]]
+name = "v2-skill-compiler"
+path = "src/main.rs"

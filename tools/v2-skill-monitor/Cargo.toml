@@ -1,0 +1,20 @@
+[package]
+name = "v2-skill-monitor"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Orthic Labs"]
+description = "Read-only CutRight v2 skill health monitor: reports typed healthy/degraded/failed states for the local skills tree without modifying it."
+publish = false
+
+# Standalone tool: intentionally not a member of the CutRight application
+# workspace (lane C owns this root; zero external dependencies, pure std).
+[workspace]
+
+[lib]
+name = "v2_skill_monitor"
+path = "src/lib.rs"
+
+[[bin]]
+name = "v2-skill-monitor"
+path = "src/main.rs"
