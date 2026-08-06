@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "source_id": "palmier-pro",
+  "observed_at_revision": "397b82e64093f986cbabd89f1a1c93812ff546c2",
+  "observation_date": "2026-08-07",
+  "observed_behavior": "Public behavior of an AI-assisted timeline video editor observed from its documentation and observable tool surface at the pinned revision: project packages as single source of truth with serialized atomic writes; multiple timelines with explicit active selection; managed media import/probing/organization with lazy hydration; typed clip mutations (add/insert/move/remove/ripple/split/swap/link/sync/multicam) validated before atomic apply; text overlays with a constrained layout vocabulary; captions derived from word-timed transcripts enabling word- and silence-based media edits; keyframable effects and color through one render-identical calculation path; exports and other long-running work as durable inspectable jobs; stable entity identifiers for every object; composited timeline inspection returning rendered samples with visible object ids; one shared undo history for human and agent edits; versioned media variants; a readable agent capability catalog.",
+  "implementer_separation": "Behavior is specified from observation notes only (imports/provenance/behavior/palmier/*.md). Any agent implementing the corresponding CutRight Rust surfaces works from these written specifications and never opens the upstream source tree while implementing.",
+  "no_copy_attestation": "No upstream source code, declaration, schema, asset, comment, or configuration text was copied into the CutRight tree. The behavior specifications are written in CutRight terminology and map every adopted behavior to future CutRight actions or read models. The GPL-3.0 upstream remains outside all shipping and development source roots; the closure scanner rejects any such path.",
+  "observation_notes": [
+    "imports/provenance/behavior/palmier/01-project-behavior.md",
+    "imports/provenance/behavior/palmier/02-timeline-behavior.md",
+    "imports/provenance/behavior/palmier/03-media-behavior.md",
+    "imports/provenance/behavior/palmier/04-clip-behavior.md",
+    "imports/provenance/behavior/palmier/05-text-captions-behavior.md",
+    "imports/provenance/behavior/palmier/06-effects-audio-behavior.md",
+    "imports/provenance/behavior/palmier/07-identity-inspection-undo-jobs.md",
+    "imports/provenance/behavior/palmier/08-export-behavior.md",
+    "imports/provenance/behavior/palmier/09-rejected-behaviors.md"
+  ],
+  "rejected_behaviors": [
+    "hosted generative providers (login/subscription/network generation)",
+    "account, telemetry, and subscription gating",
+    "network-exposed control endpoint as the agent boundary",
+    "closed-source processing components",
+    "platform-pinned UI framework assumptions"
+  ],
+  "imported_by_task": "CR-V2-B1-017"
+}
