@@ -1,0 +1,10 @@
+{
+  "capabilities": [
+    {
+      "name": "file.read"
+    },
+    {
+      "name": "process.spawn"
+    }
+  ]
+}

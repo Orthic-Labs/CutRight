@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "expected_class": "absent_notice",
+  "expected_value": "skills/silent-import/NOTICE.md",
+  "note": "Skill directory carries neither NOTICE.md nor provenance.json."
+}

@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cutright://schema/evals/eval-case.schema.v1.json",
+  "title": "CutRight v2 eval case file",
+  "description": "A per-skill collection of statically checkable eval cases adapted from workspace-capabilities evals. Enforced by tools/v2-evals/run.py (stdlib checks; this document is the normative shape).",
+  "type": "object",
+  "required": ["schema_version", "skill", "source", "cases"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "skill": {
+      "type": "string",
+      "description": "CutRight skill directory name these cases belong to.",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "source": {
+      "type": "object",
+      "required": ["source_id", "revision", "source_file", "adapted"],
+      "properties": {
+        "source_id": { "const": "workspace-capabilities" },
+        "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "source_file": {
+          "type": "string",
+          "description": "Repo-relative path of the workspace evals.json the cases were adapted from."
+        },
+        "adapted": {
+          "const": true,
+          "description": "Cases were rewritten to CutRight inputs/outputs; no upstream text was copied."
+        },
+        "omitted_cases": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Upstream case ids deliberately not adapted; each gets an exclusion note."
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["case_id", "input", "expected"],
+        "properties": {
+          "case_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "input": {
+            "type": "object",
+            "required": ["request"],
+            "properties": {
+              "request": { "type": "string", "minLength": 1 }
+            }
+          },
+          "expected": {
+            "type": "object",
+            "required": ["status"],
+            "properties": {
+              "status": { "enum": ["routed", "refused", "degraded"] },
+              "skill": {
+                "type": "string",
+                "description": "Required when status is routed: the skill the request routes to."
+              },
+              "reason_code": {
+                "type": "string",
+                "description": "Required when status is refused or degraded. Stable codes: skill_boundary, approval_gate, verification_gate, fabrication_refusal, provider_gate, no_cloud_provider, brand_gate, pipeline_boundary."
+              },
+              "evidence": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Typed evidence records the run must emit (e.g. AssetDelivery, VisualReviewResult)."
+              }
+            }
+          },
+          "forbidden_skills": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "source_cases": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Upstream case ids this case was adapted from."
+          },
+          "severity": { "enum": ["error", "warning", "info"] }
+        }
+      }
+    }
+  }
+}

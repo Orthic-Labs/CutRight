@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "note": "Exclusion rows for every workspace eval source surveyed at pin 6ee21f03a787e7b57dc412760a8996ea7a235302 (source_id workspace-capabilities) that was not imported wholesale. Partially imported files name the CutRight case file carrying their adapted derivatives. Enforced by tools/v2-evals/run.py.",
+  "rows": [
+    {
+      "source_path": "tools/skills/ads/evals/evals.json",
+      "reason": "Paid-ads lane is out of scope for CutRight; task 019 excludes unrelated eval families."
+    },
+    {
+      "source_path": "tools/skills/architect/evals/evals.json",
+      "reason": "Coding-agent/orchestration lane; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/brand-identity/evals/evals.json",
+      "reason": "Identity-system skill not yet materialised in CutRight; revisit when skills/brand-identity lands."
+    },
+    {
+      "source_path": "tools/skills/coder/evals/evals.json",
+      "reason": "Coding-agent lane explicitly excluded by task 019."
+    },
+    {
+      "source_path": "tools/skills/commit/evals/evals.json",
+      "reason": "Coding-agent/orchestration lane; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/content/specialists/image-enhancement/evals/evals.json",
+      "reason": "Hosted-provider specialist; CutRight local pipeline has no counterpart."
+    },
+    {
+      "source_path": "tools/skills/content/specialists/kdp/evals/evals.json",
+      "reason": "Book-publishing specialist; out of scope for a video editor."
+    },
+    {
+      "source_path": "tools/skills/content/specialists/remotion/evals/evals.json",
+      "reason": "Remotion is provenance_only per CR-V2-B1-021; its evals are not imported into runtime suites."
+    },
+    {
+      "source_path": "tools/skills/content/specialists/seedance/evals/evals.json",
+      "reason": "Hosted-provider specialist; CutRight local pipeline has no counterpart."
+    },
+    {
+      "source_path": "tools/skills/content/specialists/transcription/evals/evals.json",
+      "reason": "Transcription concept adapted into fixtures/evals/cases/content-video-editor.json (cve-transcribe-captions); provider-specific specialist cases excluded."
+    },
+    {
+      "source_path": "tools/skills/cortex/evals/evals.json",
+      "reason": "Coding-agent/orchestration lane; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/council/evals/evals.json",
+      "reason": "Multi-model orchestration lane; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/debugger/evals/evals.json",
+      "reason": "Coding-agent lane explicitly excluded by task 019."
+    },
+    {
+      "source_path": "tools/skills/designer/specialists/static-creative/evals/evals.json",
+      "reason": "Static-creative concept folded into fixtures/evals/cases/designer.json (designer-static-creative); specialist file itself excluded."
+    },
+    {
+      "source_path": "tools/skills/dispatch/evals/evals.json",
+      "reason": "Orchestration lane; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/handoff/evals/evals.json",
+      "reason": "Orchestration lane; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/jfdi/evals/evals.json",
+      "reason": "Orchestration lane; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/marketing/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/marketing/specialists/cro/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/marketing/specialists/daily-mvp/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/marketing/specialists/growth/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/marketing/specialists/growth/references/ab-test/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/marketing/specialists/growth/references/analytics/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/marketing/specialists/growth/references/pricing/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/marketing/specialists/growth/references/referral/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/marketing/specialists/growth/references/revops/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/marketing/specialists/growth/references/sales-enablement/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/marketing/specialists/ideas/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/marketing/specialists/product-context/evals/evals.json",
+      "reason": "Commercial/growth lane is out of scope for CutRight."
+    },
+    {
+      "source_path": "tools/skills/qa/evals/evals.json",
+      "reason": "Partially imported: qa-no-functional-only-signoff adapted into fixtures/evals/cases/content-video-editor.json; remaining workspace browser-harness cases have no local counterpart."
+    },
+    {
+      "source_path": "tools/skills/research/evals/evals.json",
+      "reason": "Research lane explicitly excluded by task 019."
+    },
+    {
+      "source_path": "tools/skills/seo/evals/evals.json",
+      "reason": "SEO lane explicitly excluded by task 019."
+    },
+    {
+      "source_path": "tools/skills/social/evals/evals.json",
+      "reason": "Partially imported: social-no-fabricated-proof and social-pressure-skip-brand-gate adapted into fixtures/evals/cases/video-director.json; remaining platform-operations cases excluded."
+    },
+    {
+      "source_path": "tools/skills/social/references/content/evals/evals.json",
+      "reason": "Platform-operations reference; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/tasklist/evals/evals.json",
+      "reason": "Orchestration lane; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/writing/evals/evals.json",
+      "reason": "Partially imported: writing-no-fabrication adapted into fixtures/evals/cases/content-video-editor.json; prose skill not yet materialised in CutRight."
+    },
+    {
+      "source_path": "tools/skills/writing/specialists/blogs/evals/evals.json",
+      "reason": "Prose specialist; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/writing/specialists/changelog/evals/evals.json",
+      "reason": "Prose specialist; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/writing/specialists/copywriting/evals/evals.json",
+      "reason": "Prose specialist; no CutRight skill counterpart."
+    },
+    {
+      "source_path": "tools/skills/writing/specialists/email/evals/evals.json",
+      "reason": "Email lane explicitly excluded by task 019."
+    },
+    {
+      "source_path": "tools/skills/writing/specialists/email/references/sequence/evals/evals.json",
+      "reason": "Email lane explicitly excluded by task 019."
+    },
+    {
+      "source_path": "tools/skills/writing/specialists/profile-copy/evals/evals.json",
+      "reason": "Prose specialist; no CutRight skill counterpart."
+    }
+  ]
+}

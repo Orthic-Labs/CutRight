@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "source_id": "workspace-capabilities",
+  "revision_type": "commit",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "destination": "tools/v2-evals + schemas/evals + fixtures/evals",
+  "file_count": 25,
+  "total_bytes": 59965,
+  "sha256_of_sorted_path_list": "ac3c2f8abb0e5f8e57d7a47e98d014dde194ac6ea5afaf84ece44a8ed611438c",
+  "imported_by_task": "CR-V2-B1-019",
+  "imported_at": "2026-08-06T23:41:58Z",
+  "notes": "Concept adaptation, not a file copy: catalogue-integrity and skill-topology gates plus eval cases from the pinned workspace tools/evals and tools/skills/{designer,content,writing,social,brand,qa} closures were rewritten for CutRight roots (skills/, capabilities/registry.json), CutRight inputs/outputs, and deterministic stdlib tooling. No upstream eval text, prompts, or code bytes were copied. Every surveyed workspace eval source is recorded as imported or excluded in fixtures/evals/exclusions.json; the sha256 covers the sorted relative path list of the 25 adapted destination files."
+}

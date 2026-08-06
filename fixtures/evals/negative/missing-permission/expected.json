@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "expected_class": "missing_permission",
+  "expected_value": "network.fetch",
+  "note": "permissions: names a capability absent from the fixture registry."
+}

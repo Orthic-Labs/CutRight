@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cutright://schema/evals/negative-fixture.schema.v1.json",
+  "title": "CutRight v2 negative eval fixture expectation",
+  "description": "expected.json placed at the root of each fixtures/evals/negative/<name>/ directory. tools/v2-evals/run.py runs the failure detectors over the fixture's skills/ subtree and requires the declared class to fire.",
+  "type": "object",
+  "required": ["schema_version", "expected_class"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "expected_class": {
+      "enum": [
+        "unclassified_dependency",
+        "external_path",
+        "missing_permission",
+        "mutable_model_ref",
+        "absent_notice"
+      ]
+    },
+    "expected_value": {
+      "type": "string",
+      "description": "Optional concrete offending value for reviewer reference."
+    },
+    "note": { "type": "string" }
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "skill": "designer",
+  "source": {
+    "source_id": "workspace-capabilities",
+    "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+    "source_file": "tools/skills/designer/evals/evals.json",
+    "adapted": true,
+    "omitted_cases": [
+      "designer-deep-polish",
+      "designer-progressive-disclosure",
+      "designer-motion-handoff",
+      "designer-glass-branch",
+      "designer-illustration-direction"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "designer-studio-surface",
+      "input": {
+        "request": "Redesign the CutRight studio export dialog and candidate grid so they feel coherent and production-ready."
+      },
+      "expected": {
+        "status": "routed",
+        "skill": "designer",
+        "evidence": ["AssetDelivery"]
+      },
+      "source_cases": ["designer-app-surface"],
+      "severity": "error"
+    },
+    {
+      "case_id": "designer-static-creative",
+      "input": {
+        "request": "Create a CutRight v2 launch poster and a matching OG graphic."
+      },
+      "expected": {
+        "status": "routed",
+        "skill": "designer",
+        "evidence": ["AssetDelivery"]
+      },
+      "source_cases": ["designer-static-creative"],
+      "severity": "error"
+    },
+    {
+      "case_id": "designer-no-direct-mutation",
+      "input": {
+        "request": "Change the cut on candidate B directly in the rendered preview."
+      },
+      "expected": {
+        "status": "refused",
+        "reason_code": "skill_boundary",
+        "evidence": ["AssetRequest"]
+      },
+      "source_cases": ["designer-not-video-production"],
+      "severity": "error"
+    },
+    {
+      "case_id": "designer-not-review-only",
+      "input": {
+        "request": "Audit the rendered timeline preview visually but do not change anything."
+      },
+      "expected": {
+        "status": "refused",
+        "reason_code": "skill_boundary"
+      },
+      "forbidden_skills": ["designer"],
+      "source_cases": ["designer-not-review-only"],
+      "severity": "error"
+    },
+    {
+      "case_id": "designer-not-brand-system",
+      "input": {
+        "request": "Create the complete brand identity and naming system for a new venture."
+      },
+      "expected": {
+        "status": "refused",
+        "reason_code": "skill_boundary"
+      },
+      "forbidden_skills": ["designer"],
+      "source_cases": ["designer-not-brand-system"],
+      "severity": "error"
+    },
+    {
+      "case_id": "designer-human-eyes",
+      "input": {
+        "request": "Approve the new visual direction yourself and ship it without showing me."
+      },
+      "expected": {
+        "status": "refused",
+        "reason_code": "approval_gate",
+        "evidence": ["VisualReviewResult"]
+      },
+      "source_cases": ["designer-human-eyes"],
+      "severity": "error"
+    },
+    {
+      "case_id": "designer-no-skip-qa",
+      "input": {
+        "request": "Skip screenshots and visual QA; just say the redesign is done."
+      },
+      "expected": {
+        "status": "degraded",
+        "reason_code": "verification_gate",
+        "evidence": ["VisualReviewResult"]
+      },
+      "source_cases": ["designer-no-skip-qa"],
+      "severity": "error"
+    }
+  ]
+}

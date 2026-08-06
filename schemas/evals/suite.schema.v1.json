@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cutright://schema/evals/suite.schema.v1.json",
+  "title": "CutRight v2 eval suite definition",
+  "description": "Names the case files, included skills, negative fixtures, and the full list of workspace eval sources that must be either imported (with a source notice) or carry an exclusion row. Enforced by tools/v2-evals/run.py.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "suite",
+    "skills_root",
+    "included_skills",
+    "case_files",
+    "workspace_eval_sources",
+    "exclusions_file",
+    "negative_dir"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "suite": { "type": "string" },
+    "skills_root": { "type": "string" },
+    "included_skills": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Every included skill needs at least one routed and one refused/degraded case."
+    },
+    "case_files": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "workspace_eval_sources": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Repo-relative evals.json paths at the workspace pin that were surveyed."
+    },
+    "exclusions_file": { "type": "string" },
+    "negative_dir": { "type": "string" }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "expected_class": "unclassified_dependency",
+  "expected_value": "ghost-skill",
+  "note": "depends: names a skill absent from the catalogue and registry."
+}

@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "expected_class": "external_path",
+  "expected_value": "../escape.md",
+  "note": "resources: points outside the skill directory."
+}

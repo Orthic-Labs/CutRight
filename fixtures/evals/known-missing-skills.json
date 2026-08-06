@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "note": "Skills referenced by the current CutRight skill tree and eval cases but not yet materialised in skills/. The Book 1 join task (CR-V2-B1-022) prunes entries as skills land. Keeping this list explicit lets the catalogue and topology gates stay fail-closed on materialised identity rules while the tree is built concurrently by multiple lanes.",
+  "skills": ["brand", "brand-identity", "content", "qa", "social", "writing"]
+}

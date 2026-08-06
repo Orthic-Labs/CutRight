@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "expected_class": "mutable_model_ref",
+  "expected_value": "latest",
+  "note": "model: uses a mutable alias instead of a pinned identifier."
+}
