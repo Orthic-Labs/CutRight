@@ -1,0 +1,353 @@
+{
+  "schema_version": 1,
+  "corpus_date": "2026-08-06",
+  "entries": [
+    {
+      "source_id": "cutright",
+      "disposition": "ship_source",
+      "licence_rows": [
+        {
+          "asset_class": "code",
+          "licence": "MIT",
+          "statement": "First-party Orthic Labs code under MIT; dependency notices aggregated in third_party/.",
+          "notice_file": "LICENSE"
+        }
+      ],
+      "release_blocking": false,
+      "notes": "Shipping base for v2; external-provider assumptions replaced by the v2 architecture."
+    },
+    {
+      "source_id": "workspace-capabilities",
+      "disposition": "adapt_with_notice",
+      "licence_rows": [
+        {
+          "asset_class": "code",
+          "licence": "user_owned_with_third_party_notices",
+          "statement": "User-owned capability material; per-file third-party notices preserved on copy into skills/."
+        },
+        {
+          "asset_class": "documentation",
+          "licence": "user_owned_with_third_party_notices",
+          "statement": "Skill instructions and reference documents copied with their embedded notices intact."
+        }
+      ],
+      "notice_preservation": {
+        "mechanism": "Per-file THIRD_PARTY.yml plus per-root ledger rows in imports/v2/dispositions.json",
+        "notice_destination": "skills/ and docs/legal/notices/"
+      },
+      "release_blocking": false,
+      "notes": "Only allowed_paths from the corpus row may be copied; excluded roots are never vendored."
+    },
+    {
+      "source_id": "heardright",
+      "disposition": "adapt_with_notice",
+      "licence_rows": [
+        {
+          "asset_class": "code",
+          "licence": "user_owned_with_third_party_notices",
+          "statement": "HeardRight engine/core/platform source adapted into vendor/heardright/ with third-party notices preserved."
+        },
+        {
+          "asset_class": "model_weights",
+          "licence": "redistributable_only",
+          "statement": "Only explicitly redistributable model assets may enter first-party CutRight packs; every weight carries its own licence row in the pack manifest."
+        }
+      ],
+      "notice_preservation": {
+        "mechanism": "THIRD_PARTY.yml in vendor/heardright/ plus signed pack provenance for model assets",
+        "notice_destination": "vendor/heardright/ and runtime/pack provenance"
+      },
+      "release_blocking": false,
+      "notes": "Model assets resolve only from signed pack provenance, never from the vendored tree."
+    },
+    {
+      "source_id": "autoshorts",
+      "disposition": "clean_room_behavior",
+      "licence_rows": [],
+      "clean_room": {
+        "observed_behavior": "Project library, onboarding, one-click run, candidate-card presentation, and progress reporting as observed from the public repository at the pinned revision.",
+        "implementer_separation": "Behavior is specified from observation notes only; the implementing agent never opens AutoShorts source while writing CutRight code.",
+        "no_copy_attestation": "No AutoShorts source, asset, or configuration file is copied into the CutRight tree; the closure scanner rejects any such path."
+      },
+      "release_blocking": false,
+      "notes": "Repository declares no licence; clean-room reproduction of behavior only."
+    },
+    {
+      "source_id": "vox-director",
+      "disposition": "adapt_with_notice",
+      "licence_rows": [
+        {
+          "asset_class": "code",
+          "licence": "MIT",
+          "statement": "MIT-licensed director concepts absorbed with the MIT notice preserved in every copied subtree.",
+          "notice_file": "imports/provenance/vox-director/THIRD_PARTY.yml",
+          "upstream_licence_url": "https://github.com/Alisa0808/vox-director"
+        }
+      ],
+      "notice_preservation": {
+        "mechanism": "THIRD_PARTY.yml carrying the MIT notice in every copied subtree",
+        "notice_destination": "imports/provenance/vox-director/"
+      },
+      "release_blocking": false,
+      "notes": "Beat/shot structure, style bake-offs, A/B/C-roll, anti-monotony, and bounded async job semantics."
+    },
+    {
+      "source_id": "palmier-pro",
+      "disposition": "clean_room_behavior",
+      "licence_rows": [],
+      "clean_room": {
+        "observed_behavior": "Typed editing actions, stable element IDs, composited inspection, undo, variants, job management, and skill catalog as described by public documentation and observable behavior at the pinned revision.",
+        "implementer_separation": "GPL-3.0 Swift source is never read during implementation of the corresponding Rust surfaces; design flows only from written behavior specifications.",
+        "no_copy_attestation": "No Palmier Pro source, binary, or asset is copied into the MIT-licensed CutRight product; the closure scanner enforces this boundary."
+      },
+      "release_blocking": false,
+      "notes": "GPL-3.0 source must never be copied into the MIT product."
+    },
+    {
+      "source_id": "llama-cpp",
+      "disposition": "ship_runtime_pack",
+      "licence_rows": [
+        {
+          "asset_class": "code",
+          "licence": "MIT",
+          "statement": "llama.cpp source vendored under MIT; CutRight builds its own platform binaries into signed runtime packs.",
+          "notice_file": "runtime/source/llama-cpp/THIRD_PARTY.yml",
+          "upstream_licence_url": "https://github.com/ggml-org/llama.cpp"
+        }
+      ],
+      "release_blocking": false,
+      "notes": "Pinned local inference runtime for director and vision critic."
+    },
+    {
+      "source_id": "whisper-cpp",
+      "disposition": "ship_runtime_pack",
+      "licence_rows": [
+        {
+          "asset_class": "code",
+          "licence": "MIT",
+          "statement": "whisper.cpp source vendored under MIT; CutRight builds its own binaries into signed runtime packs.",
+          "notice_file": "runtime/source/whisper-cpp/THIRD_PARTY.yml",
+          "upstream_licence_url": "https://github.com/ggml-org/whisper.cpp"
+        }
+      ],
+      "release_blocking": false,
+      "notes": "Independent transcript/edge verifier only; the selected verifier model licence gets its own row in Book 3."
+    },
+    {
+      "source_id": "silero-vad",
+      "disposition": "ship_runtime_pack",
+      "licence_rows": [
+        {
+          "asset_class": "model_weights",
+          "licence": "MIT",
+          "statement": "Exact Silero VAD ONNX bytes redistributed under MIT with generated SHA-256 recorded in the pack manifest.",
+          "notice_file": "runtime/source/silero-vad/THIRD_PARTY.yml",
+          "upstream_licence_url": "https://github.com/snakers4/silero-vad"
+        }
+      ],
+      "release_blocking": false,
+      "notes": "No network fallback; 8/16 kHz parity fixtures must pass."
+    },
+    {
+      "source_id": "mediapipe",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Conditional component; telemetry-disabled, network-blocked qualification and per-model licence closure are required before any vision-pack entry can be opened."
+    },
+    {
+      "source_id": "ffmpeg",
+      "disposition": "ship_runtime_pack",
+      "licence_rows": [
+        {
+          "asset_class": "code",
+          "licence": "LGPL-2.1-or-later",
+          "statement": "FFmpeg n8.1 built with an LGPL-only configuration: no --enable-gpl, no --enable-nonfree; the installer carries the exact configure line and the corresponding source.",
+          "notice_file": "runtime/source/ffmpeg/THIRD_PARTY.yml",
+          "upstream_licence_url": "https://github.com/FFmpeg/FFmpeg"
+        }
+      ],
+      "release_blocking": false,
+      "notes": "LGPL compliance preserved by shipping a dynamically linkable build plus corresponding source offer."
+    },
+    {
+      "source_id": "qwen3-4b",
+      "disposition": "ship_runtime_pack",
+      "licence_rows": [
+        {
+          "asset_class": "model_weights",
+          "licence": "Apache-2.0",
+          "statement": "Qwen3-4B weights converted in-house to deterministic GGUF; Apache-2.0 notice carried in the director pack manifest.",
+          "upstream_licence_url": "https://huggingface.co/Qwen/Qwen3-4B"
+        }
+      ],
+      "release_blocking": false,
+      "notes": "Exact output hashes frozen by the pack builder; final quant selected by benchmark."
+    },
+    {
+      "source_id": "qwen3-vl-4b-instruct",
+      "disposition": "ship_runtime_pack",
+      "licence_rows": [
+        {
+          "asset_class": "model_weights",
+          "licence": "Apache-2.0",
+          "statement": "Qwen3-VL-4B-Instruct weights and mmproj converted in-house; Apache-2.0 notice carried in the critic pack manifest.",
+          "upstream_licence_url": "https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct"
+        }
+      ],
+      "release_blocking": false,
+      "notes": "Ships only after all supported targets pass quality and memory floors."
+    },
+    {
+      "source_id": "qwen3-5-4b",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Qualification candidate only; never silently replaces selected models; a full pack-version and benchmark transition is required."
+    },
+    {
+      "source_id": "kokoro-82m-v1-0",
+      "disposition": "ship_runtime_pack",
+      "licence_rows": [
+        {
+          "asset_class": "model_weights",
+          "licence": "Apache-2.0",
+          "statement": "Kokoro-82M v1.0 weights under Apache-2.0 with the model hash fixed in the pack manifest.",
+          "upstream_licence_url": "https://huggingface.co/hexgrad/Kokoro-82M"
+        },
+        {
+          "asset_class": "voices",
+          "licence": "audited_separately",
+          "statement": "Every voice and phonemizer asset must have its own provenance and redistribution row before entering a signed pack; unlicensed voices are excluded."
+        }
+      ],
+      "release_blocking": false,
+      "notes": "Weights are Apache-2.0 but voices are audited separately per the corpus licence status."
+    },
+    {
+      "source_id": "attached-cutaway-finish-material",
+      "disposition": "provenance_only",
+      "licence_rows": [
+        {
+          "asset_class": "sample_media",
+          "licence": "user_supplied_audited_separately",
+          "statement": "User-supplied cutaway/finish material kept under a materialized hash manifest; live execution migrates to typed CutRight stages and the material never ships as runtime code."
+        }
+      ],
+      "release_blocking": false,
+      "notes": "Scripts retained as golden behavior references; the manifest is materialized by CR-V2-B1-014."
+    },
+    {
+      "source_id": "research-videollamb",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-flash-vstream",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-providellm",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-lvagent",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-salova",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-adaptive-keyframe-sampling",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-longvale",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-vidhalluc",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-ave-compass",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-speecheditbench",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-unieditbench",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-five",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-v2v-bench",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-avid",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-taro",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    },
+    {
+      "source_id": "research-mmaudio",
+      "disposition": "development_only",
+      "licence_rows": [],
+      "release_blocking": false,
+      "notes": "Citation only; no code or data copied."
+    }
+  ]
+}

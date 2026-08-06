@@ -1,0 +1,147 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "cutright/import/disposition.schema.v1.json",
+  "title": "CutRight v2 licence and disposition ledger",
+  "description": "Terminal disposition ledger for the frozen v2 source corpus. Every source-corpus row needs a matching entry; every imported asset class needs an explicit licence row. blocked_unresolved rows and missing rows are release-blocking.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "corpus_date", "entries"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "corpus_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/entry" }
+    }
+  },
+  "definitions": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "disposition",
+        "licence_rows",
+        "release_blocking",
+        "notes"
+      ],
+      "properties": {
+        "source_id": { "type": "string", "minLength": 1 },
+        "disposition": { "$ref": "#/definitions/disposition" },
+        "licence_rows": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/licence_row" }
+        },
+        "clean_room": { "$ref": "#/definitions/clean_room" },
+        "notice_preservation": { "$ref": "#/definitions/notice_preservation" },
+        "release_blocking": { "type": "boolean" },
+        "notes": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "disposition": { "const": "blocked_unresolved" } }
+          },
+          "then": {
+            "properties": { "release_blocking": { "const": true } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "disposition": { "const": "clean_room_behavior" } }
+          },
+          "then": { "required": ["clean_room"] }
+        },
+        {
+          "if": {
+            "properties": { "disposition": { "const": "adapt_with_notice" } }
+          },
+          "then": { "required": ["notice_preservation"] }
+        },
+        {
+          "if": {
+            "properties": {
+              "disposition": {
+                "enum": [
+                  "ship_source",
+                  "ship_runtime_pack",
+                  "adapt_with_notice",
+                  "provenance_only"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": { "licence_rows": { "minItems": 1 } }
+          }
+        }
+      ]
+    },
+    "disposition": {
+      "type": "string",
+      "enum": [
+        "ship_source",
+        "ship_runtime_pack",
+        "adapt_with_notice",
+        "clean_room_behavior",
+        "provenance_only",
+        "development_only",
+        "excluded_with_reason",
+        "blocked_unresolved"
+      ]
+    },
+    "asset_class": {
+      "type": "string",
+      "enum": [
+        "code",
+        "model_weights",
+        "voices",
+        "fonts",
+        "music",
+        "sfx",
+        "textures",
+        "luts",
+        "sample_media",
+        "dataset",
+        "documentation",
+        "configuration"
+      ]
+    },
+    "licence_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_class", "licence", "statement"],
+      "properties": {
+        "asset_class": { "$ref": "#/definitions/asset_class" },
+        "licence": { "type": "string", "minLength": 1 },
+        "statement": { "type": "string", "minLength": 1 },
+        "notice_file": { "type": "string", "minLength": 1 },
+        "upstream_licence_url": { "type": "string", "minLength": 1 }
+      }
+    },
+    "clean_room": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observed_behavior",
+        "implementer_separation",
+        "no_copy_attestation"
+      ],
+      "properties": {
+        "observed_behavior": { "type": "string", "minLength": 1 },
+        "implementer_separation": { "type": "string", "minLength": 1 },
+        "no_copy_attestation": { "type": "string", "minLength": 1 }
+      }
+    },
+    "notice_preservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mechanism"],
+      "properties": {
+        "mechanism": { "type": "string", "minLength": 1 },
+        "notice_destination": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
