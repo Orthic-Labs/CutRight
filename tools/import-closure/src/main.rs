@@ -32,6 +32,8 @@ OPTIONS:
     --ledger <PATH>     Disposition ledger (imports/v2/dispositions.json)
     --corpus <PATH>     Source corpus (imports/v2/source-corpus.json)
     --source-id <ID>    Source id for disposition lookup [default: cutright]
+    --source <ID>       Alias for --source-id
+    --out <FILE>        Write the JSON report to FILE instead of stdout
     -h, --help          Print help
 
 OUTPUT:
@@ -74,7 +76,23 @@ fn main() -> ExitCode {
 
     match scan::scan(&config) {
         Ok(report) => {
-            print!("{}", scan::report_to_json(&report));
+            let json = scan::report_to_json(&report);
+            let target = OUT_TARGET.with(|slot| slot.borrow().clone());
+            match target {
+                Some(path) => {
+                    if let Some(parent) = path.parent() {
+                        if !parent.as_os_str().is_empty() {
+                            let _ = std::fs::create_dir_all(parent);
+                        }
+                    }
+                    if let Err(error) = std::fs::write(&path, &json) {
+                        eprintln!("import-closure: cannot write {}: {error}", path.display());
+                        return ExitCode::FAILURE;
+                    }
+                    println!("wrote {}", path.display());
+                }
+                None => print!("{json}"),
+            }
             ExitCode::SUCCESS
         }
         Err(error) => {
@@ -91,6 +109,7 @@ fn parse_scan_options(rest: &[String]) -> Result<scan::ScanConfig, ExitCode> {
         ledger: None,
         corpus: None,
     };
+    let mut out: Option<PathBuf> = None;
     let mut i = 0;
     while i < rest.len() {
         let flag = rest[i].as_str();
@@ -104,7 +123,8 @@ fn parse_scan_options(rest: &[String]) -> Result<scan::ScanConfig, ExitCode> {
             "--root" => config.root = PathBuf::from(value()?),
             "--ledger" => config.ledger = Some(PathBuf::from(value()?)),
             "--corpus" => config.corpus = Some(PathBuf::from(value()?)),
-            "--source-id" => config.source_id = value()?,
+            "--source-id" | "--source" => config.source_id = value()?,
+            "--out" => out = Some(PathBuf::from(value()?)),
             other => {
                 eprintln!("unknown option: {other}\n\n{HELP}");
                 return Err(ExitCode::from(2));
@@ -116,5 +136,11 @@ fn parse_scan_options(rest: &[String]) -> Result<scan::ScanConfig, ExitCode> {
         eprintln!("--root is required\n\n{HELP}");
         return Err(ExitCode::from(2));
     }
+    OUT_TARGET.with(|slot| *slot.borrow_mut() = out);
     Ok(config)
+}
+
+use std::cell::RefCell;
+thread_local! {
+    static OUT_TARGET: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
 }
