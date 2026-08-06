@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cutright://schemas/skills/video-director/shot-plan.schema.json",
+  "title": "VideoDirectorPlan",
+  "description": "Schema-bound director plan vocabulary for skills/video-director. Adapted from the MIT-licensed Vox Director beat/shot concepts; hosted-provider fields intentionally absent.",
+  "type": "object",
+  "required": ["plan_id", "arc", "ending", "beats", "shots"],
+  "properties": {
+    "plan_id": { "type": "string" },
+    "mode": { "enum": ["b_roll", "a_roll", "c_roll"] },
+    "arc": {
+      "enum": [
+        "hook_payoff", "pas", "bab", "aida", "storybrand", "how_it_works",
+        "timeline", "man_in_hole", "story_spine", "origin", "myth_buster",
+        "listicle", "three_act", "story_circle"
+      ]
+    },
+    "hook": {
+      "enum": [
+        "mistake_callout", "pain_point", "surprising_stat", "direct_question",
+        "urgent_warning", "secret_reveal", "experiment_story",
+        "pattern_interrupt", "outcome_tease"
+      ]
+    },
+    "ending": { "enum": ["hard_cut", "quick_cta", "loop_close"] },
+    "duration_class": { "enum": ["30s", "60s"] },
+    "constraints": { "enum": ["strict", "loose"], "default": "strict" },
+    "style_decision": {
+      "type": "object",
+      "required": ["decision_id", "theme", "palette"],
+      "properties": {
+        "decision_id": { "type": "string" },
+        "theme": { "type": "string" },
+        "palette": { "type": "array", "items": { "type": "string" } },
+        "bakeoff_candidates": { "type": "integer", "minimum": 2, "maximum": 4 }
+      }
+    },
+    "beats": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["beat_id", "position", "headline"],
+        "properties": {
+          "beat_id": { "type": "string" },
+          "position": { "type": "integer", "minimum": 1 },
+          "headline": { "type": "string", "minLength": 1 },
+          "narration_intent": { "type": "string" },
+          "approved": { "type": "boolean", "description": "Gate 1: user-approved beat map entry." }
+        }
+      }
+    },
+    "shots": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/ShotPlan" }
+    }
+  },
+  "$defs": {
+    "ShotPlan": {
+      "type": "object",
+      "required": ["shot_id", "beat_id", "size", "camera_move"],
+      "properties": {
+        "shot_id": { "type": "string" },
+        "beat_id": { "type": "string" },
+        "size": { "$ref": "#/$defs/ShotSize" },
+        "camera_move": { "$ref": "#/$defs/CameraMove" },
+        "element_motion": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ElementMotion" }
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/EvidenceRef" }
+        }
+      }
+    },
+    "ShotSize": { "enum": ["EST_WIDE", "WIDE", "MEDIUM", "CLOSE", "DETAIL"] },
+    "CameraMove": {
+      "enum": ["static", "push_in", "pull_out", "pan", "tilt", "parallax", "element"]
+    },
+    "BannedCameraMove": {
+      "description": "Tokens that fail strict-mode validation because they warp flat art; allowed only under constraints=loose with an explicit style-risk note.",
+      "enum": ["orbit", "arc", "crane", "boom", "pedestal", "dolly_zoom", "roll", "whip_pan", "handheld", "fast_zoom"]
+    },
+    "ElementMotion": {
+      "type": "object",
+      "required": ["subject", "verb"],
+      "properties": {
+        "subject": { "type": "string" },
+        "verb": { "type": "string", "description": "Rigid-paper verbs only (slide, flap, scatter, pop, hinge, drift, sway, flutter, pulse). Organic morph/warp is prohibited." },
+        "hero_traveler": { "type": "boolean", "default": false, "description": "Cross-frame traveling element; occasional punch on key beats only." }
+      }
+    },
+    "EvidenceRef": {
+      "type": "object",
+      "required": ["evidence_id"],
+      "properties": {
+        "evidence_id": { "type": "string", "description": "Must resolve to CutRight evidence; dangling refs fail plan validation." },
+        "kind": { "enum": ["still", "clip", "graphic", "audio"] }
+      }
+    }
+  }
+}

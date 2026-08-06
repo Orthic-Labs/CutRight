@@ -1,0 +1,38 @@
+Vox Director — MIT notice (CutRight v2 provenance import)
+==========================================================
+
+source_id:  vox-director
+upstream:   https://github.com/Alisa0808/vox-director
+revision:   8b034354dc443edcde7fdb2622e0491df5142fd3
+imported:   CR-V2-B1-015 into imports/provenance/vox-director/
+adaptation: skills/video-director (CutRight-local, no cloud providers)
+
+MIT License
+
+Copyright (c) 2026 Alisa Qian
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+Scope note: the absorbed concepts (narrative arcs, beat/shot vocabulary,
+style bake-offs, A/B/C-roll modes, anti-monotony rules, bounded job
+semantics) are adapted into skills/video-director under this MIT notice.
+Upstream hosted-provider behavior (Atlas Cloud model names, API clients,
+upload/download code, watermarking) was NOT copied and is unsupported in
+CutRight; see skills/video-director/CUTRIGHT-ADAPTATION.md.

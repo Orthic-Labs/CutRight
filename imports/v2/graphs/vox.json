@@ -1,0 +1,81 @@
+{
+  "root": "/Volumes/D/claude/cutright/imports/provenance/vox-director",
+  "file_count": 14,
+  "total_bytes": 126026,
+  "sha256_of_sorted_path_list": "aae355a1420047318253b144f3f260c056bc894db8c79cd0a6cf8abb7f23a600",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "5adab6ad9cdc7f1a3b972704cfbd751bafef6fb36f08f9739c9c7a4005666e3b",
+      "bytes": 1067
+    },
+    {
+      "path": "README.md",
+      "sha256": "bb5f0921b28c42557be9bf0846c5df24c48919e30b0e0ad5e2b5a947cb63fa58",
+      "bytes": 8127
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "11699e33af7557ea05e2471911888ac8e694a4bcdd78adf12ff946ad1023a89f",
+      "bytes": 20845
+    },
+    {
+      "path": "examples/cr7-act.elements_spec.json",
+      "sha256": "49eb3b9b5170bb9ac4beeb26f8a9cb1ff93ab24f8889a957dc4506ec98e78a61",
+      "bytes": 1795
+    },
+    {
+      "path": "examples/money-15s.beats.json",
+      "sha256": "e319b265b48c6eee77bb60c89fe9c2ceb9c4df44d99fddc5173e7d5507cb754e",
+      "bytes": 2637
+    },
+    {
+      "path": "examples/money-60s-9x16-english.beats.json",
+      "sha256": "c5c897453c258b754f1281e84f22171a1e947036bff6d6fd6976fabafc46b6eb",
+      "bytes": 26503
+    },
+    {
+      "path": "examples/ronaldo-9x16-kling.beats.json",
+      "sha256": "5166276097085b128b4162bbe79b7315064b515d51615ae2627cf9efb32d1797",
+      "bytes": 4983
+    },
+    {
+      "path": "examples/tang-30s.beats.json",
+      "sha256": "a78c70137c99e66cde9f7a3f91965ae5847192580b6106a10ae3984a0bade8a4",
+      "bytes": 13462
+    },
+    {
+      "path": "llms.txt",
+      "sha256": "b81721f9976d3c02529939ab757a39fbc1a273020d623d05e7378a83f4123afa",
+      "bytes": 1442
+    },
+    {
+      "path": "references/beat-layer.md",
+      "sha256": "dc73a2ca8b43a02003673e7aa4871530e13f182ff6b6824fba20f1c31700bbc8",
+      "bytes": 10451
+    },
+    {
+      "path": "references/local-engine.md",
+      "sha256": "9b256bcdaf8cbd58f63b9410cff6ffdf6d0f71cb739edb6fbab4cd18398b94f7",
+      "bytes": 4556
+    },
+    {
+      "path": "references/models-and-gotchas.md",
+      "sha256": "6b57764c37fc84b0a04e1535f455b4684cf1058625ccfd97f130199288d83839",
+      "bytes": 5389
+    },
+    {
+      "path": "references/prompt-guide.md",
+      "sha256": "3767a53cf32c7676c5d81a232b971ec9f6495286485eed756f4693c72f5f6186",
+      "bytes": 20588
+    },
+    {
+      "path": "references/voices.md",
+      "sha256": "d4adbeb9aa3fb13b59ee9430b6aedac0fff4426b663426e34b5efed6de7759aa",
+      "bytes": 4181
+    }
+  ],
+  "selection_id": "vox",
+  "source_id": "vox-director",
+  "revision": "8b034354dc443edcde7fdb2622e0491df5142fd3"
+}

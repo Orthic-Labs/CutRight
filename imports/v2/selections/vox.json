@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "selection_id": "vox",
+  "source_id": "vox-director",
+  "revision_type": "commit",
+  "source_repo": "/Volumes/D/claude/tmp/v2-sources/vox-director",
+  "revision": "8b034354dc443edcde7fdb2622e0491df5142fd3",
+  "include_paths": [
+    "LICENSE",
+    "SKILL.md",
+    "README.md",
+    "llms.txt",
+    "references",
+    "examples"
+  ],
+  "strip_prefix": "",
+  "dest": "imports/provenance/vox-director",
+  "graph": "imports/v2/graphs/vox.json",
+  "receipt": "imports/v2/receipts/vox.json",
+  "imported_by_task": "CR-V2-B1-015",
+  "excluded_with_reason": [
+    {
+      "path": "assets",
+      "reason": "Showcase videos and thumbnails (sample media incl. celebrity likenesses); not audited for redistribution and not needed for the absorbed concepts."
+    },
+    {
+      "path": "scripts",
+      "reason": "Hosted-provider execution glue (Atlas Cloud API clients, upload/download, provider routing); CutRight absorbs the director concepts into skills/video-director without any cloud provider, per dispatch."
+    },
+    {
+      "path": "package.json",
+      "reason": "Packaging metadata for the upstream distribution; not a source/reference file."
+    },
+    {
+      "path": "vox-director.skill",
+      "reason": "Upstream skill-packaging artifact; the CutRight-local skill is skills/video-director."
+    },
+    {
+      "path": "AGENTS.md",
+      "reason": "Upstream agent-instruction file specific to the upstream repository."
+    },
+    {
+      "path": ".gitignore",
+      "reason": "Repository hygiene file; not source/reference material."
+    },
+    {
+      "path": "README.zh.md",
+      "reason": "Localized duplicate of README.md, which is included."
+    },
+    {
+      "path": "SKILL.zh.md",
+      "reason": "Localized duplicate of SKILL.md, which is included."
+    }
+  ]
+}

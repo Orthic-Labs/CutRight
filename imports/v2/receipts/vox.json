@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "source_id": "vox-director",
+  "revision_type": "commit",
+  "revision": "8b034354dc443edcde7fdb2622e0491df5142fd3",
+  "destination": "imports/provenance/vox-director/",
+  "file_count": 14,
+  "total_bytes": 126026,
+  "sha256_of_sorted_path_list": "aae355a1420047318253b144f3f260c056bc894db8c79cd0a6cf8abb7f23a600",
+  "imported_by_task": "CR-V2-B1-015",
+  "imported_at": "2026-08-06T23:18:13Z",
+  "selection": {
+    "selection_id": "vox",
+    "source_repo": "/Volumes/D/claude/tmp/v2-sources/vox-director",
+    "include_paths": [
+      "LICENSE",
+      "SKILL.md",
+      "README.md",
+      "llms.txt",
+      "references",
+      "examples"
+    ],
+    "strip_prefix": ""
+  },
+  "excluded_with_reason": [
+    {
+      "path": "assets",
+      "reason": "Showcase videos and thumbnails (sample media incl. celebrity likenesses); not audited for redistribution and not needed for the absorbed concepts."
+    },
+    {
+      "path": "scripts",
+      "reason": "Hosted-provider execution glue (Atlas Cloud API clients, upload/download, provider routing); CutRight absorbs the director concepts into skills/video-director without any cloud provider, per dispatch."
+    },
+    {
+      "path": "package.json",
+      "reason": "Packaging metadata for the upstream distribution; not a source/reference file."
+    },
+    {
+      "path": "vox-director.skill",
+      "reason": "Upstream skill-packaging artifact; the CutRight-local skill is skills/video-director."
+    },
+    {
+      "path": "AGENTS.md",
+      "reason": "Upstream agent-instruction file specific to the upstream repository."
+    },
+    {
+      "path": ".gitignore",
+      "reason": "Repository hygiene file; not source/reference material."
+    },
+    {
+      "path": "README.zh.md",
+      "reason": "Localized duplicate of README.md, which is included."
+    },
+    {
+      "path": "SKILL.zh.md",
+      "reason": "Localized duplicate of SKILL.md, which is included."
+    }
+  ],
+  "notes": [
+    "Single-file include paths were flattened to destination-root files after import_selected.py nested them into same-name directories; bytes are identical to the pinned source (V-3 local clone).",
+    "THIRD_PARTY.yml with the MIT notice is added to this root after this receipt snapshot; docs/legal/notices/vox-director.txt carries the release-facing notice."
+  ]
+}
