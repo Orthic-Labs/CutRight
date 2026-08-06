@@ -1,0 +1,41 @@
+{
+  "root": "/Volumes/D/claude/cutright/skills/_shared",
+  "file_count": 6,
+  "total_bytes": 25107,
+  "sha256_of_sorted_path_list": "8ef7747900c1748ab26540f5d53a50460948bb3b683810855c8f26657e9bf683",
+  "files": [
+    {
+      "path": "THIRD_PARTY.yml",
+      "sha256": "b88303a79a36698b63d755052d69fdb12eda1dfdbaa62ba245c86bd3fb13aa43",
+      "bytes": 949
+    },
+    {
+      "path": "anti-slop.md",
+      "sha256": "26b7d60bed0f734bb6c770d207e2145439add71b055e564f7b0933aa089c6490",
+      "bytes": 7152
+    },
+    {
+      "path": "illustrate/GUIDE.md",
+      "sha256": "58c93c227a7c6bfd585da49af9e850a4c6573fb22aaa8f5b938a3468cb4ca8ff",
+      "bytes": 2937
+    },
+    {
+      "path": "illustrate/references/style-contract.md",
+      "sha256": "1a7ab381511a02250b03d2fbd62e41e8a640ef2b6570069b6ec7e5216d38d120",
+      "bytes": 4967
+    },
+    {
+      "path": "illustrate/references/tool-adapters.md",
+      "sha256": "14b1040586248f5c876085d27fe40bc4e0b2857867fc702b50c014cdf2ad2df3",
+      "bytes": 3692
+    },
+    {
+      "path": "parametric-design.md",
+      "sha256": "7d81a9e9a525cea648ac9ee5a006328a98139c993ccbd8943d874ac2057015c8",
+      "bytes": 5410
+    }
+  ],
+  "selection_id": "designer-shared",
+  "source_id": "workspace-capabilities",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302"
+}

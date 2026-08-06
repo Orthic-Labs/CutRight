@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "source_id": "workspace-capabilities",
+  "revision_type": "commit",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "destination": "skills/designer",
+  "file_count": 207,
+  "total_bytes": 3099566,
+  "sha256_of_sorted_path_list": "b221de57b20a177ba24242065b028b4ca9c3250dbccf21b42a24583df4e04f67",
+  "imported_by_task": "CR-V2-B1-007",
+  "imported_at": "2026-08-06T23:08:07Z",
+  "selection": {
+    "selection_id": "designer",
+    "source_repo": "/Volumes/D/claude",
+    "include_paths": [
+      "tools/skills/designer",
+      "tools/skills/_shared"
+    ],
+    "strip_prefix": "tools/skills"
+  },
+  "auxiliary_subtrees": [
+    {
+      "destination": "skills/_shared",
+      "source_path": "tools/skills/_shared",
+      "reason": "designer SKILL.md and references reach _shared/illustrate/GUIDE.md, _shared/anti-slop.md and _shared/parametric-design.md; copied with topology preserved per dispatch guidance",
+      "file_count": 6,
+      "total_bytes": 25107,
+      "sha256_of_sorted_path_list": "8ef7747900c1748ab26540f5d53a50460948bb3b683810855c8f26657e9bf683"
+    }
+  ],
+  "omitted_reachable_nodes": 0,
+  "notes": [
+    "Variance V-2: corpus allowed_path 'designer/**' maps to tools/skills/designer at the pinned workspace revision.",
+    "Every file present at the pinned revision under the selected roots was copied (206 designer + 5 _shared); zero reachable nodes omitted.",
+    "Closure scanner (tools/import-closure) run from the tools/skills level of a scratch snapshot reported upstream gaps that exist AT the pin and therefore could not be copied: dangling refs to designer/engine/scripts/lib/designer-paths.mjs (11 scripts), designer/engine/reference/morph.md (engine/GUIDE.md, engine/reference/craft.md), designer/engine/huashu/demos/hero-animation-v9.mp4, plus 7 mutable https markdown links. These are recorded here instead of being fabricated.",
+    "Cross-skill references intentionally left unrewritten in this task per CR-V2-B1-007 procedure; rewritten in CR-V2-B1-008."
+  ]
+}
