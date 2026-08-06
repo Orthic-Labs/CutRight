@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "source_id": "workspace-capabilities",
+  "revision_type": "commit",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "destination": "tools/v2-gauntlet + docs/testing/V2-GAUNTLET.md",
+  "file_count": 16,
+  "total_bytes": 57266,
+  "sha256_of_sorted_path_list": "f0eff322b6cf6b10cc30e12e4bca5ab13c8003500130c2c05ce3a7b1522a8918",
+  "imported_by_task": "CR-V2-B1-020",
+  "imported_at": "2026-08-06T23:55:58Z",
+  "notes": "Concept adaptation, not a file copy: changed-line mutation testing, changed-line coverage and seeded (xorshift64 Fisher-Yates) test-order randomisation from the pinned workspace tools/gauntlet closure were reimplemented as one standalone pure-std Rust crate with LayerStatus { Passed, Failed, Skipped, Unproven }, a --self-test mode proving the weak fixture fails with a surviving mutant, and a local JSON receipt. No Node/Forge integration and no CI or hosted-service hooks; no upstream file bytes were copied. The sha256 covers the sorted relative path list of the 16 adapted destination files (crate sources, fixtures, lockfiles, docs)."
+}

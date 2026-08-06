@@ -1,0 +1,10 @@
+[package]
+name = "weak-sample"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Gauntlet weak fixture: boundary case is untested, so the ge-flip mutant survives and the mutation layer must fail."
+
+[workspace]
+
+[dependencies]

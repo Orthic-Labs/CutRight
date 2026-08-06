@@ -1,0 +1,10 @@
+[package]
+name = "strong-sample"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Gauntlet strong fixture: every changed-line mutant is killed by the tests, so the mutation layer must pass."
+
+[workspace]
+
+[dependencies]

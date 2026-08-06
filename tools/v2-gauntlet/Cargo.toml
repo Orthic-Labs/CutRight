@@ -1,0 +1,19 @@
+[package]
+name = "v2-gauntlet"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "CutRight v2 evidence gauntlet: diff-scoped mutation testing, changed-line coverage, and seeded test-order randomisation. Local-only; never wired to CI or a hosted service."
+
+# Standalone crate: no workspace inheritance.
+[workspace]
+
+[dependencies]
+
+[[bin]]
+name = "v2-gauntlet"
+path = "src/main.rs"
+
+[lib]
+name = "v2_gauntlet"
+path = "src/lib.rs"
