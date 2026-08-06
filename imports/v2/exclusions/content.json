@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "selection_id": "content",
+  "excluded_paths": [
+    "specialists/kdp/*",
+    "specialists/carousel/*",
+    "specialists/demo-recorder/*"
+  ],
+  "excluded_with_reason": [
+    {
+      "path": "specialists/kdp",
+      "reason": "not a CutRight v2 video lane (per task implementation_shape); KDP book-production branch stays in the venture workspace"
+    },
+    {
+      "path": "specialists/carousel",
+      "reason": "carousel capture is a workspace-browser capture lane; in CutRight capture routes through cutright://skill/qa (capture mode). Excluded per CR-V2-B1-010 procedure."
+    },
+    {
+      "path": "specialists/demo-recorder",
+      "reason": "demo recording depends on the workspace tools/demo runtime (node tools/demo/bin/demo.mjs); in CutRight demo capture routes through the signed runtime pack via cutright://skill/qa (capture mode). Not in the task include_roots."
+    }
+  ]
+}

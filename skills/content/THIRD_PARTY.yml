@@ -1,0 +1,18 @@
+schema_version: 1
+source_id: workspace-capabilities
+name: content
+canonical_url: https://github.com/bogusyogi/claude
+revision: 6ee21f03a787e7b57dc412760a8996ea7a235302
+license: user_owned_with_third_party_notices
+notice: |
+  Selected closure vendored from the workspace-capabilities corpus (upstream path
+  tools/skills/content) at pinned revision 6ee21f03a787e7b57dc412760a8996ea7a235302
+  by task CR-V2-B1-010. Selection per imports/v2/selections/content.json; explicit
+  exclusions with reasons in imports/v2/exclusions/content.json (kdp, carousel,
+  demo-recorder branches). The upstream repository ships no LICENSE file at this path;
+  the corpus disposition is adapt_with_notice under license_status
+  user_owned_with_third_party_notices. Variance V-2 applies: corpus allowed_paths map
+  to tools/skills/* at the pin. Runtime execution was rewritten to typed CutRight
+  actions and signed runtime-pack capabilities; hosted generation providers are marked
+  unsupported optional capabilities (see skills/content/CUTRIGHT-ADAPTATION.md).
+  The specialists/remotion subtree is upstream Remotion guidance carried as provenance.

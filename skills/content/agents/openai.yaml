@@ -1,0 +1,9 @@
+# CR-V2-B1-010 PROVENANCE — CutRight v2 adaptation.
+# Upstream: workspace-capabilities @ 6ee21f03a787e7b57dc412760a8996ea7a235302,
+# tools/skills/content/agents/openai.yaml (see skills/content/THIRD_PARTY.yml).
+# Upstream host-interface configuration carried as inert provenance; CutRight v2
+# invocation is the typed action cutright://skill/content.
+interface:
+  display_name: "Content Creation"
+  short_description: "Routes images, motion, avatars, and article art"
+  default_prompt: "Use $contentcreation to choose the right image or video workflow for this content asset."

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "selection_id": "content",
+  "source_id": "workspace-capabilities",
+  "revision_type": "commit",
+  "source_repo": "/Volumes/D/claude",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "include_paths": [
+    "tools/skills/content/SKILL.md",
+    "tools/skills/content/agents",
+    "tools/skills/content/evals",
+    "tools/skills/content/references",
+    "tools/skills/content/specialists/production-routing",
+    "tools/skills/content/specialists/transcription",
+    "tools/skills/content/specialists/remotion",
+    "tools/skills/content/specialists/seedance",
+    "tools/skills/content/specialists/image-enhancement"
+  ],
+  "strip_prefix": "tools/skills",
+  "dest": "skills/",
+  "graph": "imports/v2/graphs/content.json",
+  "receipt": "imports/v2/receipts/content.json",
+  "imported_by_task": "CR-V2-B1-010"
+}

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "source_id": "workspace-capabilities",
+  "revision_type": "git_commit",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "destination": "skills/content",
+  "file_count": 61,
+  "total_bytes": 181779,
+  "sha256_of_sorted_path_list": "244fd60473f4f456f2365645f3df0fb58cec89aa5be165b6ae8883b114057cb3",
+  "imported_by_task": "CR-V2-B1-010",
+  "imported_at": "2026-08-07",
+  "selection": {
+    "selection_id": "content",
+    "path": "imports/v2/selections/content.json"
+  },
+  "omitted_reachable_nodes": [
+    {
+      "path": "specialists/kdp",
+      "reason": "excluded: not a CutRight v2 video lane (imports/v2/exclusions/content.json)"
+    },
+    {
+      "path": "specialists/carousel",
+      "reason": "excluded: capture retyped to cutright://skill/qa capture mode (imports/v2/exclusions/content.json)"
+    },
+    {
+      "path": "specialists/demo-recorder",
+      "reason": "excluded: depends on workspace tools/demo runtime not vendored (imports/v2/exclusions/content.json)"
+    }
+  ],
+  "notes": "Import tooling placed the SKILL.md include-path into a nested directory; flattened to skills/content/SKILL.md at import time (upstream path is a single file). specialists/video-editor is referenced by upstream SKILL.md but is ABSENT at the pinned revision (upstream gap, not fabricated). Graph snapshot is pre-adaptation; adaptation is logged in skills/content/CUTRIGHT-ADAPTATION.md."
+}
