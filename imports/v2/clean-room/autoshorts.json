@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "source_id": "autoshorts",
+  "observed_at_revision": "f17b04cdd97ef65c32b81b31b36bb6eb5d013d5b",
+  "observation_date": "2026-08-07",
+  "observed_behavior": "Public behavior of a local-first desktop product that turns long-form recordings into ranked vertical short-form clip candidates, observed from its published documentation and observable application surface at the pinned revision: a project library dashboard where projects are created from one local media file and carry a visible pipeline-stage indicator; create/open/rename/delete project lifecycle persisted across relaunches; a first-launch onboarding wizard that chooses between a fully local workflow and a hosted-API workflow, with local model selection, in-place model download with percentage progress, and runtime reachability checks; media-tooling presence warnings; a one-click automated chain (audio extraction, transcription, moment analysis, ranked candidate list) whose stages write durable results, stop visibly on failure, and reuse completed work on retry; ranked candidate cards showing title/hook, rank, and reason with per-card selection, persistent custom names, per-card and sequential bulk clip production, and separate clip-ready versus caption-ready states; live progress attributed to the item being worked on; relaunch recovery that restores the last-known stage without replaying the whole pipeline; interrupted renders returning cleanly to a not-rendered state; exported standalone vertical clips whose location is surfaced; per-candidate failure notes that do not fail the whole project.",
+  "implementer_separation": "Behavior is specified from observation notes only (imports/provenance/behavior/autoshorts/*.md), written in implementation-neutral language without upstream module, function, table, or storage-key names. Any agent implementing the corresponding CutRight stages and surfaces works from these written specifications and never opens the upstream source tree while implementing.",
+  "no_copy_attestation": "No upstream source code, declaration, schema, asset, comment, or configuration text was copied into the CutRight tree; only externally observable product behavior was recorded. The behavior specifications are written in CutRight terminology and map every adopted behavior to future CutRight stages with acceptance test statements. The upstream repository remains outside all shipping and development source roots; the closure scanner rejects any such path.",
+  "observation_notes": [
+    "imports/provenance/behavior/autoshorts/00-observation-index.md",
+    "imports/provenance/behavior/autoshorts/01-project-lifecycle.md",
+    "imports/provenance/behavior/autoshorts/02-onboarding-and-runtime-readiness.md",
+    "imports/provenance/behavior/autoshorts/03-one-click-pipeline.md",
+    "imports/provenance/behavior/autoshorts/04-candidate-cards.md",
+    "imports/provenance/behavior/autoshorts/05-progress-recovery-export.md"
+  ],
+  "rejected_behaviors": [
+    "browser-local API-key storage (secrets persisted in web-view local storage)",
+    "center-crop-only landscape-to-portrait reframing",
+    "analysis-model timestamps taken as canonical cut boundaries",
+    "local database treated as the canonical source of truth",
+    "cloud-first defaults and hosted-provider onboarding",
+    "monolithic single-file user interface"
+  ],
+  "imported_by_task": "CR-V2-B1-016"
+}
