@@ -1,0 +1,41 @@
+# config/v2-runtime-boundary-allowlist.txt
+# Paths excluded from the v2 runtime-boundary scan
+# (scripts/gates/v2-runtime-boundary.py). One prefix per line; '#' comments.
+#
+# Excluded classes:
+#   - tests and fixtures live inside #[cfg(test)] regions and are also
+#     skipped structurally by the scanner itself
+#   - generated files (lockfiles, dist, target)
+#   - provenance, legal, dispatch, and guard tooling paths that must be
+#     able to NAME forbidden executables in order to forbid them
+
+# Provenance and import staging (never release runtime code).
+imports/
+
+# Attached Cutaway/Finish golden-behavior material: provenance_only per
+# imports/v2/dispositions.json; live execution migrates to typed stages.
+cutaway/
+finish/
+
+# Documentation, legal notices, and dispatch evidence.
+docs/
+
+# Guard tooling and repo scripts name forbidden executables by design.
+scripts/
+
+# Development-only tooling (import-closure, evals) is not release code.
+tools/
+
+# Third-party notice aggregation.
+third_party/
+
+# Generated build output and dependencies.
+target/
+node_modules/
+dist/
+.git/
+
+# Lockfiles and generated manifests.
+Cargo.lock
+pnpm-lock.yaml
+package-lock.json
