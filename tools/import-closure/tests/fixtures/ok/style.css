@@ -1,0 +1,4 @@
+/* Proves the CSS url() reference form. */
+.fixture {
+  background: url(shared.txt);
+}

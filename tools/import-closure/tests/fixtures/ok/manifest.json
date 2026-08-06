@@ -1,0 +1,6 @@
+{
+  "name": "closure-fixture-package",
+  "main": "shared.txt",
+  "assets": ["shared.txt"],
+  "models": [{ "weights": "shared.txt" }]
+}

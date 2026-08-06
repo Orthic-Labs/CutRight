@@ -1,0 +1,12 @@
+[package]
+name = "import-closure"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Orthic Labs"]
+description = "Transitive source-closure scanner for the CutRight v2 import programme."
+publish = false
+
+# Standalone tool: intentionally not a member of the CutRight application
+# workspace so lanes can run it without touching root workspace manifests.
+[workspace]
