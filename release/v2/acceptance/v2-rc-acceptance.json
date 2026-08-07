@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "release_id": "v2-rc-acceptance-2026-08-07",
+  "generated_at": "2026-08-07T15:33:00Z",
+  "release_candidate": {
+    "stage_seal": "release/v2/staging/SEAL.json",
+    "app": "release/v2/staging/app",
+    "packs": "release/v2/staging/packs",
+    "samples": "release/v2/staging/samples",
+    "licences": "release/v2/staging/licences",
+    "checksums": "release/v2/staging/checksums",
+    "signatures": "release/v2/staging/signatures"
+  },
+  "targets": [
+    {
+      "target": "macOS-arm64",
+      "kernel_and_safety_floors": "pass",
+      "studio_workflows": "pass",
+      "clean_machine": "pass",
+      "four_lanes_pass": "unproven",
+      "supported_target_claim": false
+    },
+    {
+      "target": "macOS-x86_64",
+      "kernel_and_safety_floors": "pass",
+      "studio_workflows": "pass",
+      "clean_machine": "pass",
+      "four_lanes_pass": "unproven",
+      "supported_target_claim": false
+    }
+  ],
+  "studio_modes": {
+    "IngestMode": "pass",
+    "EditMode": "pass",
+    "FinishMode": "pass",
+    "MigrationMode": "pass"
+  },
+  "clean_machine": {
+    "harness": "scripts/qa/v2-clean-machine/run.py",
+    "host": "release/v2/clean-machine-host.json",
+    "samples": ["recorded-talking-head", "repurpose-podcast", "procedural-explainer", "anchored-product"],
+    "samples_passed": 4,
+    "samples_failed": 0
+  },
+  "summary": {
+    "all_kernel_floors_pass": true,
+    "all_studio_modes_pass": true,
+    "clean_machine_pass": true,
+    "four_lanes_proven": false,
+    "release_blocking": false,
+    "block_reason": "Four-lane benchmark metrics are Unproven due to missing corpus fixtures. Supported-target claims are not made until at least the four lanes record Pass on the RC hashes."
+  }
+}

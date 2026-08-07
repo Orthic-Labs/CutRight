@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "run_id": "v2-rc-four-lane-2026-08-07",
+  "generated_at": "2026-08-07T15:33:00Z",
+  "release_candidate": {
+    "app": "release/v2/staging/app",
+    "packs": "release/v2/staging/packs",
+    "samples": "release/v2/staging/samples",
+    "stage_seal": "release/v2/staging/SEAL.json"
+  },
+  "corpus": "benchmarks/corpus/manifest.json",
+  "profile": "reviewed-v2",
+  "lanes": [
+    {
+      "lane": "recorded",
+      "project_id": "golden-recorded-001",
+      "split": "train",
+      "expected_language": "en",
+      "axes": [
+        {"axis": "KernelIntegrity", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "SpeechBoundary", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "AudioVisual", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Editorial", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Creative", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Instruction", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Reliability", "status": "Unproven", "reason": "fixture missing"}
+      ],
+      "support_target_claim": false
+    },
+    {
+      "lane": "repurpose",
+      "project_id": "golden-repurpose-001",
+      "split": "train",
+      "expected_language": "en",
+      "axes": [
+        {"axis": "KernelIntegrity", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "SpeechBoundary", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "AudioVisual", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Editorial", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Creative", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Instruction", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Reliability", "status": "Unproven", "reason": "fixture missing"}
+      ],
+      "support_target_claim": false
+    },
+    {
+      "lane": "explainer",
+      "project_id": "golden-explainer-001",
+      "split": "calibration",
+      "expected_language": "en",
+      "axes": [
+        {"axis": "KernelIntegrity", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "SpeechBoundary", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "AudioVisual", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Editorial", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Creative", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Instruction", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Reliability", "status": "Unproven", "reason": "fixture missing"}
+      ],
+      "support_target_claim": false
+    },
+    {
+      "lane": "anchored_creative",
+      "project_id": "golden-anchored-001",
+      "split": "test",
+      "expected_language": "en",
+      "axes": [
+        {"axis": "KernelIntegrity", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "SpeechBoundary", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "AudioVisual", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Editorial", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Creative", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Instruction", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Reliability", "status": "Unproven", "reason": "fixture missing"}
+      ],
+      "support_target_claim": false
+    },
+    {
+      "lane": "adversarial",
+      "project_id": "golden-adversarial-001",
+      "split": "test",
+      "expected_language": "en",
+      "axes": [
+        {"axis": "KernelIntegrity", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "SpeechBoundary", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "AudioVisual", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Editorial", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Creative", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Instruction", "status": "Unproven", "reason": "fixture missing"},
+        {"axis": "Reliability", "status": "Unproven", "reason": "fixture missing"}
+      ],
+      "support_target_claim": false
+    }
+  ],
+  "kernel_and_safety_floors": {
+    "kernel_integrity": "pass",
+    "sandbox_resource_limits": "pass",
+    "network_denial": "pass",
+    "secret_scan": "pass",
+    "tamper_detection": "pass",
+    "supply_chain_audit": "pass"
+  },
+  "studio_workflows": {
+    "scope": "apps/studio tests on the RC app",
+    "status": "pass",
+    "modes_exercised": ["IngestMode", "EditMode", "FinishMode", "MigrationMode"]
+  },
+  "clean_machine_results": {
+    "harness": "scripts/qa/v2-clean-machine/run.py",
+    "host": "release/v2/clean-machine-host.json",
+    "status": "pass",
+    "samples_passed": 4
+  },
+  "summary": {
+    "lanes_total": 5,
+    "lanes_pass": 0,
+    "lanes_unproven": 5,
+    "supported_target_claims": 0,
+    "release_blocking": false,
+    "block_reason": "All corpus items have missing_fixture=true; benchmark metrics are Unproven by design. The kernels, safety floors, studio workflows, and clean-machine harness pass on the RC. Per dispatch policy, no support target is claimed until corpus fixtures are present and at least the four lanes record Pass on the RC hashes."
+  }
+}

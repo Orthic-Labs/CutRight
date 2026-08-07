@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "run_id": "v2-rc-four-lane-2026-08-07",
+  "released_at": "2026-08-07T15:33:00Z",
+  "command": "cargo run -p video-bench -- run --corpus benchmarks/corpus/manifest.json --profile benchmarks/profiles/reviewed-v2.json --packs release/v2/staging/packs.lock.json --out benchmarks/runs/v2-release-candidate",
+  "fixtures_missing": 5,
+  "metrics_collected": 0,
+  "metrics_unproven": 35,
+  "metrics_pass": 0,
+  "metrics_fail": 0,
+  "policy": "no metric is coerced to pass; no synthetic results are promoted; synthetic results are never used to claim supported targets",
+  "companion": "benchmarks/runs/v2-release-candidate/four-lane-results.json"
+}
