@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/runtime/degradation.schema.v1.json",
+  "title": "CutRight v2 degradation policy (v1)",
+  "description": "Defines ordered degradation steps: reduce batch/sample density, CPU fallback, smaller selected pack, review escalation or unsupported. Cloud fallback, silent feature disablement and unbounded retries are forbidden.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "capability",
+    "steps",
+    "forbidden"
+  ],
+  "properties": {
+    "schema": {"const": "cutright.degradation_policy/v1"},
+    "capability": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]+$"
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind"],
+        "properties": {
+          "kind": {
+            "enum": [
+              "reduce_batch",
+              "reduce_sample_density",
+              "cpu_fallback",
+              "alternate_qualified_pack",
+              "needs_review",
+              "unsupported"
+            ]
+          },
+          "rationale": {"type": "string", "maxLength": 1024},
+          "alternate_pack": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.-]+$"
+          },
+          "reason_code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.]+$"
+          }
+        }
+      }
+    },
+    "forbidden": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": ["cloud_fallback", "silent_feature_disable", "unbounded_retry"]
+      },
+      "description": "Operations that are NEVER allowed in any degradation step."
+    },
+    "review_after_step": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

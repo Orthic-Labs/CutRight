@@ -1,0 +1,27 @@
+{
+  "schema": "cutright.resource_budget/v1",
+  "target_class": "laptop",
+  "cpu": {
+    "threads": 4,
+    "needs_gpu": false,
+    "simd": "avx2"
+  },
+  "memory": {
+    "ram_mb": 8192,
+    "vram_mb": 0,
+    "swap_mb": 2048
+  },
+  "disk": {
+    "disk_mb": 10240,
+    "iops": 1000
+  },
+  "processes": 32,
+  "fd": 1024,
+  "temp_bytes": 5368709120,
+  "wall_clock_ms": 600000,
+  "output_bytes": 1073741824,
+  "model_context": {
+    "max_tokens": 4096,
+    "max_kv_cache_mb": 512
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/runtime/resource-budget.schema.v1.json",
+  "title": "CutRight v2 resource budget (v1)",
+  "description": "Defines CPU threads, accelerator, RAM/VRAM, disk, process count, file descriptors, temp bytes, wall time, output bytes and model context budgets. JSON Schema carries the bound; the runtime enforces the bound before scheduling a stage.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "target_class",
+    "cpu",
+    "memory",
+    "disk",
+    "processes",
+    "fd",
+    "wall_clock_ms",
+    "output_bytes"
+  ],
+  "properties": {
+    "schema": {"const": "cutright.resource_budget/v1"},
+    "target_class": {
+      "enum": ["laptop", "desktop", "workstation", "server", "ci"]
+    },
+    "cpu": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["threads"],
+      "properties": {
+        "threads": {"type": "integer", "minimum": 1, "maximum": 256},
+        "needs_gpu": {"type": "boolean"},
+        "simd": {
+          "enum": ["none", "sse4", "avx2", "avx512", "neon"]
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ram_mb"],
+      "properties": {
+        "ram_mb": {"type": "integer", "minimum": 64},
+        "vram_mb": {"type": "integer", "minimum": 0},
+        "swap_mb": {"type": "integer", "minimum": 0}
+      }
+    },
+    "disk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["disk_mb"],
+      "properties": {
+        "disk_mb": {"type": "integer", "minimum": 64},
+        "iops": {"type": "integer", "minimum": 0}
+      }
+    },
+    "processes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1024
+    },
+    "fd": {
+      "type": "integer",
+      "minimum": 64,
+      "maximum": 65536
+    },
+    "temp_bytes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Maximum bytes written to temp directories for a single job."
+    },
+    "wall_clock_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum wall-clock execution time for a single job."
+    },
+    "output_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum cumulative output bytes for a single job."
+    },
+    "model_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_tokens": {"type": "integer", "minimum": 1},
+        "max_kv_cache_mb": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}
