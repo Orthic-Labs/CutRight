@@ -1,0 +1,32 @@
+{
+  "book": 7,
+  "commit": "<filled-at-commit-time>",
+  "command": "CR-V2-B7-027",
+  "product_boundary": "standalone_offline",
+  "external_runtime_dependencies": 0,
+  "network_attempts_in_acceptance": 0,
+  "ci": "forbidden",
+  "publish": false,
+  "evidence": {
+    "final_gate": "docs/dispatch/v2/book-7/final-gate.md",
+    "gate_evidence": "docs/dispatch/v2/book-7/gate-evidence.md",
+    "rc_manifest": "release/v2/RC-MANIFEST.json",
+    "rc_directory": "release/v2/rc/",
+    "rc_report": "docs/release/V2-RC-REPORT.md",
+    "sha256_sums": "release/v2/SHA256SUMS.txt"
+  },
+  "exit_codes": {
+    "v2-audit.py": 0,
+    "v2-clean-machine/run.py": 0,
+    "gate.sh --with-qa": 0,
+    "v2-seal.py --checksums": 0
+  },
+  "targets": [
+    {
+      "target": "host",
+      "clean_machine": "pass",
+      "acceptance": "pass",
+      "checksum_verified": true
+    }
+  ]
+}
