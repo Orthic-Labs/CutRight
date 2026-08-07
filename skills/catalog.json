@@ -1,0 +1,251 @@
+{
+  "capability_count": 0,
+  "catalog_id": "cutright-skill-catalog-v1",
+  "generated_from": {
+    "lock": "skills/catalog.lock.json",
+    "pack_hash": "sha256:2f786f9bf312148c460f217ba6b836a3621d8251cfaae96d2fae67dca882ea30",
+    "pack_id": "cutright-skill-pack-v1",
+    "pack_schema_version": 1
+  },
+  "registry_present": false,
+  "schema_version": 1,
+  "schemas": [],
+  "skills": [
+    {
+      "calls": [
+        "brand-identity"
+      ],
+      "committed_skill_md_sha256": "sha256:bf12ed54949c9cb3cc88163a851259a1a2000fc3eefdaa3f05c5d18062b34c58",
+      "content_hash": "sha256:4af533a5df686e63643edeae60df578992808e7bf66bd297ff8b00afa07b084e",
+      "dependencies": [],
+      "description": "Load brand voice, visuals, tone, and restrictions before creating branded content or design. Invoked as cutright://skill/brand {\\\"brand_code\\\":\\\"DD\\\"} (DD, RH, HR, TS, SS, VR, SR, CR, or MR), or when work names one of those ventures.",
+      "eval_suites": [],
+      "id": "brand",
+      "order": 0,
+      "permissions": [],
+      "resources": [],
+      "version": "0.1.0"
+    },
+    {
+      "calls": [
+        "brand"
+      ],
+      "committed_skill_md_sha256": "sha256:fee94d49585eca1eb6495f21a7610a32fc9c8622fe319bc5b466b7d072162fa4",
+      "content_hash": "sha256:14758940433e0043db9f1d27e36417c194e4e1140c6c6819e12fa7e41affb23f",
+      "dependencies": [],
+      "description": "Create, audit, evolve, or apply brand identities, systems, guidelines, visual identity, voice, naming, logo direction, brand books, rebrands, website or app identity, pitch decks, or social kits.",
+      "eval_suites": [],
+      "id": "brand-identity",
+      "order": 1,
+      "permissions": [],
+      "resources": [],
+      "version": "0.1.0"
+    },
+    {
+      "calls": [
+        "brand",
+        "designer",
+        "social",
+        "writing"
+      ],
+      "committed_skill_md_sha256": "sha256:bf00d3eabb36c8a01eaee732ea48969296d8d56aa278bc274b12a255d305bf78",
+      "content_hash": "sha256:d5c462907b2923601c0f55c5936befea70c94b035ce4020836e1ab557f9def69",
+      "dependencies": [],
+      "description": "Route media production: images, illustrations, motion or video, avatars, voiceover, Seedance, Remotion, enhancement, and transcription. Use when media is the deliverable; route UI to cutright://skill/designer, prose to cutright://skill/writing, and strategy to cutright://skill/social.",
+      "eval_suites": [],
+      "id": "content",
+      "order": 2,
+      "permissions": [],
+      "resources": [],
+      "version": "0.1.0"
+    },
+    {
+      "calls": [],
+      "committed_skill_md_sha256": "sha256:c28bd8766f6a8e059f89be6c55e48d19f04cf3c52aa9490c7f0e8c7c1de9ea37",
+      "content_hash": "sha256:1fe25b1b6a08fa9a0ab74150403161e680afd6461a951775fcdb5be250351f05",
+      "dependencies": [],
+      "description": "Drive CutRight's validated local CLI (videoctl) end-to-end for hands-off captured-footage editing: ingest \u2192 transcribe/benchmark \u2192 candidate generation \u2192 natural+tight cut plans \u2192 review \u2192 variant selection \u2192 finish/captions/color \u2192 vertical reframe \u2192 QA \u2192 export/package. Reads structured project evidence, writes validated plans, records every decision in the project package.",
+      "eval_suites": [
+        {
+          "case_count": 8,
+          "case_file": "fixtures/evals/cases/content-video-editor.json",
+          "suite": "import"
+        }
+      ],
+      "id": "content-video-editor",
+      "order": 3,
+      "permissions": [],
+      "resources": [],
+      "version": "0.1.0"
+    },
+    {
+      "calls": [
+        "brand",
+        "brand-identity",
+        "qa"
+      ],
+      "committed_skill_md_sha256": "sha256:75bcea2358539448f96d80f2389eb0e0ee9632e0d62291d7f67a01ccb8ebe9a2",
+      "content_hash": "sha256:c01e5f2ec717fc0021079b89907fa3d90f0b300209789970d06a2fbe1a24fcaa",
+      "dependencies": [],
+      "description": "Create, redesign, or polish websites, app UI, dashboards, components, static creative, print, motion systems, glass materials, illustration direction, and frontend craft. Route review-only work to cutright://skill/qa (visual_review mode) and identity systems to cutright://skill/brand-identity.",
+      "eval_suites": [
+        {
+          "case_count": 7,
+          "case_file": "fixtures/evals/cases/designer.json",
+          "suite": "import"
+        }
+      ],
+      "id": "designer",
+      "order": 4,
+      "permissions": [],
+      "resources": [],
+      "version": "0.1.0"
+    },
+    {
+      "calls": [],
+      "committed_skill_md_sha256": "sha256:f812d01f45500b825f8f0b9877af9af7a5230308f3879a1dc1d2cfeea72b1a5c",
+      "content_hash": "sha256:f3ffa7c2cacf91bebcd702d69d84120cebeb0b93d746684e24778a33e7e4ebea",
+      "dependencies": [],
+      "description": "Add, run, or audit app QA for local web or Tauri apps: hidden QA servers, deterministic mocks, functional assertions, viewport or selector captures, visual evidence, app-only captures, and contract-test authoring. Invoked as cutright://skill/qa (modes: functional, visual_review, capture, contract-tests).",
+      "eval_suites": [],
+      "id": "qa",
+      "order": 5,
+      "permissions": [],
+      "resources": [],
+      "version": "0.1.0"
+    },
+    {
+      "calls": [
+        "brand",
+        "content",
+        "designer",
+        "writing"
+      ],
+      "committed_skill_md_sha256": "sha256:5178db0650ad47e68b95c2bceee1fc9d00f4b507e40b9d3a4e5e1318875d9ec1",
+      "content_hash": "sha256:1dd2ed3a9fe15d07f6f0aeda81f8262a3566171894501f685e86f57cdf387311",
+      "dependencies": [],
+      "description": "Route Instagram, Pinterest, YouTube, Twitter or X, LinkedIn, Reels, Shorts, pins, threads, calendars, and social growth strategy. Use cutright://skill/social when social strategy or platform-native content is the deliverable. Plan and copy only \u2014 no posting, scheduling, or account mutation.",
+      "eval_suites": [],
+      "id": "social",
+      "order": 6,
+      "permissions": [],
+      "resources": [],
+      "version": "0.1.0"
+    },
+    {
+      "calls": [],
+      "committed_skill_md_sha256": "sha256:633eee8f3db0f066bedcb248f9b062110cf3ec42d64627165c4ed7882b369d05",
+      "content_hash": "sha256:d45870127dd1766b7ac02f19cdb7b2c22c78ba3f4276032114ed1acd971306c7",
+      "dependencies": [],
+      "description": "CutRight-local director that turns a topic or evidence set into a bounded, typed shot plan: narrative arc, beat map, per-shot size/camera/element-motion vocabulary, style bake-off, A/B/C-roll modes, anti-monotony rhythm, and bounded job semantics. Plans only \u2014 never renders, never calls a cloud provider, never holds credentials. Adapted from the MIT-licensed Vox Director concepts (see THIRD_PARTY.yml and docs/legal/notices/vox-director.txt); provenance snapshot at imports/provenance/vox-director/.",
+      "eval_suites": [
+        {
+          "case_count": 6,
+          "case_file": "fixtures/evals/cases/video-director.json",
+          "suite": "import"
+        }
+      ],
+      "id": "video-director",
+      "order": 7,
+      "permissions": [],
+      "resources": [],
+      "version": "0.1.0"
+    },
+    {
+      "calls": [
+        "brand"
+      ],
+      "committed_skill_md_sha256": "sha256:da3f6e9303669740d76306a858d522fdadc41dc21a9624464b6731fb1ba717e0",
+      "content_hash": "sha256:d371ebde9a49bae26a10915c881fda22d0deec7271efe16c8d82f3d82a965ab5",
+      "dependencies": [],
+      "description": "Route editorial prose, essays, scripts, captions, threads, research articles, conversion copy, hooks, and content repurposing. Use when words are the deliverable. Invoked as cutright://skill/writing.",
+      "eval_suites": [],
+      "id": "writing",
+      "order": 8,
+      "permissions": [],
+      "resources": [],
+      "version": "0.1.0"
+    }
+  ],
+  "topology": {
+    "call_edges": [
+      {
+        "from": "brand",
+        "to": "brand-identity"
+      },
+      {
+        "from": "brand-identity",
+        "to": "brand"
+      },
+      {
+        "from": "content",
+        "to": "brand"
+      },
+      {
+        "from": "content",
+        "to": "designer"
+      },
+      {
+        "from": "content",
+        "to": "social"
+      },
+      {
+        "from": "content",
+        "to": "writing"
+      },
+      {
+        "from": "designer",
+        "to": "brand"
+      },
+      {
+        "from": "designer",
+        "to": "brand-identity"
+      },
+      {
+        "from": "designer",
+        "to": "qa"
+      },
+      {
+        "from": "social",
+        "to": "brand"
+      },
+      {
+        "from": "social",
+        "to": "content"
+      },
+      {
+        "from": "social",
+        "to": "designer"
+      },
+      {
+        "from": "social",
+        "to": "writing"
+      },
+      {
+        "from": "writing",
+        "to": "brand"
+      }
+    ],
+    "dependency_cycles": [
+      [
+        "brand",
+        "brand-identity"
+      ],
+      [
+        "content",
+        "social"
+      ]
+    ],
+    "nodes": [
+      "brand",
+      "brand-identity",
+      "content",
+      "content-video-editor",
+      "designer",
+      "qa",
+      "social",
+      "video-director",
+      "writing"
+    ]
+  }
+}
