@@ -13,6 +13,7 @@ members = [
   "crates/video-security",
   "crates/video-recovery",
   "crates/video-cli",
+  "crates/video-services",
   "crates/video-state",
   "crates/video-sessions",
   "crates/video-feedback",
