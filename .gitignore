@@ -3,10 +3,18 @@
 /.cutright-tools/
 /.audit/
 /.venv-whisperx/
+/.agent/
+/.blueprint/
 /apps/studio/node_modules/
 /apps/studio/dist/
 /apps/studio/.cache/
 /apps/studio/src-tauri/gen/
 /apps/studio/src-tauri/target/
+/crates/*/target/
+/crates/*/Cargo.lock
+/tools/*/target/
+__pycache__/
 *.swp
 .DS_Store
+# Pre-task backups left in source roots during dispatch execution
+docs/dispatch/v2/source/*.pre-*
