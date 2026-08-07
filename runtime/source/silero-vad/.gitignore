@@ -1,0 +1,4 @@
+runtime/source/silero-vad/<target>/<arch>/model.onnx
+runtime/source/silero-vad/<target>/<arch>/Silero*.bin
+runtime/source/silero-vad/<target>/<arch>/src/
+runtime/source/silero-vad/<target>/<arch>/include/

@@ -1,0 +1,47 @@
+{
+  "schema": "cutright.pack_manifest/v1",
+  "pack_id": "speech",
+  "version": "0.1.0",
+  "model_kind": "silero-vad",
+  "target": {
+    "platform": "host",
+    "arch": "auto",
+    "abi": "auto"
+  },
+  "files": [],
+  "requirements": {
+    "min_storage_bytes": 4194304,
+    "min_memory_bytes": 134217728,
+    "thread_cap": 4
+  },
+  "capabilities": [
+    "vad.speech-detection",
+    "vad.deterministic-reset",
+    "vad.chunk-boundary"
+  ],
+  "compatibility": {
+    "min_runtime_api": 1,
+    "max_runtime_api": 1
+  },
+  "source": {
+    "upstream": "silero-vad",
+    "commit": "76e3dc408eb2a5c655c34e230d2d5459b4439daa",
+    "tag": "v0.1.0",
+    "fetched_at_ns": 0,
+    "fetched_by": "scripts/runtime/build-silero-pack.py - unfetched"
+  },
+  "model": {
+    "kind": "onnx",
+    "sha256": "unresolved",
+    "blake3": "unresolved",
+    "sample_rate": 16000,
+    "contract": "VadConfig { sample_rate: 16_000, threshold: 0.5, min_speech_ms: 160, min_silence_ms: 180 }"
+  },
+  "manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "signature": {
+    "schema": "cutright.pack_signature/v1",
+    "algorithm": "blake3+ed25519",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signed_by": "unbuilt"
+  }
+}

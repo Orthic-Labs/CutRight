@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<silero-vad-parity-suite>
+  <fixture id="parity-8k">
+    <audio path="fixtures/runtime/silero-vad/silence-1s-8k.wav" sample_rate="8000" channels="1" duration_ms="1000"/>
+    <expected-chunks>0</expected-chunks>
+    <tolerance>deterministic</tolerance>
+  </fixture>
+  <fixture id="parity-16k">
+    <audio path="fixtures/runtime/silero-vad/silence-1s-16k.wav" sample_rate="16000" channels="1" duration_ms="1000"/>
+    <expected-chunks>0</expected-chunks>
+    <tolerance>deterministic</tolerance>
+  </fixture>
+  <fixture id="chunk-boundary">
+    <audio path="fixtures/runtime/silero-vad/chunk-boundary.wav" sample_rate="16000" channels="1" duration_ms="5000"/>
+    <chunk-ms>30</chunk-ms>
+    <expected-chunks>0</expected-chunks>
+    <tolerance>deterministic</tolerance>
+  </fixture>
+  <fixture id="reset">
+    <audio path="fixtures/runtime/silero-vad/silence-1s-16k.wav" sample_rate="16000" channels="1" duration_ms="1000"/>
+    <reset-between>true</reset-between>
+    <iterations>10</iterations>
+    <tolerance>deterministic</tolerance>
+  </fixture>
+  <fixture id="long-file">
+    <audio path="fixtures/runtime/silero-vad/long-60s.wav" sample_rate="16000" channels="1" duration_ms="60000"/>
+    <expected-chunks>0</expected-chunks>
+    <tolerance>deterministic</tolerance>
+  </fixture>
+</silero-vad-parity-suite>
