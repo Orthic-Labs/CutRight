@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.dev/schemas/creative/critic-evaluation.schema.v2.json",
+  "title": "Creative Critic Evaluation",
+  "description": "Critic semantics and evaluation axes for creative artefacts. Drives the independent creative critic and deterministic visual QA.",
+  "type": "object",
+  "required": ["version", "target", "axes", "verdict"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "v2"
+    },
+    "target": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "finish-plan",
+            "render-graph",
+            "asset",
+            "style-direction",
+            "brand-card",
+            "package"
+          ]
+        },
+        "id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "axes": {
+      "type": "object",
+      "required": [
+        "brand_alignment",
+        "narrative_clarity",
+        "visual_composition",
+        "motion_grammar",
+        "typography_legibility",
+        "audio_balance",
+        "platform_fit",
+        "rights_safety",
+        "accessibility",
+        "determinism"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "brand_alignment": { "$ref": "#/$defs/axisScore" },
+        "narrative_clarity": { "$ref": "#/$defs/axisScore" },
+        "visual_composition": { "$ref": "#/$defs/axisScore" },
+        "motion_grammar": { "$ref": "#/$defs/axisScore" },
+        "typography_legibility": { "$ref": "#/$defs/axisScore" },
+        "audio_balance": { "$ref": "#/$defs/axisScore" },
+        "platform_fit": { "$ref": "#/$defs/axisScore" },
+        "rights_safety": { "$ref": "#/$defs/axisScore" },
+        "accessibility": { "$ref": "#/$defs/axisScore" },
+        "determinism": { "$ref": "#/$defs/axisScore" }
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["pass", "warn", "fail", "blocked"]
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "remediation": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    },
+    "evaluator": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": {
+          "type": "string",
+          "enum": ["deterministic", "creative-critic", "human-review"]
+        },
+        "version": { "type": "string" }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "axisScore": {
+      "type": "object",
+      "required": ["score", "weight"],
+      "additionalProperties": false,
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "type": "string", "maxLength": 1000 }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": ["severity", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warn", "blocker"]
+        },
+        "axis": { "type": "string" },
+        "message": { "type": "string", "minLength": 1 },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
