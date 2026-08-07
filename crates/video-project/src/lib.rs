@@ -25,6 +25,7 @@ mod final_render;
 mod finish;
 mod ingest;
 mod io;
+pub mod legacy;
 mod package;
 mod preferences;
 mod project_init;

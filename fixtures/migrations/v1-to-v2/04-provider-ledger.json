@@ -1,0 +1,13 @@
+{
+  "from": "v1",
+  "to": "v2",
+  "step": 4,
+  "name": "provider-ledger",
+  "requires_backup": false,
+  "touched_fields": [
+    "providers[*].kind",
+    "providers[*].external_endpoint",
+    "providers[*].local_provenance"
+  ],
+  "description": "Translate external provider records (WhisperX, HeardRight cloud, CodeRight) to a local-only provenance ledger; the active v2 configuration has zero external runtime dependencies."
+}

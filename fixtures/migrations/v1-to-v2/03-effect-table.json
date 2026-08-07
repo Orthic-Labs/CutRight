@@ -1,0 +1,13 @@
+{
+  "from": "v1",
+  "to": "v2",
+  "step": 3,
+  "name": "effect-table",
+  "requires_backup": true,
+  "touched_fields": [
+    "effects[*].legacy_id",
+    "effects[*].native_id",
+    "effects[*].provenance"
+  ],
+  "description": "Map every legacy effect id (Remotion:StatCounter, HyperFrames:*) to a native v2 effect id; legacy ids become provenance rows under native effects."
+}

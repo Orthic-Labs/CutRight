@@ -1,0 +1,14 @@
+{
+  "from": "v1",
+  "to": "v2",
+  "step": 2,
+  "name": "ms-to-ns",
+  "requires_backup": true,
+  "touched_fields": [
+    "candidates[*].start_ms",
+    "candidates[*].end_ms",
+    "edit.clips[*].t0_ms",
+    "edit.clips[*].t1_ms"
+  ],
+  "description": "Co-exist millisecond and rational time; v2 keeps ms for compatibility and adds rational time fields with a frozen origin."
+}

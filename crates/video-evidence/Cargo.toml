@@ -1,4 +1,4 @@
-# Video evidence crate (CR-V2-B3-017).
+# Video evidence crate (CR-V2-B3-017/018).
 #
 # This crate is owned by Book 3 lane C. The merge step (CR-V2-B3-022)
 # lifts it into the workspace membership. Until then, the file is
@@ -17,6 +17,7 @@ license = "MIT"
 serde = "1.0"
 serde_json = "1.0"
 thiserror = "2.0"
+blake3 = "1.5"
 
 [dev-dependencies]
 tempfile = "3.10"

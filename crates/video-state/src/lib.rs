@@ -14,6 +14,7 @@
 
 pub mod log;
 pub mod migrate;
+pub mod migrations;
 pub mod revision_store;
 
 pub use log::{LogError, LogKind, LogRecord, LogVerifier, LogVerifierOutcome, LogVerifierReport};
@@ -21,4 +22,5 @@ pub use migrate::{
     MigrationError, MigrationOutcome, MigrationPlan, MigrationRunner, MigrationStep,
     MigrationStepReceipt, MigrationVerifyReport,
 };
+pub use migrations::v2::{v1_to_v2_plan, FrozenStep, FROZEN_STEPS, FROM_VERSION, TO_VERSION};
 pub use revision_store::{Revision, RevisionError, RevisionId, RevisionStore, StagedState};

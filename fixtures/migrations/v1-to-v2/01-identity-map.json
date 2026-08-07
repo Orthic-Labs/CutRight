@@ -1,0 +1,14 @@
+{
+  "from": "v1",
+  "to": "v2",
+  "step": 1,
+  "name": "identity-map",
+  "requires_backup": true,
+  "touched_fields": [
+    "candidates[*].id",
+    "candidates[*].source_id",
+    "finish.slots[*].id",
+    "effects[*].id"
+  ],
+  "description": "Translate v1 string ids (e.g. \"clip_42\") into v2 stable BLAKE3 ids; bind them to a hash-chained log."
+}
