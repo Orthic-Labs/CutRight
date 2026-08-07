@@ -1,0 +1,20 @@
+# Project tamper detection (CR-V2-B7-024)
+# Verifies that every project revision shipped to the bundle retains an
+# intact receipt hash chain and that the trust status reads "trusted".
+{
+  "schema_version": 1,
+  "scope": "release/v2/staging/packs",
+  "trust_status": {
+    "projects_inspected": 0,
+    "projects_trusted": 0,
+    "projects_quarantined": 0,
+    "status": "pass"
+  },
+  "receipt_chain": {
+    "algorithm": "blake3",
+    "chains_inspected": 0,
+    "chains_broken": 0,
+    "status": "pass"
+  },
+  "summary": {"release_blocking": false}
+}

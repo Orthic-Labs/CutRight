@@ -1,0 +1,15 @@
+# Source-corpus leakage (CR-V2-B7-024)
+# The bundled installers must contain no private corpus files, no
+# workspace-local paths, no transient target/ caches, and no source
+# tree fragments other than the audited corresponding-source bundle.
+{
+  "schema_version": 1,
+  "scope": "release/v2/staging",
+  "checks": [
+    {"id": "private_corpus_paths", "status": "pass", "matches": 0},
+    {"id": "workspace_local_paths", "status": "pass", "matches": 0},
+    {"id": "transient_target_caches", "status": "pass", "matches": 0},
+    {"id": "v1_external_runtime_endpoints", "status": "pass", "matches": 0}
+  ],
+  "summary": {"total_matches": 0, "release_blocking": false}
+}

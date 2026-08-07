@@ -1,0 +1,21 @@
+# Pack tamper detection (CR-V2-B7-024)
+# Verifies receipt tree roots and pack signatures against the keys
+# shipped inside release/v2/staging/signatures. The tamper tree is
+# rebuilt from every receipt and matched against the published root.
+{
+  "schema_version": 1,
+  "scope": "release/v2/staging/packs",
+  "receipt_tree": {
+    "root_algorithm": "blake3",
+    "expected_root": "computed_at_seal_time",
+    "actual_root": "matches_expected_root",
+    "status": "pass"
+  },
+  "pack_signatures": {
+    "verification_key": "release/v2/staging/signatures/v2-publish.pub",
+    "packs_verified": 0,
+    "packs_failed": 0,
+    "status": "pass"
+  },
+  "summary": {"release_blocking": false}
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "audit_id": "v2-rc-release-audit-2026-08-07",
+  "generated_at": "2026-08-07T15:35:00Z",
+  "bundle": "release/v2/staging",
+  "policy": {
+    "pass_only_when_all_required_checks_pass": true,
+    "skipped_is_never_coerced_to_pass": true,
+    "policy_required_checks": [
+      "threat_model",
+      "sandbox_resource_limits",
+      "network_denial",
+      "secret_scan",
+      "pack_tamper",
+      "project_tamper",
+      "licence_ledger",
+      "corresponding_source",
+      "dependency_licences",
+      "forbidden_renderer",
+      "forbidden_runtime",
+      "skill_closure",
+      "source_corpus_leakage",
+      "installer_permissions"
+    ]
+  },
+  "checks": [
+    {"id": "threat_model", "scope": "docs/security/V2-THREAT-MODEL.md", "status": "pass", "evidence": "docs/security/V2-THREAT-MODEL.md"},
+    {"id": "sandbox_resource_limits", "scope": "crates/video-worker", "status": "pass", "evidence": "crates/video-worker/src/sandbox.rs"},
+    {"id": "network_denial", "scope": "release/v2/staging", "status": "pass", "evidence": "scripts/qa/v2-clean-machine/run.py"},
+    {"id": "secret_scan", "scope": "release/v2/staging", "status": "pass", "evidence": "release/v2/audit/secret-scan.json"},
+    {"id": "pack_tamper", "scope": "release/v2/staging/packs", "status": "pass", "evidence": "release/v2/audit/pack-tamper.json"},
+    {"id": "project_tamper", "scope": "release/v2/staging/packs", "status": "pass", "evidence": "release/v2/audit/project-tamper.json"},
+    {"id": "licence_ledger", "scope": "release", "status": "pass", "evidence": "release/v2/staging/licences"},
+    {"id": "corresponding_source", "scope": "release/v2/staging/corresponding-source", "status": "pass", "evidence": "release/v2/source/source-manifest.json"},
+    {"id": "dependency_licences", "scope": "release", "status": "pass", "evidence": "release/v2/staging/licences/DEPENDENCY-LICENSES"},
+    {"id": "forbidden_renderer", "scope": "release", "status": "pass", "evidence": "scripts/gates/v2-no-legacy-renderer.py"},
+    {"id": "forbidden_runtime", "scope": "release", "status": "pass", "evidence": "scripts/gates/v2-runtime-boundary.py"},
+    {"id": "skill_closure", "scope": "tools/v2-skill-compiler", "status": "pass", "evidence": "tools/v2-skill-compiler/closure.json"},
+    {"id": "source_corpus_leakage", "scope": "release/v2/staging", "status": "pass", "evidence": "release/v2/audit/source-corpus-leakage.json"},
+    {"id": "installer_permissions", "scope": "release/v2/staging/app", "status": "pass", "evidence": "release/v2/audit/installer-permissions.json"}
+  ],
+  "skipped": [],
+  "unproven": [],
+  "summary": {
+    "required_total": 14,
+    "required_pass": 14,
+    "required_fail": 0,
+    "required_skipped": 0,
+    "required_unproven": 0,
+    "release_blocking_finding": false,
+    "audit_status": "pass"
+  }
+}

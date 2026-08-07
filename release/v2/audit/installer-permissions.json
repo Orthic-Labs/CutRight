@@ -1,0 +1,18 @@
+# Installer permissions (CR-V2-B7-024)
+# The offline installer must not request privileged system modification
+# paths, must not run an elevated post-install script, must not enable
+# launching at login, and must not write outside the user-chosen app
+# directory. The Windows and Linux installers are OUT OF SCOPE for v2.
+{
+  "schema_version": 1,
+  "scope": "release/v2/staging/app",
+  "permissions": [
+    {"id": "elevation_required", "status": "pass", "value": false},
+    {"id": "autostart_on_login", "status": "pass", "value": false},
+    {"id": "writes_outside_app_dir", "status": "pass", "value": false},
+    {"id": "post_install_network_call", "status": "pass", "value": false}
+  ],
+  "supported_targets": ["macOS-arm64", "macOS-x86_64"],
+  "out_of_scope_targets": ["windows", "linux"],
+  "summary": {"release_blocking": false}
+}
