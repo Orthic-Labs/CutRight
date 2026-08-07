@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.dev/schemas/creative/book5-lane-ownership.schema.v2.json",
+  "title": "Book 5 Lane Ownership",
+  "description": "Frozen Book 5 lane ownership matrix and native renderer lane boundary.",
+  "type": "object",
+  "required": ["version", "lanes", "native_renderer_crates", "forbidden_surfaces"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string", "const": "v2" },
+    "lanes": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "type": "string",
+        "enum": [
+          "planning",
+          "brand",
+          "brand-identity",
+          "designer",
+          "writing",
+          "social",
+          "asset-validation",
+          "native-renderer",
+          "creative-critic",
+          "job-plane"
+        ]
+      }
+    },
+    "native_renderer_crates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "owner"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "owner": {
+            "type": "string",
+            "enum": [
+              "native-renderer",
+              "native-typography",
+              "native-motion",
+              "native-audio"
+            ]
+          }
+        }
+      }
+    },
+    "decision_rights": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["right", "owner", "reviewer"],
+        "additionalProperties": false,
+        "properties": {
+          "right": {
+            "type": "string",
+            "enum": [
+              "render-graph",
+              "finish-plan",
+              "typography",
+              "motion-grammar",
+              "audio-finishing",
+              "visual-qa",
+              "critic-verdict"
+            ]
+          },
+          "owner": { "type": "string", "minLength": 1 },
+          "reviewer": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "forbidden_surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["surface", "verdict"],
+        "additionalProperties": false,
+        "properties": {
+          "surface": { "type": "string", "minLength": 1 },
+          "verdict": { "type": "string", "enum": ["forbidden", "readonly"] }
+        }
+      }
+    }
+  }
+}

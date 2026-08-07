@@ -1,0 +1,41 @@
+{
+  "version": "v2",
+  "lanes": [
+    "planning",
+    "brand",
+    "brand-identity",
+    "designer",
+    "writing",
+    "social",
+    "asset-validation",
+    "native-renderer",
+    "creative-critic",
+    "job-plane"
+  ],
+  "native_renderer_crates": [
+    { "path": "crates/video-core/src/native_renderer", "owner": "native-renderer" },
+    { "path": "crates/video-core/src/native_typography", "owner": "native-typography" },
+    { "path": "crates/video-core/src/native_motion", "owner": "native-motion" },
+    { "path": "crates/video-core/src/native_audio", "owner": "native-audio" }
+  ],
+  "decision_rights": [
+    { "right": "render-graph", "owner": "native-renderer", "reviewer": "creative-critic" },
+    { "right": "finish-plan", "owner": "native-renderer", "reviewer": "creative-critic" },
+    { "right": "typography", "owner": "native-typography", "reviewer": "native-renderer" },
+    { "right": "motion-grammar", "owner": "native-motion", "reviewer": "native-renderer" },
+    { "right": "audio-finishing", "owner": "native-audio", "reviewer": "native-renderer" },
+    { "right": "visual-qa", "owner": "creative-critic", "reviewer": "job-plane" },
+    { "right": "critic-verdict", "owner": "creative-critic", "reviewer": "job-plane" }
+  ],
+  "forbidden_surfaces": [
+    { "surface": "crates/video-core/src/brand/*", "verdict": "readonly" },
+    { "surface": "crates/video-core/src/creative_critic/*", "verdict": "forbidden" },
+    { "surface": "crates/video-core/src/designer/*", "verdict": "readonly" },
+    { "surface": "crates/video-core/src/writing/*", "verdict": "readonly" },
+    { "surface": "crates/video-core/src/social/*", "verdict": "readonly" },
+    { "surface": "crates/video-jobs/*", "verdict": "readonly" },
+    { "surface": "remotion", "verdict": "forbidden" },
+    { "surface": "hyperframes", "verdict": "forbidden" },
+    { "surface": "hyper-frames", "verdict": "forbidden" }
+  ]
+}
