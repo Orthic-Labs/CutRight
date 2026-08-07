@@ -32,6 +32,6 @@ pub use error::{RegistryError, RegistryResult};
 pub use generated_inner::generated;
 pub use permission::{PermissionGrant, PermissionSet, PermissionSetId, Scope, SCOPES};
 pub use registry::{
-    Capability, CapabilityId, CapabilityKind, CapabilityOutputs, CapabilityRegistry,
-    Degradation, RegistryDocument, REGISTRY_SCHEMA, REGISTRY_SCHEMA_VERSION,
+    build_registry, Capability, CapabilityId, CapabilityKind, CapabilityOutputs,
+    CapabilityRegistry, Degradation, RegistryDocument, REGISTRY_SCHEMA, REGISTRY_SCHEMA_VERSION,
 };

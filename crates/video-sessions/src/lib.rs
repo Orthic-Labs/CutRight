@@ -14,5 +14,6 @@
 pub mod binding;
 
 pub use binding::{
-    SessionBinding, SessionBindingError, SessionGuard, SessionGuardError, SessionOrigin,
+    ActiveRevisionId, PermissionSetId, ProjectId, SessionBinding, SessionBindingError,
+    SessionGuard, SessionGuardError, SessionId, SessionOrigin,
 };

@@ -745,10 +745,15 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror",
+ "video-actions",
+ "video-capabilities",
  "video-core",
  "video-jobs",
  "video-media",
  "video-providers",
+ "video-security",
+ "video-sessions",
+ "video-state",
 ]
 
 [[package]]
@@ -756,6 +761,41 @@ name = "video-providers"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "video-core",
+]
+
+[[package]]
+name = "video-recovery"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "video-core",
+]
+
+[[package]]
+name = "video-runtime"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "video-core",
+]
+
+[[package]]
+name = "video-security"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "chrono",
  "serde",
  "serde_json",
  "thiserror",

@@ -1,5 +1,10 @@
+mod executor;
 mod receipts;
 
+pub use executor::{
+    ActionBatch, ActionExecutor, ActionExecutorError, ExecutorAction, ExecutorReport,
+    ACTION_BATCH_SCHEMA, EXECUTOR_REPORT_SCHEMA,
+};
 pub use receipts::{verify_receipts, ReceiptCheck, ReceiptVerificationReport};
 
 mod analysis;

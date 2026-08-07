@@ -62,6 +62,10 @@ impl std::fmt::Display for SessionId {
 pub struct ProjectId(String);
 
 impl ProjectId {
+    /// Construct a project id from any owned string.
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
     /// Borrow the underlying string slice.
     pub fn as_str(&self) -> &str {
         &self.0

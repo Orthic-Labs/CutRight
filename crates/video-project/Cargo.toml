@@ -12,11 +12,15 @@ chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+video-actions = { path = "../video-actions" }
+video-capabilities = { path = "../video-capabilities" }
 video-core = { path = "../video-core" }
 video-jobs = { path = "../video-jobs" }
 video-media = { path = "../video-media" }
 video-providers = { path = "../video-providers" }
 video-security = { path = "../video-security" }
+video-sessions = { path = "../video-sessions" }
+video-state = { path = "../video-state" }
 
 [dev-dependencies]
 tempfile = "3.23"
