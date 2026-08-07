@@ -1,0 +1,125 @@
+{
+  "checks": [
+    {
+      "check": "no_external_tool_on_path",
+      "evidence": {
+        "absent": [
+          "python",
+          "python3",
+          "node",
+          "npm",
+          "ffmpeg",
+          "ollama",
+          "heardright",
+          "coderight"
+        ]
+      },
+      "passed": false
+    },
+    {
+      "check": "network_deny",
+      "evidence": {
+        "hosts": [
+          {
+            "host": "download.cutright.local",
+            "policy_blocked": true,
+            "resolved": false
+          },
+          {
+            "host": "updates.cutright.local",
+            "policy_blocked": true,
+            "resolved": false
+          }
+        ]
+      },
+      "passed": true
+    },
+    {
+      "check": "offline_bundle_markers",
+      "evidence": {
+        "markers": [
+          {
+            "marker": "app",
+            "present": true
+          },
+          {
+            "marker": "packs",
+            "present": true
+          },
+          {
+            "marker": "licences",
+            "present": true
+          },
+          {
+            "marker": "checksums",
+            "present": true
+          },
+          {
+            "marker": "signatures",
+            "present": true
+          }
+        ]
+      },
+      "passed": true
+    },
+    {
+      "check": "all_four_samples_present",
+      "evidence": {
+        "samples": [
+          {
+            "lane": "creator",
+            "project_present": true,
+            "rights_manifest_present": true,
+            "sample": "recorded-talking-head"
+          },
+          {
+            "lane": "speech",
+            "project_present": true,
+            "rights_manifest_present": true,
+            "sample": "repurpose-podcast"
+          },
+          {
+            "lane": "creative",
+            "project_present": true,
+            "rights_manifest_present": true,
+            "sample": "procedural-explainer"
+          },
+          {
+            "lane": "vision",
+            "project_present": true,
+            "rights_manifest_present": true,
+            "sample": "anchored-product"
+          }
+        ]
+      },
+      "passed": true
+    },
+    {
+      "check": "four_lanes_accepted",
+      "evidence": {
+        "claimed_lanes": [
+          "creative",
+          "creator",
+          "speech",
+          "vision"
+        ]
+      },
+      "passed": true
+    }
+  ],
+  "ci": "forbidden",
+  "external_runtime_dependencies": 0,
+  "network_attempts": 0,
+  "overall_passed": false,
+  "platform": {
+    "machine": "arm64",
+    "python": "3.9.6",
+    "release": "25.5.0",
+    "system": "Darwin"
+  },
+  "publish": false,
+  "ran_at": "2026-08-07T09:52:33.538658+00:00",
+  "schema_version": "v2",
+  "target": "host",
+  "upload_status": "not_performed"
+}
