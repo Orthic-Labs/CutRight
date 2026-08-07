@@ -1,0 +1,14 @@
+{
+  "schema": "cutright.permission_set/v1",
+  "permission_set_id": "evidence_read_only",
+  "grants": [
+    {
+      "capability": "timeline.read",
+      "scope": "timeline_read"
+    },
+    {
+      "capability": "evidence.read",
+      "scope": "evidence_read"
+    }
+  ]
+}

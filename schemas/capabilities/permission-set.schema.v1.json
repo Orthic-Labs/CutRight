@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/capabilities/permission-set.schema.v1.json",
+  "title": "CutRight v2 permission set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "permission_set_id",
+    "grants"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cutright.permission_set/v1"
+    },
+    "permission_set_id": {
+      "type": "string"
+    },
+    "grants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "capability",
+          "scope"
+        ],
+        "properties": {
+          "capability": {
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "evidence_read",
+              "asset_plan",
+              "timeline_read",
+              "timeline_write",
+              "render",
+              "export",
+              "settings",
+              "pack_manage"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

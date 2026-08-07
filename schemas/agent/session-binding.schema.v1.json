@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/agent/session-binding.schema.v1.json",
+  "title": "CutRight v2 embedded/external agent session binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "session_id",
+    "project_id",
+    "active_revision"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cutright.session_binding/v1"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "active_revision": {
+      "type": "string"
+    },
+    "surface": {
+      "enum": [
+        "embedded",
+        "external_mcp",
+        "cli"
+      ]
+    },
+    "frontmost_project_confirmed": {
+      "type": "boolean"
+    },
+    "permission_set_id": {
+      "type": "string"
+    },
+    "expires_at_ns": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}
