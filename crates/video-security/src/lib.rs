@@ -8,3 +8,4 @@
 
 pub mod media_limits;
 pub mod sandbox;
+pub mod trust;

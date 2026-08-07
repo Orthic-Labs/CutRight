@@ -4,6 +4,7 @@ pub use receipts::{verify_receipts, ReceiptCheck, ReceiptVerificationReport};
 
 mod analysis;
 pub mod autonomous_run;
+pub mod trust;
 mod audio_profile;
 mod benchmark;
 mod candidates;
