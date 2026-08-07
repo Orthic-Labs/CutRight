@@ -12,6 +12,8 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod log;
 pub mod revision_store;
 
+pub use log::{LogError, LogKind, LogRecord, LogVerifier, LogVerifierOutcome, LogVerifierReport};
 pub use revision_store::{Revision, RevisionError, RevisionId, RevisionStore, StagedState};
