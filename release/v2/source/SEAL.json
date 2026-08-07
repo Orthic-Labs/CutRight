@@ -1,0 +1,11 @@
+{
+  "items": [
+    {
+      "path": "source-manifest.json",
+      "sha256": "7a95f317edeeab8d9f3e78536c52bf055284368dda21584faf4de2cd2ea86da5",
+      "signature": ""
+    }
+  ],
+  "schema_version": "v2",
+  "seal_target": "/Volumes/D/claude/cutright/release/v2/source"
+}

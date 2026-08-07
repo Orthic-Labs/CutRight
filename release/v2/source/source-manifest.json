@@ -1,0 +1,66 @@
+{
+  "bundle_kind": "manifest_only",
+  "counts": {
+    "apps/studio/src": 64,
+    "apps/studio/src-tauri": 25,
+    "apps/studio/src/components": 23,
+    "apps/studio/src/contracts": 3,
+    "apps/studio/src/modes": 6,
+    "crates": 170,
+    "docs": 87,
+    "fixtures/schemas": 22,
+    "release": 7,
+    "schemas": 72,
+    "scripts": 28
+  },
+  "excluded_categories": [
+    ".git",
+    "target",
+    "node_modules",
+    ".venv",
+    ".cache",
+    "private_benchmark_media",
+    "credentials",
+    "secrets",
+    "model_bytes_not_redistributable",
+    "workspace_only"
+  ],
+  "external_runtime_dependencies": [],
+  "ffmpeg_corresponding_source": null,
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "1ccfb42d300e984e96e44922a46337e7643c2ba382c220fcb9b8d3686cc67efc",
+      "size": 6073
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "2a49131f4c5864adb8a24f2ea1ae432cc56a0475695dbc5b75f446a49a630ba5",
+      "size": 1068
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "35df9b3b79fd68c6d7515a2d2086f1df70a4f6d1dc7801a21159c764a238c180",
+      "size": 1082
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "859cb313fc6122c7d55b08c00d83e9f29f67da93d0deb31f29601ca6d1ef5220",
+      "size": 23086
+    },
+    {
+      "path": "README.md",
+      "sha256": "6c251aff993d65dbe3e4a719ae120d16fc4e8fdbb94921104fa4c74d5c33cd51",
+      "size": 7435
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "sha256": "156c6e5c036ffcb29f72897c605dca2f439b0fe871ca6ec430d8ae074ee8602a",
+      "size": 5205
+    }
+  ],
+  "head": "5ef55489f9689cd1c0f1457ac20892c76252389a",
+  "private_data_removed": true,
+  "schema_version": "v2",
+  "target": "host"
+}
