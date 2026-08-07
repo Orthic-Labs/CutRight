@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.dev/schemas/creative/pipeline-stage.schema.v2.json",
+  "title": "Creative Pipeline Stage",
+  "description": "Frozen pipeline stage and handoff contract for the CutRight creative OS.",
+  "type": "object",
+  "required": ["version", "stage", "producer", "consumer", "input", "output", "critic_hook"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string", "const": "v2" },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "brief-lock",
+        "brand-bind",
+        "style-pick",
+        "bake-off",
+        "shot-plan",
+        "roll-plan",
+        "asset-gate",
+        "package",
+        "render-graph",
+        "critique",
+        "render",
+        "qa-visu",
+        "publish"
+      ]
+    },
+    "producer": {
+      "type": "string",
+      "enum": [
+        "planning",
+        "brand",
+        "brand-identity",
+        "designer",
+        "writing",
+        "social",
+        "asset-validation",
+        "native-renderer",
+        "native-typography",
+        "native-motion",
+        "native-audio",
+        "creative-critic",
+        "job-plane"
+      ]
+    },
+    "consumer": {
+      "type": "string",
+      "enum": [
+        "planning",
+        "brand",
+        "designer",
+        "writing",
+        "social",
+        "asset-validation",
+        "native-renderer",
+        "creative-critic",
+        "job-plane"
+      ]
+    },
+    "input": {
+      "type": "object",
+      "required": ["kind", "schema"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "schema": { "type": "string", "minLength": 1 },
+        "id_required": { "type": "boolean", "default": true }
+      }
+    },
+    "output": {
+      "type": "object",
+      "required": ["kind", "schema"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "schema": { "type": "string", "minLength": 1 },
+        "id_required": { "type": "boolean", "default": true }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_wall_ms": { "type": "integer", "minimum": 0 },
+        "max_files": { "type": "integer", "minimum": 0 },
+        "max_cost_units": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "critic_hook": {
+      "type": "object",
+      "required": ["required", "axes"],
+      "additionalProperties": false,
+      "properties": {
+        "required": { "type": "boolean" },
+        "axes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "brand_alignment",
+              "narrative_clarity",
+              "visual_composition",
+              "motion_grammar",
+              "typography_legibility",
+              "audio_balance",
+              "platform_fit",
+              "rights_safety",
+              "accessibility",
+              "determinism"
+            ]
+          }
+        },
+        "min_verdict": {
+          "type": "string",
+          "enum": ["pass", "warn"]
+        }
+      }
+    }
+  }
+}

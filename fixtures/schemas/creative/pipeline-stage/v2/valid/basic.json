@@ -1,0 +1,26 @@
+{
+  "version": "v2",
+  "stage": "bake-off",
+  "producer": "planning",
+  "consumer": "planning",
+  "input": {
+    "kind": "style_direction",
+    "schema": "schemas/creative/style-direction.schema.v2.json",
+    "id_required": true
+  },
+  "output": {
+    "kind": "bakeoff",
+    "schema": "schemas/creative/bakeoff.schema.v2.json",
+    "id_required": true
+  },
+  "budget": {
+    "max_wall_ms": 60000,
+    "max_files": 8,
+    "max_cost_units": 5
+  },
+  "critic_hook": {
+    "required": true,
+    "axes": ["visual_composition", "brand_alignment"],
+    "min_verdict": "warn"
+  }
+}
