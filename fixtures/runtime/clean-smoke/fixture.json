@@ -1,0 +1,25 @@
+{
+  "schema": "cutright.clean_runtime_fixture/v1",
+  "fixture_root": "fixtures/runtime/clean-smoke",
+  "staged_packs": {
+    "media": "fixtures/runtime/clean-smoke/packs/media/MANIFEST",
+    "speech": "fixtures/runtime/clean-smoke/packs/speech/MANIFEST",
+    "tracker": "fixtures/runtime/clean-smoke/packs/tracker/MANIFEST"
+  },
+  "expected_components": [
+    "media.probe",
+    "speech.transcribe",
+    "speech.vad",
+    "evidence.verify",
+    "studio.director",
+    "studio.critic",
+    "tts.synthesize",
+    "scene.evidence",
+    "face.evidence",
+    "job.cached"
+  ],
+  "expected_cache_hits": {
+    "job.cached": "0xabababababababababababababababababababababababababababababababab"
+  },
+  "network_attempts_expected": 0
+}
