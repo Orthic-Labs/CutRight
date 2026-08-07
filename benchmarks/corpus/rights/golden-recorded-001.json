@@ -1,0 +1,19 @@
+{
+  "project_id": "golden-recorded-001",
+  "licence": "local_only",
+  "owner": "operator-owned",
+  "consent_record": {
+    "written": true,
+    "signed_at": "2026-08-01T00:00:00Z",
+    "scope": "local benchmark only"
+  },
+  "source_hashes": ["blake3:0000000000000000000000000000000000000000000000000000000000000000"],
+  "source_paths": [],
+  "provenance": {
+    "capture_date": "2026-07-01",
+    "session": "recorded-001",
+    "device": "operator-camera"
+  },
+  "reviewer_ids": ["reviewer-a"],
+  "missing_fixture": true
+}

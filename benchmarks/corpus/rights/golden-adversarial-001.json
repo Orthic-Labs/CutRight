@@ -1,0 +1,19 @@
+{
+  "project_id": "golden-adversarial-001",
+  "licence": "local_only",
+  "owner": "operator-owned",
+  "consent_record": {
+    "written": true,
+    "signed_at": "2026-08-01T00:00:00Z",
+    "scope": "local benchmark only"
+  },
+  "source_hashes": ["blake3:2222222222222222222222222222222222222222222222222222222222222222"],
+  "source_paths": [],
+  "provenance": {
+    "capture_date": "2026-07-20",
+    "session": "adversarial-001",
+    "device": "handheld-mixed"
+  },
+  "reviewer_ids": ["reviewer-c", "reviewer-d"],
+  "missing_fixture": true
+}

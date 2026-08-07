@@ -1,0 +1,19 @@
+{
+  "project_id": "golden-repurpose-001",
+  "licence": "local_only",
+  "owner": "operator-owned",
+  "consent_record": {
+    "written": true,
+    "signed_at": "2026-08-01T00:00:00Z",
+    "scope": "local benchmark only"
+  },
+  "source_hashes": ["blake3:3333333333333333333333333333333333333333333333333333333333333333"],
+  "source_paths": [],
+  "provenance": {
+    "capture_date": "2026-07-05",
+    "session": "repurpose-001",
+    "device": "podcast-rig"
+  },
+  "reviewer_ids": ["reviewer-a"],
+  "missing_fixture": true
+}

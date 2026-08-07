@@ -1,0 +1,19 @@
+{
+  "project_id": "golden-explainer-001",
+  "licence": "redistributable",
+  "owner": "operator-owned",
+  "consent_record": {
+    "written": true,
+    "signed_at": "2026-08-01T00:00:00Z",
+    "scope": "benchmark and redistribution"
+  },
+  "source_hashes": ["blake3:1111111111111111111111111111111111111111111111111111111111111111"],
+  "source_paths": [],
+  "provenance": {
+    "capture_date": "2026-07-10",
+    "session": "explainer-001",
+    "device": "screen-recording"
+  },
+  "reviewer_ids": ["reviewer-b"],
+  "missing_fixture": true
+}
