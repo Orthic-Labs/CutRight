@@ -1,0 +1,8 @@
+{
+  "skill_id": "editorial-director",
+  "version": "1.0.0",
+  "inputs": ["EditorialRequest"],
+  "outputs": ["EditorialProposal"],
+  "validation": "validate_proposal",
+  "forbids": ["raw_timestamps", "fabricated_candidates"]
+}
