@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/benchmarks/revision-cycle.schema.v1.json",
+  "title": "CutRight v2 bounded evaluation revision cycle",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "cycle_id",
+    "metric_id",
+    "verdict",
+    "revisions",
+    "final_status"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "cycle_id": { "type": "string", "minLength": 1 },
+    "metric_id": { "type": "string", "minLength": 1 },
+    "revision_limit": { "const": 1 },
+    "verdict": { "$ref": "critic-verdict.schema.v1.json" },
+    "revisions": {
+      "type": "array",
+      "maxItems": 1,
+      "items": { "$ref": "critic-verdict.schema.v1.json" }
+    },
+    "final_status": {
+      "enum": ["pass", "fail", "skipped_with_reason", "unsupported", "unproven", "escalated"]
+    },
+    "escalation_reason": {
+      "type": "string",
+      "enum": [
+        "second_disagreement",
+        "low_confidence",
+        "missing_critic",
+        "missing_evidence",
+        "policy_limit"
+      ]
+    }
+  },
+  "$defs": {
+    "verdict": {
+      "$ref": "critic-verdict.schema.v1.json"
+    }
+  }
+}

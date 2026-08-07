@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": "verdict-basic-001",
+  "metric_id": "speech.word_clipping.high_confidence",
+  "evaluator": "critic-A",
+  "evaluator_version": "1.0.0",
+  "seed": 42,
+  "status": "fail",
+  "evidence_refs": [
+    {
+      "source_range": [1230, 1450],
+      "output_range": [1200, 1400],
+      "frame_refs": ["f-00123"],
+      "word_ids": ["w-0001"]
+    }
+  ],
+  "rationale": "kept high-confidence word clipped by 50 ms",
+  "confidence": 0.9
+}
