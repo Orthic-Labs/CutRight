@@ -15,6 +15,7 @@
 #![warn(missing_docs)]
 
 pub mod action;
+pub mod diff;
 pub mod validation;
 
 pub use action::{
@@ -22,6 +23,7 @@ pub use action::{
     ExportRenderParams, GraphicParams, MoveParams, ParamError, RetimeParams, RestoreParams,
     SettingParams, TakeSwapParams, TargetRef, TargetRefError, ACTION_KINDS,
 };
+pub use diff::{dry_run, DiffEntry, DiffError, DiffRange, SemanticDiff, StableDiffKey, DRY_RUN_SCHEMA};
 pub use validation::{
     validate_batch, DefaultValidator, ValidationContext, ValidationError, ValidationFailure,
     Validator,
