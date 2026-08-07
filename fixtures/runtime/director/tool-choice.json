@@ -1,0 +1,16 @@
+{
+  "schema": "cutright.director.fixture/v1",
+  "fixture": "director-tool-choice",
+  "kind": "tool-choice",
+  "prompt": "Apply the bake-off tool to the selected plan.",
+  "available_tools": [
+    "bake_off",
+    "rerun_segment",
+    "drop_segment"
+  ],
+  "expected_tool": "bake_off",
+  "tolerance": {
+    "tool_choice_floor": 1.0
+  },
+  "fixture_hash": "unresolved"
+}

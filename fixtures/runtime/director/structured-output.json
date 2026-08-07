@@ -1,0 +1,22 @@
+{
+  "schema": "cutright.director.fixture/v1",
+  "fixture": "director-structured-output",
+  "kind": "structured-output",
+  "prompt": "Plan a 30-second social cut.",
+  "schema": {
+    "type": "object",
+    "required": ["plan_id", "duration_ms", "scenes"],
+    "properties": {
+      "plan_id": {"type": "string"},
+      "duration_ms": {"type": "integer", "minimum": 1},
+      "scenes": {"type": "array", "items": {"type": "object"}}
+    }
+  },
+  "tolerance": {
+    "schema_validity_floor": 1.0,
+    "editorial_eval_floor": 0.85,
+    "tool_choice_floor": 1.0,
+    "target_memory_floor_mb": 8192
+  },
+  "fixture_hash": "unresolved"
+}

@@ -1,0 +1,11 @@
+{
+  "schema": "cutright.director.fixture/v1",
+  "fixture": "director-editorial-eval",
+  "kind": "editorial-eval",
+  "prompt": "Score the following plan on coherence, hook, and pacing.",
+  "expected_dimensions": ["coherence", "hook", "pacing"],
+  "tolerance": {
+    "editorial_eval_floor": 0.85
+  },
+  "fixture_hash": "unresolved"
+}

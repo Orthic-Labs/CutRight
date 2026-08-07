@@ -1,0 +1,22 @@
+{
+  "schema": "cutright.model_source/v1",
+  "model": "qwen3-4b",
+  "pack_id": "director",
+  "version": "0.1.0",
+  "upstream": {
+    "name": "qwen3",
+    "commit": "7c69a109fc3fa19c860be9dff46fc23299092018",
+    "license": "apache-2.0"
+  },
+  "quantisation": "unresolved",
+  "tokenizer": "unresolved",
+  "chat_template": "unresolved",
+  "context_window": 32768,
+  "selection_rule": "min(candidate_quantisations, key=size, subject_to=[schema_validity_floor, editorial_eval_floor, tool_choice_floor, target_memory_floor])",
+  "fixtures": [
+    "fixtures/runtime/director/structured-output.json",
+    "fixtures/runtime/director/tool-choice.json",
+    "fixtures/runtime/director/editorial-eval.json"
+  ],
+  "manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+}
