@@ -1,0 +1,25 @@
+{
+  "fixture_id": "cutaway-golden-natural-001",
+  "format": "long_form",
+  "source_range_ms": [0, 60000],
+  "expected_segments": [
+    {
+      "start_ms": 1000,
+      "end_ms": 5000,
+      "kind": "natural",
+      "pad_policy": "short",
+      "kept_word_ids": ["w1", "w2", "w3", "w4"],
+      "expected_clipped": false
+    },
+    {
+      "start_ms": 7000,
+      "end_ms": 12000,
+      "kind": "natural",
+      "pad_policy": "short",
+      "kept_word_ids": ["w5", "w6", "w7"],
+      "expected_clipped": false
+    }
+  ],
+  "no_clipped_high_confidence_words": true,
+  "evidence_refs": ["vad.v1", "words.v2"]
+}
