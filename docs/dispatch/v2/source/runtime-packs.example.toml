@@ -1,0 +1,52 @@
+# Non-release illustrative source matrix. Book 3 generates measured signed locks.
+format_version = 1
+frozen_at = "2026-08-06"
+
+[[component]]
+id = "ffmpeg"
+pack = "media"
+source_revision = "9047fa1b084f76b1b4d065af2d743df1b40dfb56"
+license = "LGPL-2.1-or-later build configuration"
+shipping = true
+
+[[component]]
+id = "llama-runtime"
+pack = "director"
+source_revision = "6a32c29a746a2e44de463de647f9f6661eb5086b"
+license = "MIT"
+shipping = true
+
+[[component]]
+id = "qwen3-4b-director"
+pack = "director"
+source_revision = "7c69a109fc3fa19c860be9dff46fc23299092018"
+license = "Apache-2.0"
+shipping = true
+qualification = "quantisation selected by benchmark"
+
+[[component]]
+id = "qwen3-vl-4b-critic"
+pack = "vision"
+source_revision = "ebb281ec70b05090aa6165b016eac8ec08e71b17"
+license = "Apache-2.0"
+shipping = true
+qualification = "all claimed targets must pass"
+
+[[component]]
+id = "kokoro-82m-v1.0"
+pack = "voice"
+source_sha256 = "496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4"
+license = "Apache-2.0; voice files separately audited"
+shipping = true
+
+[[component]]
+id = "remotion"
+pack = "none"
+shipping = false
+disposition = "provenance_only"
+
+[[component]]
+id = "hyperframes"
+pack = "none"
+shipping = false
+disposition = "clean_room_behavior"

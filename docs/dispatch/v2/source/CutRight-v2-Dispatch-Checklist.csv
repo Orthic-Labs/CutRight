@@ -1,0 +1,190 @@
+Task ID,Book,Lane,Sequential,Depends On,Title,Commit Message,File Ceiling,Line Ceiling,Status
+CR-V2-B1-001,1,S,true,Pinned CutRight baseline,Freeze the v2 baseline and corpus date,CR-V2-B1-001: freeze-the-v2-baseline-and-corpus-date,1,220,not_started
+CR-V2-B1-002,1,S,true,CR-V2-B1-001,Create the machine-readable source corpus schema and manifest,CR-V2-B1-002: create-the-machine-readable-source-corpus-schema-and-manif,8,1400,not_started
+CR-V2-B1-003,1,S,true,CR-V2-B1-002,Define the licence and disposition ledger contract,CR-V2-B1-003: define-the-licence-and-disposition-ledger-contract,8,1400,not_started
+CR-V2-B1-004,1,S,true,CR-V2-B1-003,Implement the transitive source-closure scanner,CR-V2-B1-004: implement-the-transitive-source-closure-scanner,10,1800,not_started
+CR-V2-B1-005,1,S,true,CR-V2-B1-004,"Add hard guards for no CI, no submodules, no path lookup, and no external runtime",CR-V2-B1-005: add-hard-guards-for-no-ci-no-submodules-no-path-lookup-and,8,1400,not_started
+CR-V2-B1-006,1,S,true,CR-V2-B1-005,Freeze Book 1 import interfaces and lane ownership,CR-V2-B1-006: freeze-book-1-import-interfaces-and-lane-ownership,8,1400,not_started
+CR-V2-B1-007,1,P-A,false,CR-V2-B1-006,Vendor the complete Designer closure into CutRight,CR-V2-B1-007: vendor-the-complete-designer-closure-into-cutright,1200,250000,not_started
+CR-V2-B1-008,1,P-A,false,CR-V2-B1-007,Rewrite Designer to the CutRight-local skill and action model,CR-V2-B1-008: rewrite-designer-to-the-cutright-local-skill-and-action-mo,1200,250000,not_started
+CR-V2-B1-009,1,P-A,false,CR-V2-B1-008,Vendor and adapt Brand and Brand Identity,CR-V2-B1-009: vendor-and-adapt-brand-and-brand-identity,200,60000,not_started
+CR-V2-B1-010,1,P-A,false,CR-V2-B1-009,Vendor and adapt the selected Content production closure,CR-V2-B1-010: vendor-and-adapt-the-selected-content-production-closure,900,180000,not_started
+CR-V2-B1-011,1,P-A,false,CR-V2-B1-010,"Vendor and adapt Writing, Social, and QA closures",CR-V2-B1-011: vendor-and-adapt-writing-social-and-qa-closures,700,140000,not_started
+CR-V2-B1-012,1,P-B,false,CR-V2-B1-006,Vendor the pinned HeardRight source needed by CutRight,CR-V2-B1-012: vendor-the-pinned-heardright-source-needed-by-cutright,2500,350000,not_started
+CR-V2-B1-013,1,P-B,false,CR-V2-B1-012,"Resolve HeardRight model, dictionary, and runtime-asset provenance",CR-V2-B1-013: resolve-heardright-model-dictionary-and-runtime-asset-prov,8,1400,not_started
+CR-V2-B1-014,1,P-B,false,CR-V2-B1-013,Materialize the supplied Cutaway and Finish artefacts as provenance,CR-V2-B1-014: materialize-the-supplied-cutaway-and-finish-artefacts-as-p,80,30000,not_started
+CR-V2-B1-015,1,P-B,false,CR-V2-B1-014,Adapt the permitted Vox Director material,CR-V2-B1-015: adapt-the-permitted-vox-director-material,180,50000,not_started
+CR-V2-B1-016,1,P-B,false,CR-V2-B1-015,Write clean-room AutoShorts behavior specifications,CR-V2-B1-016: write-clean-room-autoshorts-behavior-specifications,20,6000,not_started
+CR-V2-B1-017,1,P-C,false,CR-V2-B1-006,Write clean-room Palmier behavior specifications,CR-V2-B1-017: write-clean-room-palmier-behavior-specifications,24,8000,not_started
+CR-V2-B1-018,1,P-C,false,CR-V2-B1-017,Adapt the workspace bounded-run compiler and monitor concepts,CR-V2-B1-018: adapt-the-workspace-bounded-run-compiler-and-monitor-conce,60,12000,not_started
+CR-V2-B1-019,1,P-C,false,CR-V2-B1-018,"Adapt skill topology, catalogue integrity, and evaluation fixtures",CR-V2-B1-019: adapt-skill-topology-catalogue-integrity-and-evaluation-fi,100,25000,not_started
+CR-V2-B1-020,1,P-C,false,CR-V2-B1-019,Adapt the evidence gauntlet as an optional local hardening lane,CR-V2-B1-020: adapt-the-evidence-gauntlet-as-an-optional-local-hardening,60,15000,not_started
+CR-V2-B1-021,1,P-C,false,CR-V2-B1-020,Classify Remotion and HyperFrames and freeze the native migration contract,CR-V2-B1-021: classify-remotion-and-hyperframes-and-freeze-the-native-mi,8,1400,not_started
+CR-V2-B1-022,1,S,true,CR-V2-B1-011; CR-V2-B1-016; CR-V2-B1-021,Create third-party notices and corresponding-source archive scaffolds,CR-V2-B1-022: create-third-party-notices-and-corresponding-source-archiv,8,1400,not_started
+CR-V2-B1-023,1,S,true,CR-V2-B1-022,Merge the three Book 1 lanes in deterministic order,CR-V2-B1-023: merge-the-three-book-1-lanes-in-deterministic-order,1,400,not_started
+CR-V2-B1-024,1,S,true,CR-V2-B1-023,Compile the embedded skill catalogue and complete closure report,CR-V2-B1-024: compile-the-embedded-skill-catalogue-and-complete-closure-,4,12000,not_started
+CR-V2-B1-025,1,S,true,CR-V2-B1-024,Enforce zero unresolved licence and provenance rows for Book 1 outputs,CR-V2-B1-025: enforce-zero-unresolved-licence-and-provenance-rows-for-bo,8,1400,not_started
+CR-V2-B1-026,1,S,true,CR-V2-B1-025,Prove the source tree has no runtime dependency on another checkout,CR-V2-B1-026: prove-the-source-tree-has-no-runtime-dependency-on-another,8,1400,not_started
+CR-V2-B1-027,1,S,true,CR-V2-B1-026,Run focused Book 1 validation and the authoritative local gate,CR-V2-B1-027: run-focused-book-1-validation-and-the-authoritative-local-,3,1800,not_started
+CR-V2-B2-001,2,S,true,Book 1 final gate,"Freeze stable identifiers, rational time, and revision semantics",CR-V2-B2-001: freeze-stable-identifiers-rational-time-and-revision-seman,8,1400,not_started
+CR-V2-B2-002,2,S,true,CR-V2-B2-001,Freeze the capability and action schema vocabulary,CR-V2-B2-002: freeze-the-capability-and-action-schema-vocabulary,8,1400,not_started
+CR-V2-B2-003,2,S,true,CR-V2-B2-002,"Freeze transactional apply, inverse action, and failure semantics",CR-V2-B2-003: freeze-transactional-apply-inverse-action-and-failure-sema,8,1400,not_started
+CR-V2-B2-004,2,S,true,CR-V2-B2-003,"Freeze permissions, skill boundaries, and session write guards",CR-V2-B2-004: freeze-permissions-skill-boundaries-and-session-write-guar,8,1400,not_started
+CR-V2-B2-005,2,S,true,CR-V2-B2-004,Freeze semantic dry-run and diff output,CR-V2-B2-005: freeze-semantic-dry-run-and-diff-output,8,1400,not_started
+CR-V2-B2-006,2,S,true,CR-V2-B2-005,Freeze Book 2 crate boundaries and parallel ownership,CR-V2-B2-006: freeze-book-2-crate-boundaries-and-parallel-ownership,8,1400,not_started
+CR-V2-B2-007,2,P-A,false,CR-V2-B2-006,Implement the typed Action enum and stable target references,CR-V2-B2-007: implement-the-typed-action-enum-and-stable-target-referenc,8,1400,not_started
+CR-V2-B2-008,2,P-A,false,CR-V2-B2-007,Implement semantic action validation,CR-V2-B2-008: implement-semantic-action-validation,8,1400,not_started
+CR-V2-B2-009,2,P-A,false,CR-V2-B2-008,Implement semantic dry-run and stable diff generation,CR-V2-B2-009: implement-semantic-dry-run-and-stable-diff-generation,8,1400,not_started
+CR-V2-B2-010,2,P-A,false,CR-V2-B2-009,Implement atomic transaction apply and revision commit,CR-V2-B2-010: implement-atomic-transaction-apply-and-revision-commit,8,1800,not_started
+CR-V2-B2-011,2,P-A,false,CR-V2-B2-010,Implement inverse batches and undo/redo,CR-V2-B2-011: implement-inverse-batches-and-undo-redo,8,1400,not_started
+CR-V2-B2-012,2,P-B,false,CR-V2-B2-006,Implement the capability registry model and validator,CR-V2-B2-012: implement-the-capability-registry-model-and-validator,8,1400,not_started
+CR-V2-B2-013,2,P-B,false,CR-V2-B2-012,Create the canonical source capability registry,CR-V2-B2-013: create-the-canonical-source-capability-registry,100,20000,not_started
+CR-V2-B2-014,2,P-B,false,CR-V2-B2-013,"Generate Rust, TypeScript, CLI, and tool bindings from the registry",CR-V2-B2-014: generate-rust-typescript-cli-and-tool-bindings-from-the-re,20,18000,not_started
+CR-V2-B2-015,2,P-B,false,CR-V2-B2-014,Integrate the compiled skill catalogue into the capability registry,CR-V2-B2-015: integrate-the-compiled-skill-catalogue-into-the-capability,8,1400,not_started
+CR-V2-B2-016,2,P-B,false,CR-V2-B2-015,Add capability registry drift and documentation generation,CR-V2-B2-016: add-capability-registry-drift-and-documentation-generation,8,1400,not_started
+CR-V2-B2-017,2,P-C,false,CR-V2-B2-006,Implement immutable project revision storage,CR-V2-B2-017: implement-immutable-project-revision-storage,8,1400,not_started
+CR-V2-B2-018,2,P-C,false,CR-V2-B2-017,Implement project write locks and session bindings,CR-V2-B2-018: implement-project-write-locks-and-session-bindings,8,1400,not_started
+CR-V2-B2-019,2,P-C,false,CR-V2-B2-018,"Implement append-only action, decision, and audit logs",CR-V2-B2-019: implement-append-only-action-decision-and-audit-logs,8,1400,not_started
+CR-V2-B2-020,2,P-C,false,CR-V2-B2-019,Implement versioned project migrations with backups and dry-run,CR-V2-B2-020: implement-versioned-project-migrations-with-backups-and-dr,14,2400,not_started
+CR-V2-B2-021,2,P-C,false,CR-V2-B2-020,"Create cross-crate contract fixtures for state, actions, and capabilities",CR-V2-B2-021: create-cross-crate-contract-fixtures-for-state-actions-and,180,40000,not_started
+CR-V2-B2-022,2,S,true,CR-V2-B2-011; CR-V2-B2-016; CR-V2-B2-021,Merge Book 2 lanes and scaffold the single ActionExecutor,CR-V2-B2-022: merge-book-2-lanes-and-scaffold-the-single-actionexecutor,8,1600,not_started
+CR-V2-B2-023,2,S,true,CR-V2-B2-022,Expose the executor through the JSON CLI without duplicating logic,CR-V2-B2-023: expose-the-executor-through-the-json-cli-without-duplicati,8,1400,not_started
+CR-V2-B2-024,2,S,true,CR-V2-B2-023,Expose the executor to the Studio backend,CR-V2-B2-024: expose-the-executor-to-the-studio-backend,8,1400,not_started
+CR-V2-B2-025,2,S,true,CR-V2-B2-024,Expose the same executor through an optional loopback MCP adapter,CR-V2-B2-025: expose-the-same-executor-through-an-optional-loopback-mcp-,8,1400,not_started
+CR-V2-B2-026,2,S,true,CR-V2-B2-025,Run cross-surface transaction and contract tests,CR-V2-B2-026: run-cross-surface-transaction-and-contract-tests,4,1400,not_started
+CR-V2-B2-027,2,S,true,CR-V2-B2-026,Run the authoritative Book 2 local gate and freeze evidence,CR-V2-B2-027: run-the-authoritative-book-2-local-gate-and-freeze-evidenc,2,1200,not_started
+CR-V2-B3-001,3,S,true,Book 2 final gate,"Freeze runtime pack, lock, signature, and compatibility schemas",CR-V2-B3-001: freeze-runtime-pack-lock-signature-and-compatibility-schem,8,1400,not_started
+CR-V2-B3-002,3,S,true,CR-V2-B3-001,Freeze the hierarchical evidence graph schema,CR-V2-B3-002: freeze-the-hierarchical-evidence-graph-schema,8,1400,not_started
+CR-V2-B3-003,3,S,true,CR-V2-B3-002,"Freeze job DAG, fingerprint, resume, retry, and cancellation schemas",CR-V2-B3-003: freeze-job-dag-fingerprint-resume-retry-and-cancellation-s,8,1400,not_started
+CR-V2-B3-004,3,S,true,CR-V2-B3-003,Freeze resource budgets and degradation policies,CR-V2-B3-004: freeze-resource-budgets-and-degradation-policies,8,1400,not_started
+CR-V2-B3-005,3,S,true,CR-V2-B3-004,"Freeze pack install, activation, repair, rollback, and offline-only resolution",CR-V2-B3-005: freeze-pack-install-activation-repair-rollback-and-offline,8,1400,not_started
+CR-V2-B3-006,3,S,true,CR-V2-B3-005,Freeze Book 3 pack/evidence/job crate boundaries and lane ownership,CR-V2-B3-006: freeze-book-3-pack-evidence-job-crate-boundaries-and-lane-,8,1400,not_started
+CR-V2-B3-007,3,P-A,false,CR-V2-B3-006,Build the LGPL-only FFmpeg 8.1 media pack pipeline,CR-V2-B3-007: build-the-lgpl-only-ffmpeg-8-1-media-pack-pipeline,60,30000,not_started
+CR-V2-B3-008,3,P-A,false,CR-V2-B3-007,Integrate vendored HeardRight as a CutRight speech component,CR-V2-B3-008: integrate-vendored-heardright-as-a-cutright-speech-compone,40,12000,not_started
+CR-V2-B3-009,3,P-A,false,CR-V2-B3-008,Build the Parakeet primary ASR model pack,CR-V2-B3-009: build-the-parakeet-primary-asr-model-pack,30,6000,not_started
+CR-V2-B3-010,3,P-A,false,CR-V2-B3-009,Build the Silero VAD model pack and parity suite,CR-V2-B3-010: build-the-silero-vad-model-pack-and-parity-suite,8,1400,not_started
+CR-V2-B3-011,3,P-A,false,CR-V2-B3-010,Build whisper.cpp v1.9.2 as an independent speech-quality pack,CR-V2-B3-011: build-whisper-cpp-v1-9-2-as-an-independent-speech-quality-,8,1400,not_started
+CR-V2-B3-012,3,P-B,false,CR-V2-B3-006,Vendor and build the pinned llama.cpp inference runtime,CR-V2-B3-012: vendor-and-build-the-pinned-llama-cpp-inference-runtime,80,24000,not_started
+CR-V2-B3-013,3,P-B,false,CR-V2-B3-012,Build the Qwen3-4B Director model pack,CR-V2-B3-013: build-the-qwen3-4b-director-model-pack,30,7000,not_started
+CR-V2-B3-014,3,P-B,false,CR-V2-B3-013,Build the Qwen3-VL-4B independent visual critic pack,CR-V2-B3-014: build-the-qwen3-vl-4b-independent-visual-critic-pack,8,1400,not_started
+CR-V2-B3-015,3,P-B,false,CR-V2-B3-014,Qualify Qwen3.5-4B without making it a release dependency,CR-V2-B3-015: qualify-qwen3-5-4b-without-making-it-a-release-dependency,8,1400,not_started
+CR-V2-B3-016,3,P-B,false,CR-V2-B3-015,Build the Kokoro local TTS and phonemizer pack,CR-V2-B3-016: build-the-kokoro-local-tts-and-phonemizer-pack,8,1400,not_started
+CR-V2-B3-017,3,P-C,false,CR-V2-B3-006,Implement deterministic scene and shot segmentation evidence,CR-V2-B3-017: implement-deterministic-scene-and-shot-segmentation-eviden,8,1400,not_started
+CR-V2-B3-018,3,P-C,false,CR-V2-B3-017,"Implement face, pose, gesture, text, saliency, and motion tracks",CR-V2-B3-018: implement-face-pose-gesture-text-saliency-and-motion-track,30,6000,not_started
+CR-V2-B3-019,3,P-C,false,CR-V2-B3-018,Implement the hierarchical evidence graph store,CR-V2-B3-019: implement-the-hierarchical-evidence-graph-store,8,1400,not_started
+CR-V2-B3-020,3,P-C,false,CR-V2-B3-019,Implement bounded evidence retrieval and coarse-to-fine query planning,CR-V2-B3-020: implement-bounded-evidence-retrieval-and-coarse-to-fine-qu,8,1400,not_started
+CR-V2-B3-021,3,P-C,false,CR-V2-B3-020,"Implement the content-addressed job DAG, cache, retry, resume, and cancellation",CR-V2-B3-021: implement-the-content-addressed-job-dag-cache-retry-resume,14,2600,not_started
+CR-V2-B3-022,3,S,true,CR-V2-B3-011; CR-V2-B3-016; CR-V2-B3-021,Merge Book 3 lanes and create the runtime/evidence/job service façade,CR-V2-B3-022: merge-book-3-lanes-and-create-the-runtime-evidence-job-ser,10,1800,not_started
+CR-V2-B3-023,3,S,true,CR-V2-B3-022,"Implement pack doctor, verification, and local repair commands",CR-V2-B3-023: implement-pack-doctor-verification-and-local-repair-comman,8,1400,not_started
+CR-V2-B3-024,3,S,true,CR-V2-B3-023,Replace every release runtime lookup with signed pack resolution,CR-V2-B3-024: replace-every-release-runtime-lookup-with-signed-pack-reso,16,2600,not_started
+CR-V2-B3-025,3,S,true,CR-V2-B3-024,Run a network-blocked clean-path runtime smoke test,CR-V2-B3-025: run-a-network-blocked-clean-path-runtime-smoke-test,20,2000,not_started
+CR-V2-B3-026,3,S,true,CR-V2-B3-025,"Run focused pack, evidence, and job recovery tests",CR-V2-B3-026: run-focused-pack-evidence-and-job-recovery-tests,1,1200,not_started
+CR-V2-B3-027,3,S,true,CR-V2-B3-026,Run the authoritative Book 3 local gate and freeze pack/evidence/job evidence,CR-V2-B3-027: run-the-authoritative-book-3-local-gate-and-freeze-pack-ev,2,1400,not_started
+CR-V2-B4-001,4,S,true,Book 3 final gate,"Freeze the benchmark taxonomy, dataset split, and result schemas",CR-V2-B4-001: freeze-the-benchmark-taxonomy-dataset-split-and-result-sch,8,1400,not_started
+CR-V2-B4-002,4,S,true,CR-V2-B4-001,Create the rights-bound golden project corpus manifest,CR-V2-B4-002: create-the-rights-bound-golden-project-corpus-manifest,220,50000,not_started
+CR-V2-B4-003,4,S,true,CR-V2-B4-002,"Freeze metric definitions, units, aggregation, and release floors",CR-V2-B4-003: freeze-metric-definitions-units-aggregation-and-release-fl,8,1400,not_started
+CR-V2-B4-004,4,S,true,CR-V2-B4-003,"Freeze evaluator independence, evidence citation, and revision policy",CR-V2-B4-004: freeze-evaluator-independence-evidence-citation-and-revisi,8,1400,not_started
+CR-V2-B4-005,4,S,true,CR-V2-B4-004,"Freeze the EditorialPlan, beat, take-score, reorder, and escalation schemas",CR-V2-B4-005: freeze-the-editorialplan-beat-take-score-reorder-and-escal,8,1400,not_started
+CR-V2-B4-006,4,S,true,CR-V2-B4-005,Freeze Book 4 benchmark/editorial lane ownership,CR-V2-B4-006: freeze-book-4-benchmark-editorial-lane-ownership,8,1400,not_started
+CR-V2-B4-007,4,P-A,false,CR-V2-B4-006,Implement word-boundary and speech-preservation evaluators,CR-V2-B4-007: implement-word-boundary-and-speech-preservation-evaluators,8,1400,not_started
+CR-V2-B4-008,4,P-A,false,CR-V2-B4-007,Implement audio-video sync and audio-preservation evaluators,CR-V2-B4-008: implement-audio-video-sync-and-audio-preservation-evaluato,8,1400,not_started
+CR-V2-B4-009,4,P-A,false,CR-V2-B4-008,"Implement visual preservation, crop stability, and collision evaluators",CR-V2-B4-009: implement-visual-preservation-crop-stability-and-collision,8,1400,not_started
+CR-V2-B4-010,4,P-A,false,CR-V2-B4-009,"Implement action atomicity, undo, crash, cache, and offline evaluators",CR-V2-B4-010: implement-action-atomicity-undo-crash-cache-and-offline-ev,8,1400,not_started
+CR-V2-B4-011,4,P-A,false,CR-V2-B4-010,Implement editorial human-agreement metrics and benchmark runner,CR-V2-B4-011: implement-editorial-human-agreement-metrics-and-benchmark-,12,2400,not_started
+CR-V2-B4-012,4,P-B,false,CR-V2-B4-006,Implement deterministic beat segmentation from transcript and evidence,CR-V2-B4-012: implement-deterministic-beat-segmentation-from-transcript-,8,1400,not_started
+CR-V2-B4-013,4,P-B,false,CR-V2-B4-012,Implement duplicate-take and restatement clustering,CR-V2-B4-013: implement-duplicate-take-and-restatement-clustering,8,1400,not_started
+CR-V2-B4-014,4,P-B,false,CR-V2-B4-013,Implement evidence-backed take scoring and hard-fault disqualification,CR-V2-B4-014: implement-evidence-backed-take-scoring-and-hard-fault-disq,8,1400,not_started
+CR-V2-B4-015,4,P-B,false,CR-V2-B4-014,"Implement contextual filler, false-start, slate, handling, and dead-air decisions",CR-V2-B4-015: implement-contextual-filler-false-start-slate-handling-and,8,1400,not_started
+CR-V2-B4-016,4,P-B,false,CR-V2-B4-015,Implement boundary consensus and word-safe segment compilation,CR-V2-B4-016: implement-boundary-consensus-and-word-safe-segment-compila,8,1400,not_started
+CR-V2-B4-017,4,P-C,false,CR-V2-B4-006,Implement narrative arc templates and schema-bound Director requests,CR-V2-B4-017: implement-narrative-arc-templates-and-schema-bound-directo,8,1400,not_started
+CR-V2-B4-018,4,P-C,false,CR-V2-B4-017,"Implement hook, payoff, CTA, and truthfulness-aware ordering",CR-V2-B4-018: implement-hook-payoff-cta-and-truthfulness-aware-ordering,8,1400,not_started
+CR-V2-B4-019,4,P-C,false,CR-V2-B4-018,Implement semantic short-form candidate discovery and ranking,CR-V2-B4-019: implement-semantic-short-form-candidate-discovery-and-rank,8,1400,not_started
+CR-V2-B4-020,4,P-C,false,CR-V2-B4-019,"Implement confidence, ambiguity, escalation, and one-cycle reflection",CR-V2-B4-020: implement-confidence-ambiguity-escalation-and-one-cycle-re,8,1400,not_started
+CR-V2-B4-021,4,P-C,false,CR-V2-B4-020,Merge Book 4 lanes and implement the EditorialEngine façade,CR-V2-B4-021: merge-book-4-lanes-and-implement-the-editorialengine-fa-ad,8,1400,not_started
+CR-V2-B4-022,4,S,true,CR-V2-B4-011; CR-V2-B4-016; CR-V2-B4-021,"Compile natural, tight, long-form, and short variants through the action kernel",CR-V2-B4-022: compile-natural-tight-long-form-and-short-variants-through,8,1400,not_started
+CR-V2-B4-023,4,S,true,CR-V2-B4-022,Implement benchmark profiles that keep autonomy disabled until earned,CR-V2-B4-023: implement-benchmark-profiles-that-keep-autonomy-disabled-u,8,1400,not_started
+CR-V2-B4-024,4,S,true,CR-V2-B4-023,Expose benchmark and editorial evidence read models to Studio,CR-V2-B4-024: expose-benchmark-and-editorial-evidence-read-models-to-stu,8,1400,not_started
+CR-V2-B4-025,4,S,true,CR-V2-B4-024,Run the first full v2 benchmark acceptance suite,CR-V2-B4-025: run-the-first-full-v2-benchmark-acceptance-suite,500,80000,not_started
+CR-V2-B4-026,4,S,true,CR-V2-B4-025,"Run focused editorial, evaluator, truthfulness, and preservation tests",CR-V2-B4-026: run-focused-editorial-evaluator-truthfulness-and-preservat,1,1200,not_started
+CR-V2-B4-027,4,S,true,CR-V2-B4-026,Run the authoritative Book 4 local gate and freeze benchmark evidence,CR-V2-B4-027: run-the-authoritative-book-4-local-gate-and-freeze-benchma,2,1500,not_started
+CR-V2-B5-001,5,S,true,Book 4 final gate,Freeze the embedded creative skill execution contract,CR-V2-B5-001: freeze-the-embedded-creative-skill-execution-contract,8,1400,not_started
+CR-V2-B5-002,5,S,true,CR-V2-B5-001,"Freeze creative asset request, delivery, and acceptance schemas",CR-V2-B5-002: freeze-creative-asset-request-delivery-and-acceptance-sche,8,1400,not_started
+CR-V2-B5-003,5,S,true,CR-V2-B5-002,"Freeze BrandCard, BrandSystem, style direction, and bake-off schemas",CR-V2-B5-003: freeze-brandcard-brandsystem-style-direction-and-bake-off-,8,1400,not_started
+CR-V2-B5-004,5,S,true,CR-V2-B5-003,Freeze the native declarative render graph and effect DSL,CR-V2-B5-004: freeze-the-native-declarative-render-graph-and-effect-dsl,8,1400,not_started
+CR-V2-B5-005,5,S,true,CR-V2-B5-004,"Freeze creative critic, visual QA, and finish-lock semantics",CR-V2-B5-005: freeze-creative-critic-visual-qa-and-finish-lock-semantics,8,1400,not_started
+CR-V2-B5-006,5,S,true,CR-V2-B5-005,"Freeze Book 5 creative skill, planning, and renderer lane ownership",CR-V2-B5-006: freeze-book-5-creative-skill-planning-and-renderer-lane-ow,8,1400,not_started
+CR-V2-B5-007,5,P-A,false,CR-V2-B5-006,Implement the product-local skill runtime and resolver,CR-V2-B5-007: implement-the-product-local-skill-runtime-and-resolver,8,1400,not_started
+CR-V2-B5-008,5,P-A,false,CR-V2-B5-007,Implement Brand and Brand Identity skills as typed services,CR-V2-B5-008: implement-brand-and-brand-identity-skills-as-typed-service,8,1400,not_started
+CR-V2-B5-009,5,P-A,false,CR-V2-B5-008,Implement Designer as an internal typed asset planner and reviewer,CR-V2-B5-009: implement-designer-as-an-internal-typed-asset-planner-and-,8,1400,not_started
+CR-V2-B5-010,5,P-A,false,CR-V2-B5-009,Implement Writing and packaging copy as internal evidence-bound skills,CR-V2-B5-010: implement-writing-and-packaging-copy-as-internal-evidence-,8,1400,not_started
+CR-V2-B5-011,5,P-A,false,CR-V2-B5-010,Implement Social platform constraints as versioned local data and skill output,CR-V2-B5-011: implement-social-platform-constraints-as-versioned-local-d,8,1400,not_started
+CR-V2-B5-012,5,P-B,false,CR-V2-B5-006,Implement beat/shot creative planning from editorial evidence,CR-V2-B5-012: implement-beat-shot-creative-planning-from-editorial-evide,8,1400,not_started
+CR-V2-B5-013,5,P-B,false,CR-V2-B5-012,Implement style bake-offs and acceptance records,CR-V2-B5-013: implement-style-bake-offs-and-acceptance-records,8,1400,not_started
+CR-V2-B5-014,5,P-B,false,CR-V2-B5-013,"Implement recorded A-roll, generated B-roll, and anchored C-roll planning",CR-V2-B5-014: implement-recorded-a-roll-generated-b-roll-and-anchored-c-,8,1400,not_started
+CR-V2-B5-015,5,P-B,false,CR-V2-B5-014,"Implement asset semantic validation, rights, identity, and label locks",CR-V2-B5-015: implement-asset-semantic-validation-rights-identity-and-la,8,1400,not_started
+CR-V2-B5-016,5,P-B,false,CR-V2-B5-015,"Implement thumbnail, title-card, brand-kit, and package asset plans",CR-V2-B5-016: implement-thumbnail-title-card-brand-kit-and-package-asset,8,1400,not_started
+CR-V2-B5-017,5,P-C,false,CR-V2-B5-006,Implement the CutRight native GPU/vector compositor core,CR-V2-B5-017: implement-the-cutright-native-gpu-vector-compositor-core,16,3000,not_started
+CR-V2-B5-018,5,P-C,false,CR-V2-B5-017,"Implement native typography, captions, and text animation",CR-V2-B5-018: implement-native-typography-captions-and-text-animation,8,1400,not_started
+CR-V2-B5-019,5,P-C,false,CR-V2-B5-018,"Implement native motion grammar, reframing, and temporal placement",CR-V2-B5-019: implement-native-motion-grammar-reframing-and-temporal-pla,8,1400,not_started
+CR-V2-B5-020,5,P-C,false,CR-V2-B5-019,"Implement native audio finishing, music/SFX, transient sync, and reverb throw",CR-V2-B5-020: implement-native-audio-finishing-music-sfx-transient-sync-,8,1400,not_started
+CR-V2-B5-021,5,P-C,false,CR-V2-B5-020,Implement the native render-graph compiler and remove Remotion/HyperFrames from the active source graph,CR-V2-B5-021: implement-the-native-render-graph-compiler-and-remove-remo,45,14000,not_started
+CR-V2-B5-022,5,S,true,CR-V2-B5-011; CR-V2-B5-016; CR-V2-B5-021,Merge Book 5 lanes and compile versioned FinishPlans,CR-V2-B5-022: merge-book-5-lanes-and-compile-versioned-finishplans,8,1400,not_started
+CR-V2-B5-023,5,S,true,CR-V2-B5-022,Implement independent creative critic and deterministic visual QA,CR-V2-B5-023: implement-independent-creative-critic-and-deterministic-vi,8,1400,not_started
+CR-V2-B5-024,5,S,true,CR-V2-B5-023,Integrate generated and procedural creative assembly with the job plane,CR-V2-B5-024: integrate-generated-and-procedural-creative-assembly-with-,8,1400,not_started
+CR-V2-B5-025,5,S,true,CR-V2-B5-024,Create four-lane creative golden fixtures and native migration comparisons,CR-V2-B5-025: create-four-lane-creative-golden-fixtures-and-native-migra,300,70000,not_started
+CR-V2-B5-026,5,S,true,CR-V2-B5-025,"Run focused creative skill, native renderer, audio, and critic tests",CR-V2-B5-026: run-focused-creative-skill-native-renderer-audio-and-criti,1,1200,not_started
+CR-V2-B5-027,5,S,true,CR-V2-B5-026,Run the authoritative Book 5 local gate and freeze creative evidence,CR-V2-B5-027: run-the-authoritative-book-5-local-gate-and-freeze-creativ,2,1500,not_started
+CR-V2-B6-001,6,S,true,Book 5 final gate,"Freeze Studio information architecture, route state, and project read model",CR-V2-B6-001: freeze-studio-information-architecture-route-state-and-pro,8,1400,not_started
+CR-V2-B6-002,6,S,true,CR-V2-B6-001,Freeze project library and disposable index contracts,CR-V2-B6-002: freeze-project-library-and-disposable-index-contracts,8,1400,not_started
+CR-V2-B6-003,6,S,true,CR-V2-B6-002,"Freeze Studio action binding, optimistic state, and semantic-diff UX",CR-V2-B6-003: freeze-studio-action-binding-optimistic-state-and-semantic,8,1400,not_started
+CR-V2-B6-004,6,S,true,CR-V2-B6-003,Freeze timeline authoring UX and corrective operation scope,CR-V2-B6-004: freeze-timeline-authoring-ux-and-corrective-operation-scop,8,1400,not_started
+CR-V2-B6-005,6,S,true,CR-V2-B6-004,"Freeze embedded agent UX, session, planning, and approval policy",CR-V2-B6-005: freeze-embedded-agent-ux-session-planning-and-approval-pol,8,1400,not_started
+CR-V2-B6-006,6,S,true,CR-V2-B6-005,"Freeze Book 6 workspace, authoring, and agent lane ownership",CR-V2-B6-006: freeze-book-6-workspace-authoring-and-agent-lane-ownership,8,1400,not_started
+CR-V2-B6-007,6,P-A,false,CR-V2-B6-006,Implement Home and the rebuildable project library,CR-V2-B6-007: implement-home-and-the-rebuildable-project-library,8,1400,not_started
+CR-V2-B6-008,6,P-A,false,CR-V2-B6-007,Implement Sources and Transcript authoring modes,CR-V2-B6-008: implement-sources-and-transcript-authoring-modes,8,1400,not_started
+CR-V2-B6-009,6,P-A,false,CR-V2-B6-008,Implement Story and Beats modes,CR-V2-B6-009: implement-story-and-beats-modes,8,1400,not_started
+CR-V2-B6-010,6,P-A,false,CR-V2-B6-009,Implement Run mode and one-click Make Versions workflow,CR-V2-B6-010: implement-run-mode-and-one-click-make-versions-workflow,8,1400,not_started
+CR-V2-B6-011,6,P-A,false,CR-V2-B6-010,"Implement Compare, Finals, and QA & Receipts modes",CR-V2-B6-011: implement-compare-finals-and-qa-receipts-modes,8,1400,not_started
+CR-V2-B6-012,6,P-B,false,CR-V2-B6-006,Implement the non-destructive timeline editor,CR-V2-B6-012: implement-the-non-destructive-timeline-editor,60,12000,not_started
+CR-V2-B6-013,6,P-B,false,CR-V2-B6-012,Implement Design mode,CR-V2-B6-013: implement-design-mode,8,1400,not_started
+CR-V2-B6-014,6,P-B,false,CR-V2-B6-013,Implement Motion & Sound mode,CR-V2-B6-014: implement-motion-sound-mode,8,1400,not_started
+CR-V2-B6-015,6,P-B,false,CR-V2-B6-014,Implement Assets and Auditions panels,CR-V2-B6-015: implement-assets-and-auditions-panels,8,1400,not_started
+CR-V2-B6-016,6,P-B,false,CR-V2-B6-015,Implement corrective operation workflows and comprehensive undo UX,CR-V2-B6-016: implement-corrective-operation-workflows-and-comprehensive,8,1400,not_started
+CR-V2-B6-017,6,P-C,false,CR-V2-B6-006,Implement embedded agent sessions and the generated tool registry,CR-V2-B6-017: implement-embedded-agent-sessions-and-the-generated-tool-r,8,1400,not_started
+CR-V2-B6-018,6,P-C,false,CR-V2-B6-017,"Implement embedded agent planning, evidence retrieval, diff review, and execution",CR-V2-B6-018: implement-embedded-agent-planning-evidence-retrieval-diff-,8,1400,not_started
+CR-V2-B6-019,6,P-C,false,CR-V2-B6-018,Implement composited timeline inspection and sample sheets,CR-V2-B6-019: implement-composited-timeline-inspection-and-sample-sheets,8,1400,not_started
+CR-V2-B6-020,6,P-C,false,CR-V2-B6-019,Complete optional loopback MCP project navigation and write guards,CR-V2-B6-020: complete-optional-loopback-mcp-project-navigation-and-writ,8,1400,not_started
+CR-V2-B6-021,6,P-C,false,CR-V2-B6-020,"Implement accessibility, reduced motion, keyboard, and performance budgets",CR-V2-B6-021: implement-accessibility-reduced-motion-keyboard-and-perfor,8,1400,not_started
+CR-V2-B6-022,6,S,true,CR-V2-B6-011; CR-V2-B6-016; CR-V2-B6-021,Merge Book 6 lanes and replace the root Studio navigation,CR-V2-B6-022: merge-book-6-lanes-and-replace-the-root-studio-navigation,8,1400,not_started
+CR-V2-B6-023,6,S,true,CR-V2-B6-022,"Integrate persistent job progress, recovery, notifications, and digests",CR-V2-B6-023: integrate-persistent-job-progress-recovery-notifications-a,8,1400,not_started
+CR-V2-B6-024,6,S,true,CR-V2-B6-023,Create deterministic visual QA fixtures for every Studio mode,CR-V2-B6-024: create-deterministic-visual-qa-fixtures-for-every-studio-m,220,45000,not_started
+CR-V2-B6-025,6,S,true,CR-V2-B6-024,Run full four-lane Studio workflow tests with the embedded agent,CR-V2-B6-025: run-full-four-lane-studio-workflow-tests-with-the-embedded,80,14000,not_started
+CR-V2-B6-026,6,S,true,CR-V2-B6-025,Build the local development application bundle with all v2 modes,CR-V2-B6-026: build-the-local-development-application-bundle-with-all-v2,8,1400,not_started
+CR-V2-B6-027,6,S,true,CR-V2-B6-026,Run the authoritative Book 6 local gate and freeze Studio/agent evidence,CR-V2-B6-027: run-the-authoritative-book-6-local-gate-and-freeze-studio-,2,1600,not_started
+CR-V2-B7-001,7,S,true,Book 6 final gate,"Freeze feedback, preference evidence, and per-format autonomy schemas",CR-V2-B7-001: freeze-feedback-preference-evidence-and-per-format-autonom,8,1400,not_started
+CR-V2-B7-002,7,S,true,CR-V2-B7-001,Freeze the security and privacy threat model,CR-V2-B7-002: freeze-the-security-and-privacy-threat-model,8,1400,not_started
+CR-V2-B7-003,7,S,true,CR-V2-B7-002,"Freeze installer, bundle, pack, update, and rollback architecture",CR-V2-B7-003: freeze-installer-bundle-pack-update-and-rollback-architect,8,1400,not_started
+CR-V2-B7-004,7,S,true,CR-V2-B7-003,"Freeze migration, backup, recovery, and compatibility policy",CR-V2-B7-004: freeze-migration-backup-recovery-and-compatibility-policy,8,1400,not_started
+CR-V2-B7-005,7,S,true,CR-V2-B7-004,Freeze release acceptance matrix and supported-target claims,CR-V2-B7-005: freeze-release-acceptance-matrix-and-supported-target-clai,8,1400,not_started
+CR-V2-B7-006,7,S,true,CR-V2-B7-005,"Freeze Book 7 autonomy, security/recovery, and distribution lane ownership",CR-V2-B7-006: freeze-book-7-autonomy-security-recovery-and-distribution-,8,1400,not_started
+CR-V2-B7-007,7,P-A,false,CR-V2-B7-006,Implement expanded hash-bound decision records,CR-V2-B7-007: implement-expanded-hash-bound-decision-records,8,1400,not_started
+CR-V2-B7-008,7,P-A,false,CR-V2-B7-007,Implement evidence-backed per-format preference learning,CR-V2-B7-008: implement-evidence-backed-per-format-preference-learning,8,1400,not_started
+CR-V2-B7-009,7,P-A,false,CR-V2-B7-008,Implement applied format profiles with immutable versions,CR-V2-B7-009: implement-applied-format-profiles-with-immutable-versions,8,1400,not_started
+CR-V2-B7-010,7,P-A,false,CR-V2-B7-009,Implement autonomy advancement and automatic demotion,CR-V2-B7-010: implement-autonomy-advancement-and-automatic-demotion,8,1400,not_started
+CR-V2-B7-011,7,P-A,false,CR-V2-B7-010,Implement autonomous orchestration with mandatory critic and digest,CR-V2-B7-011: implement-autonomous-orchestration-with-mandatory-critic-a,8,1400,not_started
+CR-V2-B7-012,7,P-B,false,CR-V2-B7-006,Implement sandboxed worker execution and untrusted-media limits,CR-V2-B7-012: implement-sandboxed-worker-execution-and-untrusted-media-l,8,1400,not_started
+CR-V2-B7-013,7,P-B,false,CR-V2-B7-012,Implement crash recovery and project repair,CR-V2-B7-013: implement-crash-recovery-and-project-repair,8,1400,not_started
+CR-V2-B7-014,7,P-B,false,CR-V2-B7-013,"Implement tamper detection, receipt tree, and pack/project trust status",CR-V2-B7-014: implement-tamper-detection-receipt-tree-and-pack-project-t,8,1400,not_started
+CR-V2-B7-015,7,P-B,false,CR-V2-B7-014,Implement privacy-safe local logs and telemetry-off defaults,CR-V2-B7-015: implement-privacy-safe-local-logs-and-telemetry-off-defaul,8,1400,not_started
+CR-V2-B7-016,7,P-B,false,CR-V2-B7-015,"Implement pack repair, rollback, and offline payload integrity in Studio",CR-V2-B7-016: implement-pack-repair-rollback-and-offline-payload-integri,8,1400,not_started
+CR-V2-B7-017,7,P-C,false,CR-V2-B7-006,"Create local signing, notarization, and seal scripts without upload",CR-V2-B7-017: create-local-signing-notarization-and-seal-scripts-without,8,1400,not_started
+CR-V2-B7-018,7,P-C,false,CR-V2-B7-017,Assemble the complete offline installers and payload,CR-V2-B7-018: assemble-the-complete-offline-installers-and-payload,60,10000,not_started
+CR-V2-B7-019,7,P-C,false,CR-V2-B7-018,Build the source distribution and LGPL corresponding-source bundle,CR-V2-B7-019: build-the-source-distribution-and-lgpl-corresponding-sourc,8,1400,not_started
+CR-V2-B7-020,7,P-C,false,CR-V2-B7-019,Create rights-cleared sample projects and offline product documentation,CR-V2-B7-020: create-rights-cleared-sample-projects-and-offline-product-,180,40000,not_started
+CR-V2-B7-021,7,P-C,false,CR-V2-B7-020,"Implement the clean-machine, blocked-network acceptance harness",CR-V2-B7-021: implement-the-clean-machine-blocked-network-acceptance-har,40,12000,not_started
+CR-V2-B7-022,7,S,true,CR-V2-B7-011; CR-V2-B7-016; CR-V2-B7-021,Merge Book 7 lanes and integrate v1-to-v2 project migration,CR-V2-B7-022: merge-book-7-lanes-and-integrate-v1-to-v2-project-migratio,40,7000,not_started
+CR-V2-B7-023,7,S,true,CR-V2-B7-022,Run final four-lane benchmark and Studio acceptance on supported targets,CR-V2-B7-023: run-final-four-lane-benchmark-and-studio-acceptance-on-sup,600,100000,not_started
+CR-V2-B7-024,7,S,true,CR-V2-B7-023,"Run final security, privacy, licence, and supply-chain release audit",CR-V2-B7-024: run-final-security-privacy-licence-and-supply-chain-releas,8,1400,not_started
+CR-V2-B7-025,7,S,true,CR-V2-B7-024,"Generate the final SBOM, provenance graph, and release disclosure",CR-V2-B7-025: generate-the-final-sbom-provenance-graph-and-release-discl,12,5000,not_started
+CR-V2-B7-026,7,S,true,CR-V2-B7-025,Build and seal the local release candidate,CR-V2-B7-026: build-and-seal-the-local-release-candidate,120,18000,not_started
+CR-V2-B7-027,7,S,true,CR-V2-B7-026,"Run the final authoritative local gate, clean-machine proof, and checksum seal",CR-V2-B7-027: run-the-final-authoritative-local-gate-clean-machine-proof,3,1800,not_started

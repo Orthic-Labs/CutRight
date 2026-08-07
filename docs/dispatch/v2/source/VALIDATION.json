@@ -1,0 +1,17 @@
+{
+  "status": "pass",
+  "books": 7,
+  "tasks": 189,
+  "tasks_per_book": {
+    "1": 27,
+    "2": 27,
+    "3": 27,
+    "4": 27,
+    "5": 27,
+    "6": 27,
+    "7": 27
+  },
+  "sequential_tasks": 84,
+  "parallel_lane_tasks": 105,
+  "errors": []
+}

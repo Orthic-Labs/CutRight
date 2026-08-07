@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "registry_id": "cutright-v2-example",
+  "note": "Illustrative source shape. Book 2 generates the complete registry and release locks reject incomplete examples.",
+  "capabilities": [
+    {
+      "id": "evidence.query",
+      "version": "1.0.0",
+      "kind": "read",
+      "owner": "video-evidence",
+      "permissions": [
+        "evidence.read"
+      ],
+      "requires_packs": [],
+      "status": "planned"
+    },
+    {
+      "id": "timeline.remove_range",
+      "version": "1.0.0",
+      "kind": "action",
+      "owner": "video-actions",
+      "action_kind": "remove_range",
+      "permissions": [
+        "timeline.cut.write"
+      ],
+      "requires_packs": [],
+      "status": "planned"
+    },
+    {
+      "id": "editorial.plan",
+      "version": "2.0.0",
+      "kind": "job",
+      "owner": "video-editorial",
+      "permissions": [
+        "evidence.read",
+        "editorial.plan.write"
+      ],
+      "requires_packs": [
+        "speech",
+        "director",
+        "vision"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "render.native",
+      "version": "2.0.0",
+      "kind": "job",
+      "owner": "video-render",
+      "permissions": [
+        "render.write"
+      ],
+      "requires_packs": [
+        "media",
+        "creative"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "renderer.remotion",
+      "version": "1.0.0",
+      "kind": "runtime",
+      "owner": "legacy",
+      "permissions": [],
+      "requires_packs": [],
+      "status": "retired",
+      "replacement": "render.native"
+    }
+  ]
+}

@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "frozen_at": "2026-08-06",
+  "claim": "complete reproducible corpus used for CutRight v2; not an unbounded claim over all possible sources",
+  "sources": [
+    {
+      "id": "cutright",
+      "name": "CutRight",
+      "location": "Orthic-Labs/CutRight",
+      "revision": "7f3e5a61c729d4d877715b9a083d13a2e5ebe277",
+      "license_posture": "MIT",
+      "disposition": "shipping base",
+      "use": "All current source; current external-provider assumptions are replaced by v2."
+    },
+    {
+      "id": "workspace-capabilities",
+      "name": "Workspace capabilities",
+      "location": "bogusyogi/claude",
+      "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+      "license_posture": "user-owned / per-file third-party notices",
+      "disposition": "vendor selected closure",
+      "use": "Designer plus Brand, Brand Identity, Content, Writing, Social, QA, bounded-run, eval topology, and selected local assets."
+    },
+    {
+      "id": "heardright",
+      "name": "HeardRight",
+      "location": "bogusyogi/heardright",
+      "revision": "b60bff947f12ffa9d25e94ad27e8ff30db006a24",
+      "license_posture": "private user-owned; third-party model notices mandatory",
+      "disposition": "vendor and adapt",
+      "use": "Copy the engine/core/platform source and only redistributable model assets into first-party CutRight packs."
+    },
+    {
+      "id": "autoshorts",
+      "name": "AutoShorts",
+      "location": "JayWebtech/autoshorts",
+      "revision": "f17b04cdd97ef65c32b81b31b36bb6eb5d013d5b",
+      "license_posture": "no declared repository license",
+      "disposition": "behavior only",
+      "use": "Reproduce project-library, onboarding, one-click-run, candidate-card, and progress behavior without copying source."
+    },
+    {
+      "id": "vox-director",
+      "name": "Vox Director",
+      "location": "Alisa0808/vox-director",
+      "revision": "8b034354dc443edcde7fdb2622e0491df5142fd3",
+      "license_posture": "MIT",
+      "disposition": "adapt with notice",
+      "use": "Absorb beat/shot structure, style bake-offs, A/B/C-roll, anti-monotony, and bounded async job semantics."
+    },
+    {
+      "id": "palmier-pro",
+      "name": "Palmier Pro",
+      "location": "palmier-io/palmier-pro",
+      "revision": "397b82e64093f986cbabd89f1a1c93812ff546c2",
+      "license_posture": "GPL-3.0",
+      "disposition": "clean-room behavior only",
+      "use": "Reimplement typed editing actions, stable IDs, composited inspection, undo, variants, jobs, and skill catalog without copying Swift."
+    },
+    {
+      "id": "llama-cpp",
+      "name": "llama.cpp",
+      "location": "ggml-org/llama.cpp",
+      "revision": "6a32c29a746a2e44de463de647f9f6661eb5086b",
+      "license_posture": "MIT",
+      "disposition": "vendor runtime source",
+      "use": "Pinned local inference runtime; CutRight builds its own platform binaries."
+    },
+    {
+      "id": "whisper-cpp",
+      "name": "whisper.cpp",
+      "location": "ggml-org/whisper.cpp",
+      "revision": "306c88f4d1286aec1bf96e544632897886af5501",
+      "license_posture": "MIT",
+      "disposition": "vendor verifier source",
+      "use": "Independent transcript/edge verifier; not transcript authority."
+    },
+    {
+      "id": "silero-vad",
+      "name": "Silero VAD",
+      "location": "snakers4/silero-vad",
+      "revision": "76e3dc408eb2a5c655c34e230d2d5459b4439daa",
+      "license_posture": "MIT",
+      "disposition": "vendor model/runtime subset",
+      "use": "Use exact ONNX model bytes with generated SHA-256 and no network fallback."
+    },
+    {
+      "id": "mediapipe",
+      "name": "MediaPipe",
+      "location": "google-ai-edge/mediapipe",
+      "revision": "f8ef212d5c962c0e853db7e59d217056b187084b",
+      "license_posture": "Apache-2.0",
+      "disposition": "conditional source component",
+      "use": "May provide face/pose tracking only after telemetry-disabled, network-blocked qualification and per-model license closure."
+    },
+    {
+      "id": "ffmpeg",
+      "name": "FFmpeg",
+      "location": "FFmpeg/FFmpeg n8.1",
+      "revision": "9047fa1b084f76b1b4d065af2d743df1b40dfb56",
+      "license_posture": "LGPL-2.1-or-later build only",
+      "disposition": "vendor build + corresponding source",
+      "use": "No GPL/nonfree flags; distribute configure line, notices, and corresponding source."
+    },
+    {
+      "id": "qwen3-4b",
+      "name": "Qwen3-4B",
+      "location": "Qwen/Qwen3-4B",
+      "revision": "7c69a109fc3fa19c860be9dff46fc23299092018",
+      "license_posture": "Apache-2.0",
+      "disposition": "director candidate selected",
+      "use": "Convert official safetensors to CutRight-owned GGUF; exact output hashes frozen by pack builder."
+    },
+    {
+      "id": "qwen3-vl-4b-instruct",
+      "name": "Qwen3-VL-4B-Instruct",
+      "location": "Qwen/Qwen3-VL-4B-Instruct",
+      "revision": "ebb281ec70b05090aa6165b016eac8ec08e71b17",
+      "license_posture": "Apache-2.0",
+      "disposition": "independent critic selected",
+      "use": "Convert official model and multimodal projector; ship only after all-target qualification."
+    },
+    {
+      "id": "qwen3-5-4b",
+      "name": "Qwen3.5-4B",
+      "location": "Qwen/Qwen3.5-4B",
+      "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "license_posture": "Apache-2.0",
+      "disposition": "qualification candidate only",
+      "use": "Not a shipping dependency until deterministic local runtime support passes the full matrix."
+    },
+    {
+      "id": "kokoro-82m-v1-0",
+      "name": "Kokoro-82M v1.0",
+      "location": "hexgrad/Kokoro-82M",
+      "revision": "496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4",
+      "license_posture": "Apache-2.0 weights; voices separately audited",
+      "disposition": "TTS selected",
+      "use": "Model hash is fixed; every voice file must have its own provenance and redistribution entry."
+    },
+    {
+      "id": "attached-cutaway-finish-material",
+      "name": "Attached Cutaway/Finish material",
+      "location": "conversation attachments",
+      "revision": "materialized hash manifest generated in Book 1",
+      "license_posture": "user supplied; third-party dependencies audited separately",
+      "disposition": "vendor as provenance and migrate",
+      "use": "Keep scripts as golden behavior; migrate live execution to typed CutRight stages."
+    }
+  ],
+  "research": [
+    {
+      "work": "VideoLLaMB",
+      "source": "https://openaccess.thecvf.com/content/ICCV2025/html/Wang_VideoLLaMB_Long_Streaming_Video_Understanding_with_Recurrent_Memory_Bridges_ICCV_2025_paper.html",
+      "venue_date": "ICCV 2025",
+      "finding": "Scene tiling and recurrent memory bridges for long streaming video.",
+      "consequence": "Hierarchical scene memory, not whole-video prompt stuffing."
+    },
+    {
+      "work": "Flash-VStream",
+      "source": "https://openaccess.thecvf.com/content/ICCV2025/html/Zhang_Flash-VStream_Efficient_Real-Time_Understanding_for_Long_Video_Streams_ICCV_2025_paper.html",
+      "venue_date": "ICCV 2025",
+      "finding": "Compact context memory plus detail memory retrieved by information density.",
+      "consequence": "Two-tier evidence store and selective frame retrieval."
+    },
+    {
+      "work": "ProVideLLM",
+      "source": "https://openaccess.thecvf.com/content/ICCV2025/html/Chatterjee_Streaming_VideoLLMs_for_Real-Time_Procedural_Video_Understanding_ICCV_2025_paper.html",
+      "venue_date": "ICCV 2025",
+      "finding": "Compressed long-term text with detailed short-term visual tokens.",
+      "consequence": "Separate semantic summaries from high-resolution evidence."
+    },
+    {
+      "work": "LVAgent",
+      "source": "https://openaccess.thecvf.com/content/ICCV2025/html/Chen_LVAgent_Long_Video_Understanding_by_Multi-Round_Dynamical_Collaboration_of_MLLM_ICCV_2025_paper.html",
+      "venue_date": "ICCV 2025",
+      "finding": "Selection, retrieval/perception, action, and reflection in multiple rounds.",
+      "consequence": "Agent loop must retrieve, act, inspect, and revise."
+    },
+    {
+      "work": "SALOVA",
+      "source": "https://openaccess.thecvf.com/content/CVPR2025/html/Kim_SALOVA_Segment-Augmented_Long_Video_Assistant_for_Targeted_Retrieval_and_Routing_CVPR_2025_paper.html",
+      "venue_date": "CVPR 2025",
+      "finding": "Segment-level retrieval and dynamic routing improve long-form contextual relevance.",
+      "consequence": "Queries operate over indexed segments and retrieve bounded detail."
+    },
+    {
+      "work": "Adaptive Keyframe Sampling",
+      "source": "https://openaccess.thecvf.com/content/CVPR2025/html/Tang_Adaptive_Keyframe_Sampling_for_Long_Video_Understanding_CVPR_2025_paper.html",
+      "venue_date": "CVPR 2025",
+      "finding": "Relevant and coverage-aware keyframe selection outperforms uniform sampling.",
+      "consequence": "Evidence sampling must balance query relevance and coverage."
+    },
+    {
+      "work": "LongVALE",
+      "source": "https://openaccess.thecvf.com/content/CVPR2025/html/Geng_LongVALE_Vision-Audio-Language-Event_Benchmark_Towards_Time-Aware_Omni-Modal_Perception_of_Long_Videos_CVPR_2025_paper.html",
+      "venue_date": "CVPR 2025",
+      "finding": "Fine-grained audio-visual-language events and temporal boundaries.",
+      "consequence": "Evidence graph has explicit audio/visual events and boundaries."
+    },
+    {
+      "work": "VidHalluc",
+      "source": "https://openaccess.thecvf.com/content/CVPR2025/html/Li_VidHalluc_Evaluating_Temporal_Hallucinations_in_Multimodal_Large_Language_Models_for_CVPR_2025_paper.html",
+      "venue_date": "CVPR 2025",
+      "finding": "Temporal hallucinations occur in actions, sequences, and scene transitions.",
+      "consequence": "Truthfulness and chronology checks are first-class."
+    },
+    {
+      "work": "AVE-Compass",
+      "source": "https://arxiv.org/abs/2607.24821",
+      "venue_date": "2026 preprint",
+      "finding": "Checklist-based audio-visual editing evaluation and iterative evaluator feedback.",
+      "consequence": "Instruction, preservation, realism, edit-intent, and critic-revision axes."
+    },
+    {
+      "work": "SpeechEditBench",
+      "source": "https://arxiv.org/abs/2606.01804",
+      "venue_date": "2026 preprint",
+      "finding": "Target success, preservation success, and joint success.",
+      "consequence": "Every edit is scored for requested change and untouched-content preservation."
+    },
+    {
+      "work": "UniEditBench",
+      "source": "https://arxiv.org/abs/2604.15871",
+      "venue_date": "2026 preprint",
+      "finding": "Structural fidelity, background consistency, naturalness, and temporal-spatial consistency.",
+      "consequence": "Independent visual critic and multi-dimensional edit scoring."
+    },
+    {
+      "work": "FiVE",
+      "source": "https://arxiv.org/abs/2503.13684",
+      "venue_date": "2025 preprint",
+      "finding": "Fine-grained editing requires background preservation, temporal consistency, quality, and runtime metrics.",
+      "consequence": "Object-level edit success is separated from non-target preservation."
+    },
+    {
+      "work": "V2V-Bench",
+      "source": "https://arxiv.org/abs/2606.05665",
+      "venue_date": "2026 preprint",
+      "finding": "Video-to-video evaluation needs temporal alignment, structural fidelity, transformation quality, visual quality, and semantic alignment.",
+      "consequence": "Release reports separate these dimensions instead of one aggregate score."
+    },
+    {
+      "work": "AVID",
+      "source": "https://arxiv.org/abs/2604.13593",
+      "venue_date": "2026 preprint",
+      "finding": "Audio-visual inconsistency requires temporal grounding and conflict classification.",
+      "consequence": "Critic tests include active-speaker, voiceover, scenic, and cross-modal conflict cases."
+    },
+    {
+      "work": "TARO",
+      "source": "https://openaccess.thecvf.com/content/ICCV2025/html/Ton_TARO_Timestep-Adaptive_Representation_Alignment_with_Onset-Aware_Conditioning_for_Synchronized_Video-to-Audio_ICCV_2025_paper.html",
+      "venue_date": "ICCV 2025",
+      "finding": "Onset-aware conditioning improves event-level audio-visual synchronization.",
+      "consequence": "Transient alignment is evaluated at event/onset level."
+    },
+    {
+      "work": "MMAudio",
+      "source": "https://openaccess.thecvf.com/content/CVPR2025/html/Cheng_MMAudio_Taming_Multimodal_Joint_Training_for_High-Quality_Video-to-Audio_Synthesis_CVPR_2025_paper.html",
+      "venue_date": "CVPR 2025",
+      "finding": "Frame-level conditioning improves audio-visual synchronization.",
+      "consequence": "Audio generation and SFX placement use frame/event alignment evidence."
+    }
+  ]
+}
