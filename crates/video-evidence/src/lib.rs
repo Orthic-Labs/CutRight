@@ -12,6 +12,9 @@
 
 pub mod scene;
 pub mod shot;
+pub mod tracks;
+pub mod vision;
 
 pub use scene::{FrameSequence, FrameStat, SceneBoundary, SceneDetector, SceneRefinement};
 pub use shot::{MotionFrame, ShotBoundary, ShotDetectionError, ShotDetector, ShotKind, ShotRefinement};
+pub use vision::{VisionBundle, VisionConfig, VisionTracker};

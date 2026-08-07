@@ -1,0 +1,60 @@
+{
+  "schema": "cutright.pack_manifest/v1",
+  "pack_id": "vision",
+  "version": "0.1.0",
+  "model_kind": "vision-tracking",
+  "role": "evidence",
+  "target": {
+    "platform": "host",
+    "arch": "auto",
+    "abi": "auto"
+  },
+  "files": [],
+  "requirements": {
+    "min_storage_bytes": 0,
+    "min_memory_bytes": 536870912,
+    "thread_cap": 4
+  },
+  "capabilities": [
+    "vision.face-track",
+    "vision.pose-track",
+    "vision.gesture-track",
+    "vision.text-track",
+    "vision.saliency-track",
+    "vision.global-motion-track",
+    "vision.camera-motion-track",
+    "vision.bundle-fingerprint",
+    "vision.blocked-network-attestation"
+  ],
+  "compatibility": {
+    "min_runtime_api": 1,
+    "max_runtime_api": 1
+  },
+  "source": {
+    "upstream": "local-vision-pack",
+    "commit": "deterministic-no-network",
+    "tag": "v0.1.0",
+    "fetched_at_ns": 0,
+    "fetched_by": "scripts/runtime/assert_no_network.py --component vision-tracking"
+  },
+  "contract": {
+    "type": "VisionBundle",
+    "fields": [
+      "faces: Vec<FaceTrack>",
+      "poses: Vec<PoseTrack>",
+      "gestures: Vec<GestureTrack>",
+      "text: TextTrack",
+      "saliency: SaliencyTrack",
+      "camera_motion: CameraMotionTrack",
+      "global_motion: GlobalMotionTrack",
+      "bundle_fingerprint: [u8; 32]"
+    ]
+  },
+  "manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "signature": {
+    "schema": "cutright.pack_signature/v1",
+    "algorithm": "blake3+ed25519",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signed_by": "unbuilt"
+  }
+}
