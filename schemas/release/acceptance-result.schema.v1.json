@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/release/acceptance-result.schema.v1.json",
+  "title": "CutRight v2 acceptance result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "target",
+    "support",
+    "installer_ok",
+    "runtime_ok",
+    "benchmark_ok",
+    "workflow_ok",
+    "security_ok"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cutright.acceptance_result/v1"
+    },
+    "target": {
+      "type": "string"
+    },
+    "support": {
+      "enum": [
+        "supported",
+        "source_build_only",
+        "unsupported"
+      ]
+    },
+    "installer_ok": {
+      "type": "boolean"
+    },
+    "runtime_ok": {
+      "type": "boolean"
+    },
+    "benchmark_ok": {
+      "type": "boolean"
+    },
+    "workflow_ok": {
+      "type": "boolean"
+    },
+    "security_ok": {
+      "type": "boolean"
+    },
+    "evidence": {
+      "type": "string"
+    }
+  }
+}

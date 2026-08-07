@@ -1,0 +1,36 @@
+{
+  "schema": "cutright.targets/v1",
+  "targets": [
+    {
+      "id": "macos-arm64",
+      "installer": "macos_dmg",
+      "support": "supported"
+    },
+    {
+      "id": "macos-x86_64",
+      "installer": "macos_dmg",
+      "support": "supported"
+    },
+    {
+      "id": "windows-x86_64",
+      "installer": "windows_msi",
+      "support": "supported"
+    },
+    {
+      "id": "linux-x86_64-appimage",
+      "installer": "linux_appimage",
+      "support": "supported"
+    },
+    {
+      "id": "linux-x86_64-deb",
+      "installer": "linux_deb",
+      "support": "supported"
+    },
+    {
+      "id": "source-tarball",
+      "installer": "source_tarball",
+      "support": "source_build_only"
+    }
+  ],
+  "unsupported_targets": []
+}
