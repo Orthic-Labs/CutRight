@@ -51,7 +51,8 @@ pub use rough_render::{
     RenderSegment, SourceRenderSegment,
 };
 pub use toolchain::{
-    resolve as resolve_toolchain, MediaCapabilities, MediaToolchain, ToolchainError,
+    resolve as resolve_toolchain, MediaCapabilities, MediaToolchain, PackId, PackResourceId,
+    PackResourceResolver, ToolchainError, VerifiedResource, ResolverError,
 };
 pub use waveform::{render_waveform, render_waveform_range};
 

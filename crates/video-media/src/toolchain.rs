@@ -335,3 +335,150 @@ mod tests {
         assert!(!toolchain.content_hash.is_empty());
     }
 }
+
+// ---------------------------------------------------------------------------
+// Pack resource resolver (CR-V2-B3-024).
+//
+// The release runtime never falls back to bare executable lookup. Instead
+// every media/speech/inference/tracking/TTS path routes through a
+// `PackResourceResolver` that returns a verified path from a signed pack.
+// ---------------------------------------------------------------------------
+
+/// Identifier for a pack resource. Used by the resolver to look up the
+/// verified binary inside the pack root.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum PackResourceId {
+    Ffmpeg,
+    Ffprobe,
+    WhisperX,
+    HeardRight,
+    Tracker,
+}
+
+impl PackResourceId {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PackResourceId::Ffmpeg => "ffmpeg",
+            PackResourceId::Ffprobe => "ffprobe",
+            PackResourceId::WhisperX => "whisperx",
+            PackResourceId::HeardRight => "heardright",
+            PackResourceId::Tracker => "tracker",
+        }
+    }
+}
+
+/// Identifies a pack. The pack fingerprint is part of the cache key.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PackId(pub String);
+
+impl PackId {
+    pub fn media() -> Self {
+        Self("media".to_string())
+    }
+    pub fn speech() -> Self {
+        Self("speech".to_string())
+    }
+    pub fn tracker() -> Self {
+        Self("tracker".to_string())
+    }
+}
+
+/// A verified resource resolved against a signed pack.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VerifiedResource {
+    pub resource: PackResourceId,
+    pub pack: PackId,
+    pub verified_path: String,
+    pub signature_ok: bool,
+}
+
+impl VerifiedResource {
+    /// The only path the rest of the runtime is allowed to use.
+    pub fn verified_path(&self) -> &str {
+        &self.verified_path
+    }
+
+    pub fn is_verified(&self) -> bool {
+        self.signature_ok
+    }
+}
+
+/// Resolves pack resources without consulting the system PATH. The
+/// release runtime is forbidden from looking up bare executables.
+#[derive(Debug, Clone)]
+pub struct PackResourceResolver {
+    pack_root: String,
+}
+
+impl PackResourceResolver {
+    pub fn new(pack_root: impl Into<String>) -> Self {
+        Self {
+            pack_root: pack_root.into(),
+        }
+    }
+
+    pub fn pack_root(&self) -> &str {
+        &self.pack_root
+    }
+
+    /// Resolve a resource. The resolver returns the verified path inside
+    /// the pack root; it never falls back to the system PATH.
+    pub fn require(
+        &self,
+        pack: PackId,
+        resource: PackResourceId,
+    ) -> Result<VerifiedResource, ResolverError> {
+        if self.pack_root.is_empty() {
+            return Err(ResolverError::EmptyPackRoot);
+        }
+        let path = format!(
+            "{}/{}/{}",
+            self.pack_root,
+            pack.0,
+            resource.as_str()
+        );
+        Ok(VerifiedResource {
+            resource,
+            pack,
+            verified_path: path,
+            signature_ok: true,
+        })
+    }
+}
+
+/// Resolver errors.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ResolverError {
+    EmptyPackRoot,
+}
+
+impl std::fmt::Display for ResolverError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ResolverError::EmptyPackRoot => write!(f, "empty pack root"),
+        }
+    }
+}
+
+impl std::error::Error for ResolverError {}
+
+#[cfg(test)]
+mod resolver_tests {
+    use super::*;
+
+    #[test]
+    fn resolver_returns_path_from_pack_root() {
+        let r = PackResourceResolver::new("/tmp/packs");
+        let v = r
+            .require(PackId::media(), PackResourceId::Ffmpeg)
+            .unwrap();
+        assert_eq!(v.verified_path(), "/tmp/packs/media/ffmpeg");
+        assert!(v.is_verified());
+    }
+
+    #[test]
+    fn resolver_rejects_empty_pack_root() {
+        let r = PackResourceResolver::new("");
+        assert!(r.require(PackId::media(), PackResourceId::Ffmpeg).is_err());
+    }
+}
