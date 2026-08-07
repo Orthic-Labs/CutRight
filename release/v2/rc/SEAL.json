@@ -2,17 +2,27 @@
   "items": [
     {
       "path": "BUILD.json",
-      "sha256": "61f109a3ae12a31799ad119784bb06c97ce6409d7cacd4770919484922bc4cbe",
+      "sha256": "2db6ef4d3ee0229ac42d8ab577671a7b233800dd1669075010e854429e9fabad",
       "signature": ""
     },
     {
       "path": "RC-MANIFEST.json",
-      "sha256": "323ff780114630a2a711949a9674fc00fb55ed4f885eef0bee2a2f5b799520b7",
+      "sha256": "61d4dd37d20e15720525d9ff24ad4defc92de72545cd29f8b68528a38cd463a7",
       "signature": ""
     },
     {
       "path": "checksums.txt",
-      "sha256": "849ce0d96aef5af728dfe3f03f85177fa98ba4c1fb6654384be000e4a4fb254f",
+      "sha256": "0867b197aaf16e96ebbeb28aaf80aee7330b4bdd0dc4d02c9bb98fee2233c283",
+      "signature": ""
+    },
+    {
+      "path": "packs/v2-capability-core/PACK.json",
+      "sha256": "e334b0bf654122b399ab455f70117acfdb8405df5c9c5e146cd86338dd804dbb",
+      "signature": ""
+    },
+    {
+      "path": "packs/v2-skill-runtime/PACK.json",
+      "sha256": "8c8f5704fb253c0fba38e9315cfd087b31d792470afa8336f0b3919e46fb5acc",
       "signature": ""
     }
   ],

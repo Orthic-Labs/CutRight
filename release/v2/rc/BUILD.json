@@ -1,9 +1,16 @@
 {
-  "files": {},
-  "finished_at": "2026-08-07T10:10:21.724953+00:00",
-  "head": "047f52d",
+  "files": {
+    "/Volumes/D/claude/cutright/release/v2/rc/BUILD.json": "6fd3b7318294dab879b57872977f621bad43f65805d388c76d66de94a80264fa",
+    "/Volumes/D/claude/cutright/release/v2/rc/RC-MANIFEST.json": "61d4dd37d20e15720525d9ff24ad4defc92de72545cd29f8b68528a38cd463a7",
+    "/Volumes/D/claude/cutright/release/v2/rc/SEAL.json": "23d26457a6b1ece5834373ff5f53dfbbb70c5b24a7f2121f8a3b198f7385b69e",
+    "/Volumes/D/claude/cutright/release/v2/rc/checksums.txt": "0867b197aaf16e96ebbeb28aaf80aee7330b4bdd0dc4d02c9bb98fee2233c283",
+    "/Volumes/D/claude/cutright/release/v2/rc/packs/v2-capability-core/PACK.json": "e334b0bf654122b399ab455f70117acfdb8405df5c9c5e146cd86338dd804dbb",
+    "/Volumes/D/claude/cutright/release/v2/rc/packs/v2-skill-runtime/PACK.json": "8c8f5704fb253c0fba38e9315cfd087b31d792470afa8336f0b3919e46fb5acc"
+  },
+  "finished_at": "2026-08-07T16:00:27.034356+00:00",
+  "head": "self-test",
   "profile": "release",
   "schema_version": "v2",
-  "started_at": "2026-08-07T10:10:21.724504+00:00",
+  "started_at": "2026-08-07T16:00:27.030562+00:00",
   "target": "host"
 }
