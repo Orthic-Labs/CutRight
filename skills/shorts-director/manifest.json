@@ -1,0 +1,22 @@
+---
+name: shorts-director
+version: 0.1.0
+description: Discover and rank short-form clips from evidence-bound beats.
+inputs:
+  - beats: array of { beat_id, evidence_ref }
+  - hook_strength: float
+  - standalone_context: float
+  - payoff: float
+  - visual_support: float
+  - boundary_confidence: float
+  - duplication_penalty: float
+  - recorded: bool
+outputs:
+  - candidates: array of ranked ShortCandidate
+  - rationale: string
+  - exclusion_reasons: array of string
+invariants:
+  - never fabricate hook text; recorded must be true
+  - never invent timestamps; the caller compiles beats into ranges
+  - diversity-filter overlapping candidates
+  - excluded candidates sorted last
