@@ -86,7 +86,10 @@ impl StageSpec {
     pub fn fingerprint(&self) -> [u8; 32] {
         let mut canonical = serde_json::Map::new();
         canonical.insert("id".to_string(), serde_json::Value::String(self.id.clone()));
-        canonical.insert("kind".to_string(), serde_json::Value::String(self.kind.clone()));
+        canonical.insert(
+            "kind".to_string(),
+            serde_json::Value::String(self.kind.clone()),
+        );
         let mut deps: Vec<serde_json::Value> = self
             .dependencies
             .iter()
@@ -98,7 +101,10 @@ impl StageSpec {
         });
         canonical.insert("dependencies".to_string(), serde_json::Value::Array(deps));
         canonical.insert("parameters".to_string(), self.parameters.clone());
-        canonical.insert("cpu_milli".to_string(), serde_json::json!(self.resources.cpu_milli));
+        canonical.insert(
+            "cpu_milli".to_string(),
+            serde_json::json!(self.resources.cpu_milli),
+        );
         canonical.insert(
             "memory_mb".to_string(),
             serde_json::json!(self.resources.memory_mb),
@@ -236,10 +242,12 @@ impl JobDag {
                 if record.state != StageState::Pending {
                     return false;
                 }
-                stage
-                    .dependencies
-                    .iter()
-                    .all(|dep| records.get(dep).map(|r| r.state == StageState::Succeeded).unwrap_or(false))
+                stage.dependencies.iter().all(|dep| {
+                    records
+                        .get(dep)
+                        .map(|r| r.state == StageState::Succeeded)
+                        .unwrap_or(false)
+                })
             })
             .cloned()
             .collect();
@@ -289,11 +297,18 @@ mod tests {
         let dag = JobDag::new(
             "j".to_string(),
             "linear".to_string(),
-            vec![stage("a", vec![]), stage("b", vec!["a"]), stage("c", vec!["b"])],
+            vec![
+                stage("a", vec![]),
+                stage("b", vec!["a"]),
+                stage("c", vec!["b"]),
+            ],
         )
         .unwrap();
         let order = dag.topological_order().unwrap();
-        assert_eq!(order, vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+        assert_eq!(
+            order,
+            vec!["a".to_string(), "b".to_string(), "c".to_string()]
+        );
     }
 
     #[test]
@@ -313,7 +328,10 @@ mod tests {
             "missing".to_string(),
             vec![stage("a", vec!["ghost"])],
         );
-        assert!(matches!(dag.unwrap_err(), DagError::UnknownDependency { .. }));
+        assert!(matches!(
+            dag.unwrap_err(),
+            DagError::UnknownDependency { .. }
+        ));
     }
 
     #[test]

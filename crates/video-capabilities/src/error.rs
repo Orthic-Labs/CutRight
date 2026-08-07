@@ -23,9 +23,7 @@ pub enum RegistryError {
     #[error("capability registry JSON parse error: {0}")]
     Json(#[from] serde_json::Error),
     /// The top-level `schema_version` was not the supported value.
-    #[error(
-        "capability registry schema_version {found} is not supported (expected {expected})"
-    )]
+    #[error("capability registry schema_version {found} is not supported (expected {expected})")]
     UnsupportedSchemaVersion {
         /// Value found in the document.
         found: u32,
@@ -33,9 +31,7 @@ pub enum RegistryError {
         expected: u32,
     },
     /// An entry did not match `cutright.capability/v1`.
-    #[error(
-        "capability registry entry {index} ({capability_id}) failed: {reason}"
-    )]
+    #[error("capability registry entry {index} ({capability_id}) failed: {reason}")]
     InvalidEntry {
         /// Zero-based index into the document's `capabilities` array.
         index: usize,
@@ -54,9 +50,7 @@ pub enum RegistryError {
         permission_set: String,
     },
     /// A capability's `owner_component` did not match any known component.
-    #[error(
-        "capability {capability_id} declares unknown owner_component {owner_component}"
-    )]
+    #[error("capability {capability_id} declares unknown owner_component {owner_component}")]
     UnknownOwnerComponent {
         /// The capability that pointed at the missing owner.
         capability_id: String,

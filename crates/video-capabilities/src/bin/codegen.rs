@@ -34,7 +34,10 @@ fn main() -> ExitCode {
     let ts_out = repo_root.join("bindings/ts/capabilities.ts");
     let mcp_out = repo_root.join("bindings/mcp/tool-registry.json");
 
-    eprintln!("loading {registry_path}", registry_path = registry_path.display());
+    eprintln!(
+        "loading {registry_path}",
+        registry_path = registry_path.display()
+    );
     let doc = match RegistryDocument::load(&registry_path) {
         Ok(doc) => doc,
         Err(err) => {

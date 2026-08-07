@@ -91,11 +91,7 @@ impl NativeCompositor {
         Ok(())
     }
 
-    fn dfs(
-        start: &str,
-        graph: &RenderGraph,
-        state: &mut BTreeMap<String, u8>,
-    ) -> Option<String> {
+    fn dfs(start: &str, graph: &RenderGraph, state: &mut BTreeMap<String, u8>) -> Option<String> {
         // iterative style with explicit stack to avoid recursion limits
         let mut stack: Vec<(String, usize)> = vec![(start.to_string(), 0)];
         state.insert(start.to_string(), 1);

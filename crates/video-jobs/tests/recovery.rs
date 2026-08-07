@@ -7,9 +7,7 @@
 // 2. Changed input invalidates downstream stages only.
 // 3. Cancellation leaves completed verified stages reusable.
 
-use video_jobs::{
-    CancellationToken, JobDag, RunnerOutcome, StageRecord, StageSpec, StageState,
-};
+use video_jobs::{CancellationToken, JobDag, RunnerOutcome, StageRecord, StageSpec, StageState};
 
 fn build_dag(stages: Vec<StageSpec>) -> JobDag {
     JobDag::new("j".to_string(), "recovery".to_string(), stages).unwrap()

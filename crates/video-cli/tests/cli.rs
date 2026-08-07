@@ -431,7 +431,10 @@ fn capabilities_list_reports_canonical_registry() {
         "timeline.cut",
         "timeline.read",
     ] {
-        assert!(ids.contains(&expected), "missing capability {expected}: {ids:?}");
+        assert!(
+            ids.contains(&expected),
+            "missing capability {expected}: {ids:?}"
+        );
     }
 }
 

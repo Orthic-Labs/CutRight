@@ -3,13 +3,15 @@
 //!
 //! Black-box tests over the public surface.
 
+use std::collections::BTreeMap;
 use video_core::creative_critic::{AxisScore, CreativeCritic, DeterministicVisualQa, Verdict};
 use video_core::native_audio::{AudioCue, AudioProfile, NativeAudioEngine};
 use video_core::native_compositor::{NativeCompositor, NodeKind, RenderGraph, RenderNode};
 use video_core::native_motion::{MotionBeat, MotionClip, NativeMotionEngine};
-use video_core::native_typography::{CaptionDocument, CaptionToken, NativeTypographyEngine, TypographyProfile};
+use video_core::native_typography::{
+    CaptionDocument, CaptionToken, NativeTypographyEngine, TypographyProfile,
+};
 use video_core::render_graph_compiler::RenderGraphCompiler;
-use std::collections::BTreeMap;
 
 fn ax(label: &str, score: f64, weight: f64) -> AxisScore {
     AxisScore {
@@ -29,8 +31,14 @@ fn single_prop(k: &str, v: &str) -> BTreeMap<String, String> {
 fn critic_run_with_all_axes_above_threshold_passes() {
     let qa = DeterministicVisualQa::run("fpl_1").unwrap();
     let mut axes = BTreeMap::new();
-    axes.insert("brand_alignment".to_string(), ax("brand_alignment", 0.9, 0.5));
-    axes.insert("narrative_clarity".to_string(), ax("narrative_clarity", 0.85, 0.5));
+    axes.insert(
+        "brand_alignment".to_string(),
+        ax("brand_alignment", 0.9, 0.5),
+    );
+    axes.insert(
+        "narrative_clarity".to_string(),
+        ax("narrative_clarity", 0.85, 0.5),
+    );
     let ev = CreativeCritic::run("fpl_1", &qa, axes).unwrap();
     assert_eq!(ev.verdict, Verdict::Pass);
 }
@@ -39,7 +47,10 @@ fn critic_run_with_all_axes_above_threshold_passes() {
 fn critic_run_with_low_score_warns_or_fails() {
     let qa = DeterministicVisualQa::run("fpl_1").unwrap();
     let mut axes = BTreeMap::new();
-    axes.insert("brand_alignment".to_string(), ax("brand_alignment", 0.5, 1.0));
+    axes.insert(
+        "brand_alignment".to_string(),
+        ax("brand_alignment", 0.5, 1.0),
+    );
     let ev = CreativeCritic::run("fpl_1", &qa, axes).unwrap();
     assert!(matches!(ev.verdict, Verdict::Warn | Verdict::Fail));
 }
@@ -61,8 +72,13 @@ fn native_audio_finish_rejects_unbound_cue() {
         evidence_ref: "".to_string(),
         reverb_ms: 50,
     };
-    let err = NativeAudioEngine::finish(&profile, vec![cue]).err().expect("err");
-    assert!(matches!(err, video_core::native_audio::AudioError::UnboundCue(_)));
+    let err = NativeAudioEngine::finish(&profile, vec![cue])
+        .err()
+        .expect("err");
+    assert!(matches!(
+        err,
+        video_core::native_audio::AudioError::UnboundCue(_)
+    ));
 }
 
 #[test]
@@ -80,7 +96,10 @@ fn native_motion_rejects_unknown_transition() {
         platform: "ig_reels".to_string(),
     };
     let err = NativeMotionEngine::validate(&clip).err().expect("err");
-    assert!(matches!(err, video_core::native_motion::MotionError::ForbiddenTransition(_, _)));
+    assert!(matches!(
+        err,
+        video_core::native_motion::MotionError::ForbiddenTransition(_, _)
+    ));
 }
 
 #[test]
@@ -111,8 +130,13 @@ fn native_typography_rejects_token_outside_safe_zone() {
             evidence_ref: "evidence:ev_1".to_string(),
         }],
     };
-    let err = NativeTypographyEngine::layout(&doc, &profile).err().expect("err");
-    assert!(matches!(err, video_core::native_typography::TypographyError::OutsideSafeZone(_)));
+    let err = NativeTypographyEngine::layout(&doc, &profile)
+        .err()
+        .expect("err");
+    assert!(matches!(
+        err,
+        video_core::native_typography::TypographyError::OutsideSafeZone(_)
+    ));
 }
 
 #[test]

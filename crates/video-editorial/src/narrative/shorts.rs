@@ -46,7 +46,12 @@ pub struct ShortInputs<'a> {
 
 /// Build one candidate from inputs. Unrecorded (fabricated) hooks
 /// are excluded with a reason; never silently dropped.
-pub fn build_candidate(id: &str, title: &str, hook: &str, inputs: ShortInputs<'_>) -> ShortCandidate {
+pub fn build_candidate(
+    id: &str,
+    title: &str,
+    hook: &str,
+    inputs: ShortInputs<'_>,
+) -> ShortCandidate {
     let exclusion = if !inputs.recorded {
         Some("hook not recorded; fabricated text forbidden".into())
     } else {
@@ -110,8 +115,10 @@ pub fn rank(candidates: &[ShortCandidate]) -> Vec<&ShortCandidate> {
 /// of an earlier candidate. Earlier candidates are ranked by coverage
 /// (more beats first), then by score. Stable across ties.
 pub fn diversity_filter(candidates: Vec<ShortCandidate>) -> Vec<ShortCandidate> {
-    let mut recorded: Vec<ShortCandidate> =
-        candidates.into_iter().filter(|c| c.exclusion_reason.is_none()).collect();
+    let mut recorded: Vec<ShortCandidate> = candidates
+        .into_iter()
+        .filter(|c| c.exclusion_reason.is_none())
+        .collect();
     recorded.sort_by(|a, b| {
         b.beat_ids
             .len()
@@ -126,8 +133,7 @@ pub fn diversity_filter(candidates: Vec<ShortCandidate>) -> Vec<ShortCandidate> 
     let mut kept: Vec<ShortCandidate> = Vec::new();
     for c in recorded {
         let subset = kept.iter().any(|k| {
-            k.beat_ids.len() > c.beat_ids.len()
-                && c.beat_ids.iter().all(|b| k.beat_ids.contains(b))
+            k.beat_ids.len() > c.beat_ids.len() && c.beat_ids.iter().all(|b| k.beat_ids.contains(b))
         });
         if !subset {
             kept.push(c);
@@ -142,8 +148,14 @@ mod tests {
 
     fn beats() -> Vec<ShortBeatRef> {
         vec![
-            ShortBeatRef { beat_id: "b1".into(), evidence_ref: "ev1".into() },
-            ShortBeatRef { beat_id: "b2".into(), evidence_ref: "ev2".into() },
+            ShortBeatRef {
+                beat_id: "b1".into(),
+                evidence_ref: "ev1".into(),
+            },
+            ShortBeatRef {
+                beat_id: "b2".into(),
+                evidence_ref: "ev2".into(),
+            },
         ]
     }
 

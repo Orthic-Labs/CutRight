@@ -4,7 +4,7 @@
 use video_editorial::narrative::hook::{rank, score_hook, HookCandidate};
 use video_editorial::narrative::order::build_plan;
 use video_editorial::narrative::truthfulness::{
-    evaluate_reorder, Claim, ChronologyStatus, Reorder,
+    evaluate_reorder, ChronologyStatus, Claim, Reorder,
 };
 
 #[test]
@@ -27,13 +27,19 @@ fn rank_picks_best_recorded() {
         HookCandidate {
             take_id: "a".into(),
             text: "x".into(),
-            specificity: 0.5, promise: 0.5, self_containment: 0.5, evidence_strength: 0.5,
+            specificity: 0.5,
+            promise: 0.5,
+            self_containment: 0.5,
+            evidence_strength: 0.5,
             recorded: true,
         },
         HookCandidate {
             take_id: "b".into(),
             text: "y".into(),
-            specificity: 0.9, promise: 0.9, self_containment: 0.9, evidence_strength: 0.9,
+            specificity: 0.9,
+            promise: 0.9,
+            self_containment: 0.9,
+            evidence_strength: 0.9,
             recorded: true,
         },
     ];
@@ -46,7 +52,10 @@ fn cold_open_log_is_chronology_status_cold_open() {
     let r = Reorder {
         from_index: 2,
         to_index: 0,
-        claim: Claim { claim_id: "c".into(), depends_on: vec![] },
+        claim: Claim {
+            claim_id: "c".into(),
+            depends_on: vec![],
+        },
         introduces_false_sequence: false,
         breaks_claim_dependency: false,
     };
@@ -59,7 +68,10 @@ fn plan_truthfulness_flag_propagates() {
     let r = Reorder {
         from_index: 0,
         to_index: 1,
-        claim: Claim { claim_id: "c".into(), depends_on: vec![] },
+        claim: Claim {
+            claim_id: "c".into(),
+            depends_on: vec![],
+        },
         introduces_false_sequence: true,
         breaks_claim_dependency: false,
     };

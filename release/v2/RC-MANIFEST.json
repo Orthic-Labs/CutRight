@@ -61,7 +61,7 @@
     "release/v2/rc/SEAL.json"
   ],
   "build_metadata": "release/v2/rc/BUILD.json",
-  "build_command": "python3 scripts/release/v2-build.py --self-test --profile release --target host --out release/v2/rc",
+  "build_command": "python3 scripts/release/v2-build.py --profile release --target host --out release/v2/rc",
   "seal_command": "python3 scripts/release/v2-seal.py seal --manifest release/v2/rc/SEAL.json release/v2/rc",
   "verify_command": "python3 scripts/release/v2-seal.py verify release/v2/rc",
   "verified": true

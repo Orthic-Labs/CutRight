@@ -175,7 +175,9 @@ mod tests {
     fn rejects_empty_doc() {
         let mut d = doc();
         d.tokens.clear();
-        let err = NativeTypographyEngine::layout(&d, &profile()).err().expect("err");
+        let err = NativeTypographyEngine::layout(&d, &profile())
+            .err()
+            .expect("err");
         assert!(matches!(err, TypographyError::EmptyCaptions(_)));
     }
 
@@ -183,7 +185,9 @@ mod tests {
     fn rejects_token_outside_safe_zone() {
         let mut d = doc();
         d.tokens[0].x = 0.99;
-        let err = NativeTypographyEngine::layout(&d, &profile()).err().expect("err");
+        let err = NativeTypographyEngine::layout(&d, &profile())
+            .err()
+            .expect("err");
         assert!(matches!(err, TypographyError::OutsideSafeZone(_)));
     }
 }

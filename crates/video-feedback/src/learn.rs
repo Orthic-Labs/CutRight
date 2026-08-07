@@ -71,11 +71,7 @@ pub fn estimate_is_supported(estimate: &PreferenceEstimate) -> bool {
 fn filter_compatible(decisions: &[DecisionRecord], pack_fingerprint: &str) -> Vec<DecisionRecord> {
     decisions
         .iter()
-        .filter(|d| {
-            !d.stale_subject
-                && !d.malformed
-                && d.pack_set_fingerprint == pack_fingerprint
-        })
+        .filter(|d| !d.stale_subject && !d.malformed && d.pack_set_fingerprint == pack_fingerprint)
         .cloned()
         .collect()
 }
@@ -108,7 +104,8 @@ pub fn compute_preference(
     recency_weighted: bool,
 ) -> PreferenceEstimate {
     let pack_fingerprint_input = format!("{}|{}", pack_set_id, benchmark_profile);
-    let compatibility_fingerprint = compute_compatibility_fingerprint(pack_set_id, benchmark_profile);
+    let compatibility_fingerprint =
+        compute_compatibility_fingerprint(pack_set_id, benchmark_profile);
 
     let compatible = filter_compatible(decisions, &pack_fingerprint_input);
     let mut counts: BTreeMap<String, u32> = BTreeMap::new();
@@ -131,7 +128,12 @@ pub fn compute_preference(
     let supported = sample_count >= min_samples && variance < 0.5;
 
     let insufficient_reason = if !supported {
-        Some(pick_insufficient_reason(sample_count, min_samples, variance, &compatible))
+        Some(pick_insufficient_reason(
+            sample_count,
+            min_samples,
+            variance,
+            &compatible,
+        ))
     } else {
         None
     };

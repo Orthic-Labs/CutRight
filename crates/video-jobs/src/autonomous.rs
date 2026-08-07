@@ -130,10 +130,7 @@ pub fn evaluate_autonomous_digest(
         );
     } else if !inputs.critic_verdict.passed {
         status = AutonomousDigestStatus::Failed;
-        summary = format!(
-            "critic {} disagreed",
-            inputs.critic_verdict.critic_id
-        );
+        summary = format!("critic {} disagreed", inputs.critic_verdict.critic_id);
     } else if !inputs.deterministic_qa.passed {
         status = AutonomousDigestStatus::Failed;
         let stage = inputs

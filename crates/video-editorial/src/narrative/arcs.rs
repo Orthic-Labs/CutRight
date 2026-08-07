@@ -34,27 +34,63 @@ pub fn library() -> Vec<ArcTemplate> {
             id: "long-form.story".into(),
             kind: ArcKind::LongForm,
             roles: vec![
-                RoleSpec { role: "hook".into(), min_count: 1, max_count: 1 },
-                RoleSpec { role: "setup".into(), min_count: 1, max_count: 3 },
-                RoleSpec { role: "payoff".into(), min_count: 1, max_count: 1 },
-                RoleSpec { role: "cta".into(), min_count: 0, max_count: 1 },
+                RoleSpec {
+                    role: "hook".into(),
+                    min_count: 1,
+                    max_count: 1,
+                },
+                RoleSpec {
+                    role: "setup".into(),
+                    min_count: 1,
+                    max_count: 3,
+                },
+                RoleSpec {
+                    role: "payoff".into(),
+                    min_count: 1,
+                    max_count: 1,
+                },
+                RoleSpec {
+                    role: "cta".into(),
+                    min_count: 0,
+                    max_count: 1,
+                },
             ],
         },
         ArcTemplate {
             id: "shorts.hook-payoff".into(),
             kind: ArcKind::Shorts,
             roles: vec![
-                RoleSpec { role: "hook".into(), min_count: 1, max_count: 1 },
-                RoleSpec { role: "payoff".into(), min_count: 1, max_count: 1 },
+                RoleSpec {
+                    role: "hook".into(),
+                    min_count: 1,
+                    max_count: 1,
+                },
+                RoleSpec {
+                    role: "payoff".into(),
+                    min_count: 1,
+                    max_count: 1,
+                },
             ],
         },
         ArcTemplate {
             id: "explainer.context-claim-evidence".into(),
             kind: ArcKind::Explainer,
             roles: vec![
-                RoleSpec { role: "context".into(), min_count: 1, max_count: 1 },
-                RoleSpec { role: "claim".into(), min_count: 1, max_count: 1 },
-                RoleSpec { role: "evidence".into(), min_count: 1, max_count: 3 },
+                RoleSpec {
+                    role: "context".into(),
+                    min_count: 1,
+                    max_count: 1,
+                },
+                RoleSpec {
+                    role: "claim".into(),
+                    min_count: 1,
+                    max_count: 1,
+                },
+                RoleSpec {
+                    role: "evidence".into(),
+                    min_count: 1,
+                    max_count: 3,
+                },
             ],
         },
     ]
@@ -90,7 +126,10 @@ mod tests {
     #[test]
     fn long_form_arc_validates_with_required_roles() {
         let l = library();
-        let t = l.iter().find(|a| matches!(a.kind, ArcKind::LongForm)).unwrap();
+        let t = l
+            .iter()
+            .find(|a| matches!(a.kind, ArcKind::LongForm))
+            .unwrap();
         let counts = vec![("hook", 1), ("setup", 1), ("payoff", 1)];
         assert!(validate_arc(t, &counts));
     }
@@ -98,7 +137,10 @@ mod tests {
     #[test]
     fn arc_invalid_when_role_missing() {
         let l = library();
-        let t = l.iter().find(|a| matches!(a.kind, ArcKind::LongForm)).unwrap();
+        let t = l
+            .iter()
+            .find(|a| matches!(a.kind, ArcKind::LongForm))
+            .unwrap();
         let counts = vec![("hook", 1), ("setup", 1)]; // missing payoff
         assert!(!validate_arc(t, &counts));
     }

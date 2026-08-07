@@ -98,7 +98,13 @@ mod tests {
     use super::*;
 
     fn box_at(t: i64, x: f32, y: f32, w: f32, h: f32) -> Box2D {
-        Box2D { t_ms: t, x, y, w, h }
+        Box2D {
+            t_ms: t,
+            x,
+            y,
+            w,
+            h,
+        }
     }
 
     #[test]

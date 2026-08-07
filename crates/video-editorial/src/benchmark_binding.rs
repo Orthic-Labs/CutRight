@@ -25,11 +25,7 @@ pub struct BenchmarkBinding {
 }
 
 impl BenchmarkBinding {
-    pub fn new(
-        profile: BenchmarkProfile,
-        evidence: EvidenceCompat,
-        human_acceptance: u32,
-    ) -> Self {
+    pub fn new(profile: BenchmarkProfile, evidence: EvidenceCompat, human_acceptance: u32) -> Self {
         Self {
             profile,
             evidence,

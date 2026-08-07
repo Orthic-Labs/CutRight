@@ -82,7 +82,10 @@ impl BrandService {
         })
     }
 
-    pub fn assert_token_not_locked(card: &BrandCard, token_id: &str) -> Result<(), BrandServiceError> {
+    pub fn assert_token_not_locked(
+        card: &BrandCard,
+        token_id: &str,
+    ) -> Result<(), BrandServiceError> {
         if card.has_locked(token_id) {
             Err(BrandServiceError::LockedToken(token_id.to_string()))
         } else {
@@ -107,7 +110,10 @@ impl BrandIdentityService {
     }
 
     pub fn register(runtime: &mut SkillRuntime) {
-        runtime.register(SkillFamily::BrandIdentity, std::sync::Arc::new(Self::handle));
+        runtime.register(
+            SkillFamily::BrandIdentity,
+            std::sync::Arc::new(Self::handle),
+        );
     }
 
     fn handle(req: &SkillRequest) -> Result<SkillResult, SkillRuntimeError> {
@@ -161,7 +167,9 @@ mod tests {
             provenance: "brand_card.json".to_string(),
             locked_token_ids: vec!["mark.primary".to_string()],
         };
-        let err = BrandService::assert_token_not_locked(&card, "mark.primary").err().expect("err");
+        let err = BrandService::assert_token_not_locked(&card, "mark.primary")
+            .err()
+            .expect("err");
         assert!(matches!(err, BrandServiceError::LockedToken(_)));
         BrandService::assert_token_not_locked(&card, "color.bg").expect("ok");
     }

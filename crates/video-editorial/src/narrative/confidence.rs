@@ -42,7 +42,9 @@ impl Ambiguity {
             (Ambiguity::SchemaInvalid, _) => true,
             (Ambiguity::TruthfulnessRisk, _) => true,
             (Ambiguity::MissingEvidence, ReviewMode::Autonomous) => true,
-            (Ambiguity::CriticDisagreement, ReviewMode::Autonomous | ReviewMode::ReviewLight) => true,
+            (Ambiguity::CriticDisagreement, ReviewMode::Autonomous | ReviewMode::ReviewLight) => {
+                true
+            }
             (Ambiguity::LowTakeMargin, ReviewMode::Autonomous) => true,
             (Ambiguity::WeakBoundary, ReviewMode::Autonomous) => true,
             _ => false,
@@ -120,7 +122,11 @@ pub fn estimate(mode: ReviewMode, i: &ConfidenceInputs) -> ConfidenceEstimate {
     }
 
     let blocking = escalations.iter().any(|e| e.blocks(mode));
-    let effective_mode = if blocking { mode.degrade_one_step() } else { mode };
+    let effective_mode = if blocking {
+        mode.degrade_one_step()
+    } else {
+        mode
+    };
 
     ConfidenceEstimate {
         score: raw,
@@ -178,7 +184,10 @@ mod tests {
         let _ = Reorder {
             from_index: 0,
             to_index: 1,
-            claim: Claim { claim_id: "c".into(), depends_on: vec![] },
+            claim: Claim {
+                claim_id: "c".into(),
+                depends_on: vec![],
+            },
             introduces_false_sequence: false,
             breaks_claim_dependency: false,
         };

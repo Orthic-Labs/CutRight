@@ -2,17 +2,23 @@
 // compilation (Book 4 lane B, B4-016).
 
 use video_editorial::deterministic::boundaries::{
-    compile_segments, consensus, BoundarySource, ConsensusRecord, PadPolicy, SpeechRegion,
-    WordEdge,
+    compile_segments, consensus, BoundarySource, ConsensusRecord, PadPolicy, SpeechRegion, WordEdge,
 };
 
 fn w(id: &str, s: i64, e: i64) -> WordEdge {
-    WordEdge { word_id: id.into(), start_ms: s, end_ms: e }
+    WordEdge {
+        word_id: id.into(),
+        start_ms: s,
+        end_ms: e,
+    }
 }
 
 #[test]
 fn segments_include_words_in_region() {
-    let speech = vec![SpeechRegion { start_ms: 0, end_ms: 1000 }];
+    let speech = vec![SpeechRegion {
+        start_ms: 0,
+        end_ms: 1000,
+    }];
     let words = vec![w("w1", 0, 200), w("w2", 800, 1000)];
     let segs = compile_segments(&speech, &words, PadPolicy::None);
     assert_eq!(segs[0].word_ids, vec!["w1", "w2"]);
@@ -21,13 +27,16 @@ fn segments_include_words_in_region() {
 #[test]
 fn multiple_speech_regions_yield_multiple_segments() {
     let speech = vec![
-        SpeechRegion { start_ms: 0, end_ms: 1000 },
-        SpeechRegion { start_ms: 2000, end_ms: 3000 },
+        SpeechRegion {
+            start_ms: 0,
+            end_ms: 1000,
+        },
+        SpeechRegion {
+            start_ms: 2000,
+            end_ms: 3000,
+        },
     ];
-    let words = vec![
-        w("w1", 0, 1000),
-        w("w2", 2000, 3000),
-    ];
+    let words = vec![w("w1", 0, 1000), w("w2", 2000, 3000)];
     let segs = compile_segments(&speech, &words, PadPolicy::None);
     assert_eq!(segs.len(), 2);
 }

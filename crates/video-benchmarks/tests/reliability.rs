@@ -2,8 +2,7 @@
 // offline) evaluators (Book 4 lane A, B4-010).
 
 use video_benchmarks::reliability::{
-    evaluate_atomicity, AtomicityEvaluator, FaultRun, FaultState, InjectionPoint,
-    OfflineEvaluator,
+    evaluate_atomicity, AtomicityEvaluator, FaultRun, FaultState, InjectionPoint, OfflineEvaluator,
 };
 use video_benchmarks::{BenchmarkEvaluator, EvalContext};
 

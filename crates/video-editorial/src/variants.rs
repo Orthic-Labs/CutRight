@@ -164,7 +164,10 @@ mod tests {
         for x in &v.variants {
             assert_eq!(x.plan_id, "plan-1");
             assert_eq!(x.evidence_graph_revision, "rev-1");
-            assert_eq!(x.policy_locks, vec!["lock-1".to_string(), "lock-2".to_string()]);
+            assert_eq!(
+                x.policy_locks,
+                vec!["lock-1".to_string(), "lock-2".to_string()]
+            );
             assert_eq!(x.version, 1);
         }
     }

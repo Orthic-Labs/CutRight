@@ -25,7 +25,10 @@ fn active_pointer_missing_is_manual() {
     s.active_pointer_present = false;
     let r = scan_snapshot(&s);
     assert_eq!(r.findings.len(), 1);
-    assert_eq!(r.findings[0].class, video_recovery::scan::FindingClass::Manual);
+    assert_eq!(
+        r.findings[0].class,
+        video_recovery::scan::FindingClass::Manual
+    );
 }
 
 #[test]
@@ -37,7 +40,10 @@ fn revision_hash_mismatch_is_manual() {
         computed_hash: "xyz".into(),
     });
     let r = scan_snapshot(&s);
-    assert_eq!(r.findings[0].class, video_recovery::scan::FindingClass::Manual);
+    assert_eq!(
+        r.findings[0].class,
+        video_recovery::scan::FindingClass::Manual
+    );
 }
 
 #[test]
@@ -45,7 +51,10 @@ fn abandoned_staging_is_automatic() {
     let mut s = empty();
     s.abandoned_staging.push(StagingPath { path: "st".into() });
     let r = scan_snapshot(&s);
-    assert_eq!(r.findings[0].class, video_recovery::scan::FindingClass::Automatic);
+    assert_eq!(
+        r.findings[0].class,
+        video_recovery::scan::FindingClass::Automatic
+    );
 }
 
 #[test]
@@ -53,7 +62,10 @@ fn resumable_job_is_automatic() {
     let mut s = empty();
     s.resumable_jobs.push("job.0".into());
     let r = scan_snapshot(&s);
-    assert_eq!(r.findings[0].class, video_recovery::scan::FindingClass::Automatic);
+    assert_eq!(
+        r.findings[0].class,
+        video_recovery::scan::FindingClass::Automatic
+    );
 }
 
 #[test]
@@ -65,7 +77,10 @@ fn receipt_mismatch_is_manual() {
         computed_hash: "b".into(),
     });
     let r = scan_snapshot(&s);
-    assert_eq!(r.findings[0].class, video_recovery::scan::FindingClass::Manual);
+    assert_eq!(
+        r.findings[0].class,
+        video_recovery::scan::FindingClass::Manual
+    );
 }
 
 #[test]
@@ -77,7 +92,10 @@ fn canonical_object_mismatch_is_manual() {
         computed_hash: "b".into(),
     });
     let r = scan_snapshot(&s);
-    assert_eq!(r.findings[0].class, video_recovery::scan::FindingClass::Manual);
+    assert_eq!(
+        r.findings[0].class,
+        video_recovery::scan::FindingClass::Manual
+    );
 }
 
 #[test]
@@ -88,7 +106,10 @@ fn pack_signature_failure_is_manual() {
         signature_valid: false,
     });
     let r = scan_snapshot(&s);
-    assert_eq!(r.findings[0].class, video_recovery::scan::FindingClass::Manual);
+    assert_eq!(
+        r.findings[0].class,
+        video_recovery::scan::FindingClass::Manual
+    );
 }
 
 #[test]
@@ -96,7 +117,10 @@ fn migration_uncommitted_is_manual() {
     let mut s = empty();
     s.migration_uncommitted = true;
     let r = scan_snapshot(&s);
-    assert_eq!(r.findings[0].class, video_recovery::scan::FindingClass::Manual);
+    assert_eq!(
+        r.findings[0].class,
+        video_recovery::scan::FindingClass::Manual
+    );
 }
 
 #[test]
@@ -107,7 +131,8 @@ fn repair_does_not_discard_evidence() {
         declared_hash: "a".into(),
         computed_hash: "b".into(),
     });
-    snap.abandoned_staging.push(StagingPath { path: "st".into() });
+    snap.abandoned_staging
+        .push(StagingPath { path: "st".into() });
     let r = scan_snapshot(&snap);
     let plan = plan_repair(&r);
     // Receipt mismatch preserved as manual; staging cleared via plan.
@@ -120,7 +145,8 @@ fn repair_does_not_discard_evidence() {
 #[test]
 fn second_repair_run_is_a_no_op() {
     let mut snap = empty();
-    snap.abandoned_staging.push(StagingPath { path: "st".into() });
+    snap.abandoned_staging
+        .push(StagingPath { path: "st".into() });
     snap.resumable_jobs.push("job.0".into());
     let r = scan_snapshot(&snap);
     assert!(!repair_is_idempotent(&r));

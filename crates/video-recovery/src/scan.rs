@@ -123,8 +123,7 @@ pub fn scan_snapshot(snapshot: &ProjectSnapshot) -> ScanReport {
             kind: FindingKind::MissingActivePointer,
             class: FindingClass::Manual,
             path: "<project>/active".to_string(),
-            message: "no active project pointer; user must relink or restore"
-                .to_string(),
+            message: "no active project pointer; user must relink or restore".to_string(),
         });
     }
 
@@ -144,8 +143,7 @@ pub fn scan_snapshot(snapshot: &ProjectSnapshot) -> ScanReport {
             kind: FindingKind::AbandonedStaging,
             class: FindingClass::Automatic,
             path: staging.path.clone(),
-            message: "staging directory present without a corresponding job"
-                .to_string(),
+            message: "staging directory present without a corresponding job".to_string(),
         });
     }
 
@@ -175,8 +173,7 @@ pub fn scan_snapshot(snapshot: &ProjectSnapshot) -> ScanReport {
                 kind: FindingKind::CanonicalObjectMismatch,
                 class: FindingClass::Manual,
                 path: o.id.clone(),
-                message: "canonical object bytes do not match declared hash"
-                    .to_string(),
+                message: "canonical object bytes do not match declared hash".to_string(),
             });
         }
     }

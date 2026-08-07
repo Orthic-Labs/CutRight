@@ -37,6 +37,16 @@
         { "subtext": "Local-first dictation", "accent_color": "#FF5630" },
         { "headline": "Try HeardRight", "accent_color": "#FF5630", "cta_url": "https://heardright.app" }
       ]
-    }
+    },
+    "caption.vertical-phrase.v1": {"valid":{"text":"Build local-first","accent_color":"#FFC24B"},"invalid":[{"accent_color":"#FFC24B"},{"text":"Build local-first","accent_color":true}]},
+    "hook.pullback.v1": {"valid":{"scale_from":1.3},"invalid":[{}, {"scale_from":1.8}]},
+    "punch.wave.v1": {"valid":{"peak_scale":1.2},"invalid":[{}, {"peak_scale":0.9}]},
+    "pushin.biased-center.v1": {"valid":{"scale_to":1.1,"anchor_x":0.6},"invalid":[{"scale_to":1.1},{"scale_to":1.4,"anchor_x":0.6}]},
+    "text.bloom-reveal.v1": {"valid":{"text":"Make it clear","accent_color":"#A78BFA"},"invalid":[{"accent_color":"#A78BFA"},{"text":"Make it clear","accent_color":7}]},
+    "authority.stack.v1": {"valid":{"headline":"Evidence first","detail":"Verified locally","accent_color":"#DF6428"},"invalid":[{"detail":"Verified locally","accent_color":"#DF6428"},{"headline":"Evidence first","accent_color":false}]},
+    "cutaway.payoff.v1": {"valid":{"asset_label":"Product proof","accent_color":"#FF5630"},"invalid":[{"accent_color":"#FF5630"},{"asset_label":"Product proof","accent_color":false}]},
+    "audio.sync.v1": {"valid":{"event_ms":420,"accent_color":"#DF6428"},"invalid":[{"accent_color":"#DF6428"},{"event_ms":-1,"accent_color":"#DF6428"}]},
+    "sfx.peak-align.v1": {"valid":{"peak_ms":125},"invalid":[{}, {"peak_ms":-1}]},
+    "transition.hard-cut.v1": {"valid":{"accent_color":"#F5F0E8"},"invalid":[{}, {"accent_color":123}]}
   }
 }

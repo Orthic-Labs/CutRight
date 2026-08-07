@@ -175,7 +175,12 @@ mod tests {
     #[test]
     fn beats_page_is_paginated() {
         let times: Vec<(String, [i64; 2])> = (0..10)
-            .map(|i| (format!("seg{}", i), [i as i64 * 1000, (i + 1) as i64 * 1000]))
+            .map(|i| {
+                (
+                    format!("seg{}", i),
+                    [i as i64 * 1000, (i + 1) as i64 * 1000],
+                )
+            })
             .collect();
         let mut p = plan();
         // only include seg1..seg2 in the order

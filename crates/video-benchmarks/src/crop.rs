@@ -103,9 +103,7 @@ mod tests {
 
     #[test]
     fn constant_crop_has_zero_jerk() {
-        let samples: Vec<CropSample> = (0..10)
-            .map(|i| sample(i * 100, 0.5, 0.5, false))
-            .collect();
+        let samples: Vec<CropSample> = (0..10).map(|i| sample(i * 100, 0.5, 0.5, false)).collect();
         assert_eq!(crop_jerk(&samples), 0.0);
         assert_eq!(crop_acceleration(&samples), 0.0);
     }
@@ -123,9 +121,8 @@ mod tests {
 
     #[test]
     fn declared_samples_excluded() {
-        let mut samples: Vec<CropSample> = (0..10)
-            .map(|i| sample(i * 100, 0.5, 0.5, false))
-            .collect();
+        let mut samples: Vec<CropSample> =
+            (0..10).map(|i| sample(i * 100, 0.5, 0.5, false)).collect();
         // Inject a wildly declared-action sample
         samples[5] = sample(500, 10.0, 10.0, true);
         // Should be excluded from jerk calc

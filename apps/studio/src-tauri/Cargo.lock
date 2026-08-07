@@ -3839,6 +3839,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "video-benchmarks"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.19",
+]
+
+[[package]]
 name = "video-capabilities"
 version = "0.1.0"
 dependencies = [
@@ -3863,12 +3872,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "video-editorial"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.19",
+ "video-benchmarks",
+]
+
+[[package]]
 name = "video-jobs"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "chrono",
  "serde",
  "serde_json",
+ "thiserror 2.0.19",
  "video-core",
 ]
 
@@ -3895,9 +3916,11 @@ dependencies = [
  "video-actions",
  "video-capabilities",
  "video-core",
+ "video-editorial",
  "video-jobs",
  "video-media",
  "video-providers",
+ "video-runtime",
  "video-security",
  "video-sessions",
  "video-state",
@@ -3908,6 +3931,18 @@ name = "video-providers"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.19",
+ "video-core",
+ "video-media",
+]
+
+[[package]]
+name = "video-runtime"
+version = "0.1.0"
+dependencies = [
+ "chrono",
  "serde",
  "serde_json",
  "thiserror 2.0.19",

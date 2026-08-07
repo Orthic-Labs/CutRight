@@ -146,12 +146,19 @@ mod tests {
     use super::*;
 
     fn w(id: &str, s: i64, e: i64) -> WordEdge {
-        WordEdge { word_id: id.to_string(), start_ms: s, end_ms: e }
+        WordEdge {
+            word_id: id.to_string(),
+            start_ms: s,
+            end_ms: e,
+        }
     }
 
     #[test]
     fn compile_segments_basic() {
-        let speech = vec![SpeechRegion { start_ms: 1000, end_ms: 2000 }];
+        let speech = vec![SpeechRegion {
+            start_ms: 1000,
+            end_ms: 2000,
+        }];
         let words = vec![w("w1", 1000, 1100), w("w2", 1900, 2000)];
         let segs = compile_segments(&speech, &words, PadPolicy::None);
         assert_eq!(segs.len(), 1);
@@ -160,7 +167,10 @@ mod tests {
 
     #[test]
     fn pad_short_clamps_to_word_edge() {
-        let speech = vec![SpeechRegion { start_ms: 1100, end_ms: 1900 }];
+        let speech = vec![SpeechRegion {
+            start_ms: 1100,
+            end_ms: 1900,
+        }];
         let words = vec![w("w1", 1000, 1100), w("w2", 1900, 2000)];
         let segs = compile_segments(&speech, &words, PadPolicy::Short);
         assert_eq!(segs[0].start_ms, 1100);

@@ -89,7 +89,11 @@ pub fn winner_margin(scores: &[TakeScore]) -> f32 {
             second = s.total;
         }
     }
-    if second == f32::NEG_INFINITY { top } else { top - second }
+    if second == f32::NEG_INFINITY {
+        top
+    } else {
+        top - second
+    }
 }
 
 #[cfg(test)]
@@ -131,11 +135,7 @@ mod tests {
 
     #[test]
     fn missing_evidence_lowers_confidence() {
-        let s = score_take(
-            "t1",
-            vec![comp("x", 0.5, 1.0, true)],
-            vec![],
-        );
+        let s = score_take("t1", vec![comp("x", 0.5, 1.0, true)], vec![]);
         assert_eq!(s.confidence, 0.0);
         assert_eq!(s.status, TakeStatus::Inconclusive);
     }

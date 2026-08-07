@@ -22,9 +22,7 @@ use crate::narrative::provider::{
     validate_proposal, DirectorError, EditorialProposal, EditorialRequest,
 };
 use crate::narrative::reflection::{reflect, ReflectionReport};
-use crate::narrative::repair::{
-    attempt_repair, RepairAttempt, RepairOutcome,
-};
+use crate::narrative::repair::{attempt_repair, RepairAttempt, RepairOutcome};
 use crate::narrative::shorts::{ShortCandidate, ShortInputs};
 use crate::narrative::truthfulness::{evaluate_reorder, OrderLog, Reorder};
 use crate::plan::{EditorialPlan, EditorialPlanResult, PlanError};
@@ -57,10 +55,7 @@ impl EditorialEngine {
 
     /// Run the lane A/B/C sequence and return a plan. Never mutates
     /// any project file.
-    pub fn plan(
-        &self,
-        req: &EditorialEngineRequest,
-    ) -> Result<EditorialPlanResult, PlanError> {
+    pub fn plan(&self, req: &EditorialEngineRequest) -> Result<EditorialPlanResult, PlanError> {
         // 1. Retrieve evidence (caller supplies refs).
         if req.director_request.evidence_refs.is_empty() {
             return Err(PlanError::InvalidInputs);
@@ -79,12 +74,7 @@ impl EditorialEngine {
             .enumerate()
             .map(|(i, inputs)| {
                 let id = format!("short-{}", i);
-                crate::narrative::shorts::build_candidate(
-                    &id,
-                    &id,
-                    "recorded-hook",
-                    inputs.clone(),
-                )
+                crate::narrative::shorts::build_candidate(&id, &id, "recorded-hook", inputs.clone())
             })
             .collect();
 
@@ -201,11 +191,8 @@ impl EditorialEngine {
         }
 
         // 6b. Reflection + bounded repair (uses critic and confidence).
-        let reflection: Option<ReflectionReport> = reflect(
-            &proposal.proposal_id,
-            &confidence,
-            &critic,
-        );
+        let reflection: Option<ReflectionReport> =
+            reflect(&proposal.proposal_id, &confidence, &critic);
         let mut repair_attempt: Option<RepairAttempt> = None;
         if let Some(r) = &reflection {
             let attempt = attempt_repair(r, revision_used, &confidence, &critic);
@@ -265,8 +252,16 @@ mod tests {
             format: "shorts".into(),
             duration_ms_target: 30_000,
             candidates: vec![
-                CandidateRef { beat_id: "b1".into(), take_id: "t1".into(), role: "hook".into() },
-                CandidateRef { beat_id: "b2".into(), take_id: "t2".into(), role: "payoff".into() },
+                CandidateRef {
+                    beat_id: "b1".into(),
+                    take_id: "t1".into(),
+                    role: "hook".into(),
+                },
+                CandidateRef {
+                    beat_id: "b2".into(),
+                    take_id: "t2".into(),
+                    role: "payoff".into(),
+                },
             ],
             evidence_refs: vec!["e1".into()],
             model_revision: "v1".into(),
@@ -277,8 +272,16 @@ mod tests {
         EditorialProposal {
             proposal_id: "p1".into(),
             selected: vec![
-                CandidateRef { beat_id: "b1".into(), take_id: "t1".into(), role: "hook".into() },
-                CandidateRef { beat_id: "b2".into(), take_id: "t2".into(), role: "payoff".into() },
+                CandidateRef {
+                    beat_id: "b1".into(),
+                    take_id: "t1".into(),
+                    role: "hook".into(),
+                },
+                CandidateRef {
+                    beat_id: "b2".into(),
+                    take_id: "t2".into(),
+                    role: "payoff".into(),
+                },
             ],
             order: vec!["t1".into(), "t2".into()],
             arc_id: "shorts.hook-payoff".into(),

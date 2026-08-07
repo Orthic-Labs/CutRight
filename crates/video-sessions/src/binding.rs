@@ -352,8 +352,13 @@ impl SessionGuard {
     /// 4. The binding must not have expired.
     ///
     /// Any failure raises a typed `SessionGuardError` variant.
-    pub fn assert_write_permitted(&self, binding: &SessionBinding) -> Result<(), SessionGuardError> {
-        binding.validate_schema().map_err(SessionGuardError::InvalidBinding)?;
+    pub fn assert_write_permitted(
+        &self,
+        binding: &SessionBinding,
+    ) -> Result<(), SessionGuardError> {
+        binding
+            .validate_schema()
+            .map_err(SessionGuardError::InvalidBinding)?;
         let now_ns = now_ns();
         binding
             .validate_not_expired(now_ns)
@@ -488,7 +493,10 @@ mod tests {
             None,
         )
         .unwrap_err();
-        assert!(matches!(err, SessionBindingError::MissingField("session_id")));
+        assert!(matches!(
+            err,
+            SessionBindingError::MissingField("session_id")
+        ));
     }
 
     #[test]
@@ -525,7 +533,10 @@ mod tests {
         let guard = SessionGuard::acquire(&dir, project_id("proj_a")).expect("acquire");
         let foreign = embedded_binding(&project_id("proj_b"));
         let err = guard.assert_write_permitted(&foreign).unwrap_err();
-        assert!(matches!(err, SessionGuardError::CrossProjectWriteDenied { .. }));
+        assert!(matches!(
+            err,
+            SessionGuardError::CrossProjectWriteDenied { .. }
+        ));
         let _ = fs::remove_dir_all(&dir);
     }
 

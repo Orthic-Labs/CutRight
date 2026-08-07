@@ -122,10 +122,9 @@ mod tests {
     #[test]
     fn rejects_legacy_renderer_name() {
         let mut g = clean_graph();
-        g.nodes[0].props.insert(
-            "renderer".to_string(),
-            "remotion".to_string(),
-        );
+        g.nodes[0]
+            .props
+            .insert("renderer".to_string(), "remotion".to_string());
         let err = RenderGraphCompiler::compile(&g).err().expect("err");
         assert!(matches!(err, RenderGraphCompileError::LegacyRenderer(_)));
     }

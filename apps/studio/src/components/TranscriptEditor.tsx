@@ -70,7 +70,7 @@ export function TranscriptEditor(props: {
 
       <ol className="segments" role="list">
         {filtered.map((seg) => (
-          <li key={seg.segmen_id ?? seg.segment_id} className="segment" data-segment-id={seg.segment_id}>
+          <li key={seg.segment_id} className="segment" data-segment-id={seg.segment_id}>
             <header className="segment-head">
               <button
                 className="timecode"

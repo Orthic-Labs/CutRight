@@ -60,7 +60,9 @@ impl RollPlanner {
                 let ok = match (c.as_str(), shot.kind) {
                     ("narration_timestamp", RollKind::Aroll) => true,
                     ("duration_ms", RollKind::Broll) => true,
-                    ("caption_companion_id", RollKind::Croll) => shot.caption_companion_id.is_some(),
+                    ("caption_companion_id", RollKind::Croll) => {
+                        shot.caption_companion_id.is_some()
+                    }
                     _ => false,
                 };
                 if !ok {

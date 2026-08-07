@@ -80,7 +80,7 @@ export function MigrationMode({
   result = null,
   approved = false,
   message = null,
-}: MigrationModeProps): JSX.Element {
+}: MigrationModeProps): React.JSX.Element {
   const passed = result?.status === 'pass';
   return (
     <section className="mode migration-mode" data-testid="migration-mode">

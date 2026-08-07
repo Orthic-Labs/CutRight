@@ -1,9 +1,9 @@
+use chrono::{TimeZone, Utc};
 use video_feedback::autonomy::{
-    advance, demote, has_regression_trigger, initial_state, transitions,
-    AutonomyDemotionPredicate, AutonomyMode, AutonomyTransitionReason,
+    advance, demote, has_regression_trigger, initial_state, transitions, AutonomyDemotionPredicate,
+    AutonomyMode, AutonomyTransitionReason,
 };
 use video_feedback::decision::FormatKey;
-use chrono::{TimeZone, Utc};
 
 fn fmt() -> FormatKey {
     FormatKey {
@@ -15,7 +15,11 @@ fn fmt() -> FormatKey {
 
 #[test]
 fn new_format_starts_reviewed() {
-    let s = initial_state(fmt(), vec!["creator-minimal".to_string()], "reviewed-v2".to_string());
+    let s = initial_state(
+        fmt(),
+        vec!["creator-minimal".to_string()],
+        "reviewed-v2".to_string(),
+    );
     assert_eq!(s.mode, AutonomyMode::Reviewed);
     assert!(!s.demoted);
     assert!(s.last_user_approval.is_none());
@@ -28,7 +32,11 @@ fn new_format_starts_reviewed() {
 
 #[test]
 fn no_self_approval_of_advancement() {
-    let s = initial_state(fmt(), vec!["creator-minimal".to_string()], "reviewed-v2".to_string());
+    let s = initial_state(
+        fmt(),
+        vec!["creator-minimal".to_string()],
+        "reviewed-v2".to_string(),
+    );
     let mut advanced = s.clone();
     advanced.metrics.benchmark_pass = true;
     advanced.metrics.user_approval_count = 100;
@@ -42,7 +50,11 @@ fn no_self_approval_of_advancement() {
 
 #[test]
 fn demotion_is_immediate_on_regression() {
-    let s = initial_state(fmt(), vec!["creator-minimal".to_string()], "reviewed-v2".to_string());
+    let s = initial_state(
+        fmt(),
+        vec!["creator-minimal".to_string()],
+        "reviewed-v2".to_string(),
+    );
     let mut advanced = s.clone();
     advanced.metrics.benchmark_pass = true;
     advanced.metrics.user_approval_count = 5;
@@ -52,7 +64,11 @@ fn demotion_is_immediate_on_regression() {
     regressed.metrics.regression_count = 1;
     let predicate = AutonomyDemotionPredicate::default();
     assert!(has_regression_trigger(&regressed, predicate));
-    let dropped = demote(regressed, AutonomyTransitionReason::BenchmarkRegression, "audit");
+    let dropped = demote(
+        regressed,
+        AutonomyTransitionReason::BenchmarkRegression,
+        "audit",
+    );
     assert_eq!(dropped.mode, AutonomyMode::Reviewed);
     assert!(dropped.demoted);
 }
@@ -70,7 +86,11 @@ fn demotion_on_incompatible_pack_change() {
     let advanced = advance(advanced, Default::default(), Utc::now(), "audit");
     let mut regressed = advanced.clone();
     regressed.compatible_pack_set = vec!["creator-2".to_string()];
-    let dropped = demote(regressed, AutonomyTransitionReason::IncompatiblePackChange, "audit");
+    let dropped = demote(
+        regressed,
+        AutonomyTransitionReason::IncompatiblePackChange,
+        "audit",
+    );
     assert_eq!(dropped.mode, AutonomyMode::Reviewed);
 }
 

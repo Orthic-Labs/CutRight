@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { PackManager } from "./modes/PackManagerMode";
+
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const packs = [
   {
@@ -27,30 +29,33 @@ const packs = [
 ];
 
 describe("PackManager", () => {
-  it("lists every pack with its actions", () => {
-    render(<PackManager packs={packs} />);
-    expect(screen.getByTestId("pack-manager")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /verify/i }).length).toBe(2);
+  it("lists every pack with its actions", async () => {
+    const host = await renderPackManager(packs);
+    expect(host.querySelector("[data-testid='pack-manager']")).toBeTruthy();
+    expect(host.querySelectorAll("[data-action='verify']")).toHaveLength(2);
   });
 
-  it("rejects action on a non-local source", () => {
+  it("refuses an action on a non-local source", async () => {
     const packsWithBad = [
       { ...packs[0], source: "remote" as const },
     ];
-    render(<PackManager packs={packsWithBad} />);
-    fireEvent.click(screen.getByTestId("verify-creator-minimal") as Element);
-    // The element should not exist; the button uses data-action=verify.
-    const btns = screen.getAllByRole("button", { name: /verify/i });
-    fireEvent.click(btns[0]);
-    expect(screen.getByRole("status").textContent).toMatch(
-      /refuses to proceed/i
-    );
+    const host = await renderPackManager(packsWithBad);
+    const verify = host.querySelector("[data-action='verify']")!;
+    await act(async () => verify.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(host.querySelector("[role='status']")?.textContent).toMatch(/refuses to proceed/i);
   });
 
-  it("activates a pack when its signature is valid", () => {
-    render(<PackManager packs={packs} />);
-    const actBtns = screen.getAllByRole("button", { name: /activate/i });
-    fireEvent.click(actBtns[0]);
-    expect(screen.getByRole("status").textContent).toMatch(/activate/i);
+  it("activates a pack when its signature is valid", async () => {
+    const host = await renderPackManager(packs);
+    const activate = host.querySelector("[data-pack-id='creator-minimal'] [data-action='activate']")!;
+    await act(async () => activate.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(host.querySelector("[role='status']")?.textContent).toMatch(/activate creator-minimal/i);
   });
 });
+
+async function renderPackManager(packs: Parameters<typeof PackManager>[0]["packs"]) {
+  const host = document.createElement("div");
+  document.body.append(host);
+  await act(async () => createRoot(host).render(<PackManager packs={packs} />));
+  return host;
+}

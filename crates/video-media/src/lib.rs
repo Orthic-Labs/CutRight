@@ -52,7 +52,7 @@ pub use rough_render::{
 };
 pub use toolchain::{
     resolve as resolve_toolchain, MediaCapabilities, MediaToolchain, PackId, PackResourceId,
-    PackResourceResolver, ToolchainError, VerifiedResource, ResolverError,
+    PackResourceResolver, ResolverError, ToolchainError, VerifiedResource,
 };
 pub use waveform::{render_waveform, render_waveform_range};
 

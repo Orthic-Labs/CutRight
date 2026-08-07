@@ -13,6 +13,7 @@ pub mod job_plane_integration;
 pub mod models;
 pub mod native_audio;
 pub mod native_compositor;
+pub mod native_effect_renderer;
 pub mod native_motion;
 pub mod native_typography;
 pub mod package_plan;
@@ -25,26 +26,51 @@ pub mod social_service;
 pub mod timestamp;
 pub mod writing_service;
 
-pub use asset_validation::{AssetValidationError, AssetValidationService, RightsRecord, ValidatedAssetReview};
+pub use asset_validation::{
+    AssetValidationError, AssetValidationService, RightsRecord, ValidatedAssetReview,
+};
 pub use bakeoff::{BakeOff, BakeOffAcceptance, BakeOffError, BakeOffService, Variant};
-pub use brand_service::{BrandCard, BrandIdentityService, BrandService, BrandServiceError, BrandSystem};
-pub use creative_critic::{AxisScore, CreativeCritic, CriticError, CriticEvaluation, DeterministicVisualQa, Verdict};
-pub use creative_plan::{Beat, CreativePlan, CreativePlanner, EditorialPlan, PlanningError, Shot, Style};
+pub use brand_service::{
+    BrandCard, BrandIdentityService, BrandService, BrandServiceError, BrandSystem,
+};
+pub use creative_critic::{
+    AxisScore, CreativeCritic, CriticError, CriticEvaluation, DeterministicVisualQa, Verdict,
+};
+pub use creative_plan::{
+    Beat, CreativePlan, CreativePlanner, EditorialPlan, PlanningError, Shot, Style,
+};
 pub use creative_skill_resolver::{CreativeSkillResolver, ResolutionPlan, ResolverError};
 pub use creative_skill_runtime::{
     Budget, SkillFamily, SkillRequest, SkillResult, SkillRuntime, SkillRuntimeError, SkillTrace,
     RUNTIME_VERSION as CREATIVE_SKILL_RUNTIME_VERSION,
 };
 pub use designer_service::{AssetRequest, AssetReview, DesignerError, DesignerService};
-pub use render_graph_compiler::{CompiledPlan, CompiledStep, RenderGraphCompileError, RenderGraphCompiler};
-pub use rollplan::{RollKind, RollPlan, RollPlanError, RollPlanner, ShotRoll};
-pub use native_compositor::{CompositeCommand, CompositorError, NativeCompositor, NodeKind, RenderGraph, RenderNode};
-pub use job_plane_integration::{CreativeJob, CreativeJobKind, JobHandle, JobPlaneIntegration, JobPlaneIntegrationError};
 pub use finish_plan::{CompiledFinishPlan, CompiledFinishPlanCompiler, CompiledFinishPlanError};
+pub use job_plane_integration::{
+    CreativeJob, CreativeJobKind, JobHandle, JobPlaneIntegration, JobPlaneIntegrationError,
+};
 pub use native_audio::{AudioCue, AudioError, AudioFinish, AudioProfile, NativeAudioEngine};
-pub use native_motion::{MotionBeat, MotionClip, MotionError, NativeMotionEngine, Placement, Reframe};
-pub use native_typography::{CaptionDocument, CaptionLayout, CaptionToken, LayoutToken, NativeTypographyEngine, TypographyError, TypographyProfile};
-pub use package_plan::{BrandKitRef, PackageAsset, PackageAssetError, PackagePlan, PackagePlanService, Thumbnail, TitleCard};
+pub use native_compositor::{
+    CompositeCommand, CompositorError, NativeCompositor, NodeKind, RenderGraph, RenderNode,
+};
+pub use native_effect_renderer::{
+    render_native_effect_frame, NativeEffectFrame, NativeEffectRenderError,
+};
+pub use native_motion::{
+    MotionBeat, MotionClip, MotionError, NativeMotionEngine, Placement, Reframe,
+};
+pub use native_typography::{
+    CaptionDocument, CaptionLayout, CaptionToken, LayoutToken, NativeTypographyEngine,
+    TypographyError, TypographyProfile,
+};
+pub use package_plan::{
+    BrandKitRef, PackageAsset, PackageAssetError, PackagePlan, PackagePlanService, Thumbnail,
+    TitleCard,
+};
+pub use render_graph_compiler::{
+    CompiledPlan, CompiledStep, RenderGraphCompileError, RenderGraphCompiler,
+};
+pub use rollplan::{RollKind, RollPlan, RollPlanError, RollPlanner, ShotRoll};
 pub use social_service::{PlatformConstraints, PlatformProfile, SocialError, SocialService};
 pub use writing_service::{CopyAtom, Package, WritingError, WritingService};
 

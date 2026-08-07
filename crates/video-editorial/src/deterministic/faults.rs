@@ -44,11 +44,15 @@ mod tests {
     #[test]
     fn all_catalogue_faults_disqualify() {
         for f in [
-            HardFault::ClippedWord { word_id: "w1".into() },
+            HardFault::ClippedWord {
+                word_id: "w1".into(),
+            },
             HardFault::SourceCorruption { detail: "x".into() },
             HardFault::UnusableExposure { luma: 0.5 },
             HardFault::UnusableAudio { snr_db: -10.0 },
-            HardFault::IdentityViolation { subject_id: "s1".into() },
+            HardFault::IdentityViolation {
+                subject_id: "s1".into(),
+            },
         ] {
             assert!(disqualifies(&f));
         }
@@ -56,7 +60,9 @@ mod tests {
 
     #[test]
     fn labels_are_distinct() {
-        let f = HardFault::ClippedWord { word_id: "x".into() };
+        let f = HardFault::ClippedWord {
+            word_id: "x".into(),
+        };
         assert_eq!(f.label(), "clipped_word");
     }
 }

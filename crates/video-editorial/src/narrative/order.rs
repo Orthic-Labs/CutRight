@@ -36,7 +36,10 @@ mod tests {
         let r = Reorder {
             from_index: 0,
             to_index: 1,
-            claim: Claim { claim_id: "c".into(), depends_on: vec![] },
+            claim: Claim {
+                claim_id: "c".into(),
+                depends_on: vec![],
+            },
             introduces_false_sequence: true,
             breaks_claim_dependency: false,
         };

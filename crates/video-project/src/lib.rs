@@ -8,9 +8,8 @@ pub use executor::{
 pub use receipts::{verify_receipts, ReceiptCheck, ReceiptVerificationReport};
 
 mod analysis;
-pub mod autonomous_run;
-pub mod trust;
 mod audio_profile;
+pub mod autonomous_run;
 mod benchmark;
 mod candidates;
 pub mod caption_profile;
@@ -26,6 +25,7 @@ mod finish;
 mod ingest;
 mod io;
 pub mod legacy;
+mod lifecycle;
 mod package;
 mod preferences;
 mod project_init;
@@ -40,6 +40,7 @@ mod shorts_scoring;
 mod snapshot;
 mod timeline;
 mod transcription;
+pub mod trust;
 
 pub use analysis::analyze_local;
 pub use audio_profile::{AudioProfile, LoudnessGateResult, AUDIO_PROFILE_SCHEMA_VERSION};
@@ -74,6 +75,7 @@ pub use export::export_otio;
 pub use final_render::{render_final, render_master};
 pub use finish::{audio_finish, finish_validate, render_slot};
 pub use ingest::{ingest_sources, IngestResult, IngestedSource};
+pub use lifecycle::{clean_machine_sample, CleanMachineSampleReport, LifecycleResults};
 pub use package::package_social;
 pub use preferences::{
     recommend_preferences, AxisResult, DistributionEntry, FormatRecommendations,

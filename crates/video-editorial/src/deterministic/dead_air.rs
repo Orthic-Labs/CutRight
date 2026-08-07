@@ -33,25 +33,25 @@ pub fn classify_silence(
 ) -> DeadAirRegion {
     let dur = end_ms - start_ms;
     let kind = match (speech_before_end_ms, speech_after_start_ms) {
-            (None, _) => DeadAirKind::PreSpeech,
-            (_, None) => DeadAirKind::PostSpeech,
-            (Some(b), Some(a)) => {
-                // Silence is "between" speech if both speech markers
-                // bound it (b <= start and a >= end). In that case a
-                // short gap is breathing; a longer gap is
-                // inter-speech.
-                // If either marker overlaps the silence, the silence
-                // is fully inside speech and is inter-speech.
-                if b > end_ms || a < start_ms {
-                    DeadAirKind::InterSpeech
-                } else if dur < min_keep_ms {
-                    DeadAirKind::Breathing
-                } else {
-                    DeadAirKind::InterSpeech
-                }
+        (None, _) => DeadAirKind::PreSpeech,
+        (_, None) => DeadAirKind::PostSpeech,
+        (Some(b), Some(a)) => {
+            // Silence is "between" speech if both speech markers
+            // bound it (b <= start and a >= end). In that case a
+            // short gap is breathing; a longer gap is
+            // inter-speech.
+            // If either marker overlaps the silence, the silence
+            // is fully inside speech and is inter-speech.
+            if b > end_ms || a < start_ms {
+                DeadAirKind::InterSpeech
+            } else if dur < min_keep_ms {
+                DeadAirKind::Breathing
+            } else {
+                DeadAirKind::InterSpeech
             }
-            _ => DeadAirKind::Breathing,
-        };
+        }
+        _ => DeadAirKind::Breathing,
+    };
     let keep = dur < min_keep_ms || matches!(kind, DeadAirKind::Breathing);
     DeadAirRegion {
         start_ms,
@@ -67,7 +67,12 @@ pub fn classify_silence(
 /// equidistant, `safe_start` snaps forward and `safe_end` snaps
 /// backward. This guarantees we never cut inside a word while
 /// minimising the displacement from the requested range.
-pub fn word_safe_range(start_ms: i64, end_ms: i64, word_starts: &[i64], word_ends: &[i64]) -> (i64, i64) {
+pub fn word_safe_range(
+    start_ms: i64,
+    end_ms: i64,
+    word_starts: &[i64],
+    word_ends: &[i64],
+) -> (i64, i64) {
     if word_starts.is_empty() || word_ends.is_empty() {
         return (start_ms, end_ms);
     }

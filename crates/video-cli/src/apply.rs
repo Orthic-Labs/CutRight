@@ -21,9 +21,7 @@ use std::process::ExitCode;
 
 use clap::Args;
 use video_capabilities::RegistryDocument;
-use video_project::{
-    ActionBatch, ActionExecutor, ExecutorReport, ACTION_BATCH_SCHEMA,
-};
+use video_project::{ActionBatch, ActionExecutor, ExecutorReport, ACTION_BATCH_SCHEMA};
 use video_sessions::{ProjectId, SessionGuard};
 
 use crate::cli::ApplyArgs;

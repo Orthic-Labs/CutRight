@@ -204,9 +204,7 @@ pub fn discover_steps(migrations_dir: &Path) -> Result<Vec<MigrationStep>, Migra
         })?;
         if meta.is_dir() {
             collect_descriptors(&path, &mut steps)?;
-        } else if meta.is_file()
-            && path.extension().and_then(|s| s.to_str()) == Some("json")
-        {
+        } else if meta.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
             collect_descriptor(&path, &mut steps)?;
         }
     }
@@ -214,10 +212,7 @@ pub fn discover_steps(migrations_dir: &Path) -> Result<Vec<MigrationStep>, Migra
     Ok(steps)
 }
 
-fn collect_descriptors(
-    dir: &Path,
-    out: &mut Vec<MigrationStep>,
-) -> Result<(), MigrationError> {
+fn collect_descriptors(dir: &Path, out: &mut Vec<MigrationStep>) -> Result<(), MigrationError> {
     let read = fs::read_dir(dir).map_err(|source| MigrationError::Io {
         path: dir.to_path_buf(),
         source,
@@ -241,20 +236,16 @@ fn collect_descriptors(
     Ok(())
 }
 
-fn collect_descriptor(
-    path: &Path,
-    out: &mut Vec<MigrationStep>,
-) -> Result<(), MigrationError> {
+fn collect_descriptor(path: &Path, out: &mut Vec<MigrationStep>) -> Result<(), MigrationError> {
     let bytes = fs::read(path).map_err(|source| MigrationError::Io {
         path: path.to_path_buf(),
         source,
     })?;
-    let step: MigrationStep = serde_json::from_slice(&bytes).map_err(|err| {
-        MigrationError::InvalidDescriptor {
+    let step: MigrationStep =
+        serde_json::from_slice(&bytes).map_err(|err| MigrationError::InvalidDescriptor {
             path: path.to_path_buf(),
             message: err.to_string(),
-        }
-    })?;
+        })?;
     out.push(step);
     Ok(())
 }
@@ -558,17 +549,11 @@ fn append_dir_to_archive(
             source,
         })?;
         if meta.is_dir() {
-            let rel = path
-                .strip_prefix(root)
-                .unwrap_or(&path)
-                .to_path_buf();
+            let rel = path.strip_prefix(root).unwrap_or(&path).to_path_buf();
             write_archive_dir(archive, &rel)?;
             append_dir_to_archive(archive, root, &path)?;
         } else if meta.is_file() {
-            let rel = path
-                .strip_prefix(root)
-                .unwrap_or(&path)
-                .to_path_buf();
+            let rel = path.strip_prefix(root).unwrap_or(&path).to_path_buf();
             let bytes = fs::read(&path).map_err(|source| MigrationError::Io {
                 path: path.clone(),
                 source,
@@ -603,20 +588,29 @@ fn write_archive_entry(
     bytes: &[u8],
 ) -> Result<(), MigrationError> {
     let header = build_header(relative_path, bytes.len() as u64, false);
-    archive.file.write_all(&header).map_err(|source| MigrationError::Io {
-        path: PathBuf::from("<archive>"),
-        source,
-    })?;
-    archive.file.write_all(bytes).map_err(|source| MigrationError::Io {
-        path: PathBuf::from("<archive>"),
-        source,
-    })?;
+    archive
+        .file
+        .write_all(&header)
+        .map_err(|source| MigrationError::Io {
+            path: PathBuf::from("<archive>"),
+            source,
+        })?;
+    archive
+        .file
+        .write_all(bytes)
+        .map_err(|source| MigrationError::Io {
+            path: PathBuf::from("<archive>"),
+            source,
+        })?;
     let pad = padding_for(bytes.len());
     let zeros = vec![0u8; pad];
-    archive.file.write_all(&zeros).map_err(|source| MigrationError::Io {
-        path: PathBuf::from("<archive>"),
-        source,
-    })?;
+    archive
+        .file
+        .write_all(&zeros)
+        .map_err(|source| MigrationError::Io {
+            path: PathBuf::from("<archive>"),
+            source,
+        })?;
     Ok(())
 }
 
@@ -629,19 +623,25 @@ fn write_archive_dir(
         name.push("");
     }
     let header = build_header(&name, 0, true);
-    archive.file.write_all(&header).map_err(|source| MigrationError::Io {
-        path: PathBuf::from("<archive>"),
-        source,
-    })?;
+    archive
+        .file
+        .write_all(&header)
+        .map_err(|source| MigrationError::Io {
+            path: PathBuf::from("<archive>"),
+            source,
+        })?;
     Ok(())
 }
 
 fn finish_archive(archive: &mut ArchiveWriter) -> Result<(), MigrationError> {
     let zeros = vec![0u8; 1024];
-    archive.file.write_all(&zeros).map_err(|source| MigrationError::Io {
-        path: PathBuf::from("<archive>"),
-        source,
-    })?;
+    archive
+        .file
+        .write_all(&zeros)
+        .map_err(|source| MigrationError::Io {
+            path: PathBuf::from("<archive>"),
+            source,
+        })?;
     archive.file.flush().map_err(|source| MigrationError::Io {
         path: PathBuf::from("<archive>"),
         source,
@@ -697,10 +697,11 @@ fn read_archive(path: &Path) -> Result<Vec<ArchiveEntry>, MigrationError> {
         source,
     })?;
     let mut buf = Vec::new();
-    file.read_to_end(&mut buf).map_err(|source| MigrationError::Io {
-        path: path.to_path_buf(),
-        source,
-    })?;
+    file.read_to_end(&mut buf)
+        .map_err(|source| MigrationError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?;
     let mut entries = Vec::new();
     let mut cursor = 0usize;
     while cursor + 512 <= buf.len() {
@@ -736,17 +737,15 @@ fn read_archive(path: &Path) -> Result<Vec<ArchiveEntry>, MigrationError> {
 }
 
 fn parse_header_name(header: &[u8]) -> String {
-    let name_end = header
-        .iter()
-        .take(100)
-        .position(|b| *b == 0)
-        .unwrap_or(100);
+    let name_end = header.iter().take(100).position(|b| *b == 0).unwrap_or(100);
     String::from_utf8_lossy(&header[..name_end]).into_owned()
 }
 
 fn parse_header_size(header: &[u8]) -> u64 {
     let size_field = &header[124..136];
-    let trimmed = std::str::from_utf8(size_field).unwrap_or("0").trim_end_matches('\0');
+    let trimmed = std::str::from_utf8(size_field)
+        .unwrap_or("0")
+        .trim_end_matches('\0');
     let trimmed = trimmed.trim();
     if trimmed.is_empty() {
         return 0;
@@ -883,8 +882,13 @@ mod tests {
         runner_dry.dry_run(&plan).expect("dry-run");
         let dry_after = hash_directory(&runner_dry.state_dir()).expect("snapshot");
         assert_eq!(dry_snapshot, dry_after);
-        assert!(!runner_dry.backups_dir().exists()
-            || fs::read_dir(runner_dry.backups_dir()).unwrap().next().is_none());
+        assert!(
+            !runner_dry.backups_dir().exists()
+                || fs::read_dir(runner_dry.backups_dir())
+                    .unwrap()
+                    .next()
+                    .is_none()
+        );
 
         let runner_apply = MigrationRunner::new(&dir);
         let outcome = runner_apply.apply(&plan).expect("apply");

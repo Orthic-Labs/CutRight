@@ -40,9 +40,7 @@ pub fn reflect(
     let truthfulness = confidence
         .escalations
         .contains(&Ambiguity::TruthfulnessRisk);
-    let missing = confidence
-        .escalations
-        .contains(&Ambiguity::MissingEvidence);
+    let missing = confidence.escalations.contains(&Ambiguity::MissingEvidence);
 
     let (cause, severity, can_repair, recommendation) = if critic_blocks || truthfulness {
         (
@@ -165,11 +163,15 @@ mod tests {
             effective_mode: ReviewMode::Reviewed,
             rationale: vec![],
         };
-        let r = reflect("p", &c, &CriticOutcome {
-            verdict: CriticVerdict::Approve,
-            findings: vec![],
-            revision_requested: false,
-        })
+        let r = reflect(
+            "p",
+            &c,
+            &CriticOutcome {
+                verdict: CriticVerdict::Approve,
+                findings: vec![],
+                revision_requested: false,
+            },
+        )
         .unwrap();
         assert!(matches!(r.cause, ReflectionCause::LowConfidence));
         assert!(r.can_repair);

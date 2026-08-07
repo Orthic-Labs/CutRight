@@ -14,8 +14,8 @@ use video_core::{
 
 pub use heardright::{EngineIdentity, ProviderError};
 pub use vad::VadProvenance;
-pub use whisperx::WhisperXProvider;
 pub use video_media::{PackId, PackResourceId, PackResourceResolver, VerifiedResource};
+pub use whisperx::WhisperXProvider;
 
 /// Default Silero speech threshold forwarded to HeardRight's file-VAD
 /// capability when a caller does not supply one. HeardRight owns the model

@@ -250,34 +250,104 @@ impl Validator for DefaultValidator {
         // ---- Variant-specific checks ----
         match action {
             Action::Cut { params, .. } => {
-                validate_range(action_index, kind, &target_str, &params.range, ctx, &mut failures);
+                validate_range(
+                    action_index,
+                    kind,
+                    &target_str,
+                    &params.range,
+                    ctx,
+                    &mut failures,
+                );
             }
             Action::Restore { params, .. } => {
-                validate_range(action_index, kind, &target_str, &params.range, ctx, &mut failures);
+                validate_range(
+                    action_index,
+                    kind,
+                    &target_str,
+                    &params.range,
+                    ctx,
+                    &mut failures,
+                );
             }
             Action::Move { params, .. } => {
-                validate_range(action_index, kind, &target_str, &params.range, ctx, &mut failures);
+                validate_range(
+                    action_index,
+                    kind,
+                    &target_str,
+                    &params.range,
+                    ctx,
+                    &mut failures,
+                );
             }
             Action::TakeSwap { params, .. } => {
-                validate_range(action_index, kind, &target_str, &params.range, ctx, &mut failures);
+                validate_range(
+                    action_index,
+                    kind,
+                    &target_str,
+                    &params.range,
+                    ctx,
+                    &mut failures,
+                );
             }
             Action::Retime { params, .. } => {
-                validate_range(action_index, kind, &target_str, &params.range, ctx, &mut failures);
+                validate_range(
+                    action_index,
+                    kind,
+                    &target_str,
+                    &params.range,
+                    ctx,
+                    &mut failures,
+                );
             }
             Action::Caption { params, .. } => {
-                validate_range(action_index, kind, &target_str, &params.range, ctx, &mut failures);
+                validate_range(
+                    action_index,
+                    kind,
+                    &target_str,
+                    &params.range,
+                    ctx,
+                    &mut failures,
+                );
             }
             Action::Graphic { params, .. } => {
-                validate_range(action_index, kind, &target_str, &params.range, ctx, &mut failures);
+                validate_range(
+                    action_index,
+                    kind,
+                    &target_str,
+                    &params.range,
+                    ctx,
+                    &mut failures,
+                );
             }
             Action::Audio { params, .. } => {
-                validate_range(action_index, kind, &target_str, &params.range, ctx, &mut failures);
+                validate_range(
+                    action_index,
+                    kind,
+                    &target_str,
+                    &params.range,
+                    ctx,
+                    &mut failures,
+                );
             }
             Action::ColourLut { params, .. } => {
-                validate_range(action_index, kind, &target_str, &params.range, ctx, &mut failures);
+                validate_range(
+                    action_index,
+                    kind,
+                    &target_str,
+                    &params.range,
+                    ctx,
+                    &mut failures,
+                );
             }
             Action::ColourCorrection { params, .. } => {
-                validate_range(action_index, kind, &target_str, &params.range, ctx, &mut failures);
+                validate_range(
+                    action_index,
+                    kind,
+                    &target_str,
+                    &params.range,
+                    ctx,
+                    &mut failures,
+                );
             }
             Action::ExportRender { params, .. } => {
                 if params.preset_id.is_empty() {
@@ -352,7 +422,9 @@ impl Validator for DefaultValidator {
                         action_index,
                         kind,
                         &target_str,
-                        ValidationError::EmptyField { field: "graphic_id" },
+                        ValidationError::EmptyField {
+                            field: "graphic_id",
+                        },
                     ));
                 }
             }
@@ -504,9 +576,7 @@ fn action_target(action: &Action) -> Option<&TargetRef> {
 }
 
 fn target_str(action: &Action) -> &str {
-    action_target(action)
-        .map(TargetRef::as_str)
-        .unwrap_or("")
+    action_target(action).map(TargetRef::as_str).unwrap_or("")
 }
 
 /// Pull a target's project id (if known) from the validation context.
@@ -521,7 +591,7 @@ mod tests {
     use super::*;
     use crate::action::{
         action_kind, AudioParams, CaptionParams, ColourCorrectionParams, ColourLutParams,
-        CutParams, ExportRenderParams, GraphicParams, MoveParams, RetimeParams, RestoreParams,
+        CutParams, ExportRenderParams, GraphicParams, MoveParams, RestoreParams, RetimeParams,
         SettingParams, TakeSwapParams, TargetKind,
     };
 
@@ -564,7 +634,10 @@ mod tests {
     fn cut(target: TargetRef, range: RangeNs) -> Action {
         Action::Cut {
             target,
-            params: CutParams { range, reason: None },
+            params: CutParams {
+                range,
+                reason: None,
+            },
         }
     }
 
@@ -595,10 +668,7 @@ mod tests {
         ctx = ctx.with_target_project(&target, "prj_other");
         let action = cut(target, range(1_000, 2_000));
         let err = DefaultValidator.validate(0, &action, &ctx).unwrap_err();
-        assert!(matches!(
-            err[0].error,
-            ValidationError::CrossProject { .. }
-        ));
+        assert!(matches!(err[0].error, ValidationError::CrossProject { .. }));
     }
 
     #[test]
@@ -756,7 +826,9 @@ mod tests {
         let err = DefaultValidator.validate(0, &action, &ctx).unwrap_err();
         assert!(err.iter().any(|f| matches!(
             f.error,
-            ValidationError::EmptyField { field: "replacement_clip_id" }
+            ValidationError::EmptyField {
+                field: "replacement_clip_id"
+            }
         )));
     }
 
@@ -773,7 +845,9 @@ mod tests {
         let err = DefaultValidator.validate(0, &action, &ctx).unwrap_err();
         assert!(err.iter().any(|f| matches!(
             f.error,
-            ValidationError::EmptyField { field: "graphic_id" }
+            ValidationError::EmptyField {
+                field: "graphic_id"
+            }
         )));
     }
 
@@ -788,10 +862,9 @@ mod tests {
             },
         };
         let err = DefaultValidator.validate(0, &action, &ctx).unwrap_err();
-        assert!(err.iter().any(|f| matches!(
-            f.error,
-            ValidationError::EmptyField { field: "lut_id" }
-        )));
+        assert!(err
+            .iter()
+            .any(|f| matches!(f.error, ValidationError::EmptyField { field: "lut_id" })));
     }
 
     #[test]
@@ -839,10 +912,9 @@ mod tests {
             },
         };
         let err = DefaultValidator.validate(0, &action, &ctx).unwrap_err();
-        assert!(err.iter().any(|f| matches!(
-            f.error,
-            ValidationError::EmptyField { field: "preset_id" }
-        )));
+        assert!(err
+            .iter()
+            .any(|f| matches!(f.error, ValidationError::EmptyField { field: "preset_id" })));
     }
 
     #[test]
@@ -856,10 +928,9 @@ mod tests {
             },
         };
         let err = DefaultValidator.validate(0, &action, &ctx).unwrap_err();
-        assert!(err.iter().any(|f| matches!(
-            f.error,
-            ValidationError::EmptyField { field: "key" }
-        )));
+        assert!(err
+            .iter()
+            .any(|f| matches!(f.error, ValidationError::EmptyField { field: "key" })));
 
         let action = Action::Setting {
             target: project_target("review_mode"),
@@ -869,10 +940,9 @@ mod tests {
             },
         };
         let err = DefaultValidator.validate(0, &action, &ctx).unwrap_err();
-        assert!(err.iter().any(|f| matches!(
-            f.error,
-            ValidationError::EmptyField { field: "value" }
-        )));
+        assert!(err
+            .iter()
+            .any(|f| matches!(f.error, ValidationError::EmptyField { field: "value" })));
     }
 
     #[test]
@@ -891,8 +961,7 @@ mod tests {
             .any(|f| f.action_index == 0 && matches!(f.error, ValidationError::NegativeStart(_))));
         assert!(err
             .iter()
-            .any(|f| f.action_index == 1
-                && matches!(f.error, ValidationError::UnknownTarget(_))));
+            .any(|f| f.action_index == 1 && matches!(f.error, ValidationError::UnknownTarget(_))));
     }
 
     #[test]
@@ -988,7 +1057,13 @@ mod tests {
         for (index, action) in actions.iter().enumerate() {
             DefaultValidator
                 .validate(index, action, &ctx)
-                .unwrap_or_else(|errs| panic!("variant {} ({:?}) failed validation: {errs:?}", index, action_kind(action)));
+                .unwrap_or_else(|errs| {
+                    panic!(
+                        "variant {} ({:?}) failed validation: {errs:?}",
+                        index,
+                        action_kind(action)
+                    )
+                });
         }
     }
 }

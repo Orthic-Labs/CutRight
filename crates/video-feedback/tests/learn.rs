@@ -1,12 +1,12 @@
+use chrono::{TimeZone, Utc};
 use video_feedback::decision::{
-    append_record, hash_chain_zero, DecisionAction, DecisionAxis, DecisionReason,
-    DecisionRecord, DecisionTarget, FormatKey, ReviewMode, SessionOrigin, UserOrigin,
+    append_record, hash_chain_zero, DecisionAction, DecisionAxis, DecisionReason, DecisionRecord,
+    DecisionTarget, FormatKey, ReviewMode, SessionOrigin, UserOrigin,
 };
 use video_feedback::learn::{
     compute_preference, compute_recommendation, estimate_is_supported, EstimateScope,
     InsufficientReason,
 };
-use chrono::{TimeZone, Utc};
 
 fn make_record(
     axis: DecisionAxis,
@@ -17,12 +17,19 @@ fn make_record(
 ) -> DecisionRecord {
     let r = DecisionRecord {
         schema_version: "v2".to_string(),
-        decision_id: format!("00000000000000000000000000000000000000000000000000000000000000{:02x}", id_seed),
+        decision_id: format!(
+            "00000000000000000000000000000000000000000000000000000000000000{:02x}",
+            id_seed
+        ),
         prev_hash: hash_chain_zero().to_string(),
         record_hash: String::new(),
-        project_instance_id: "1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+        project_instance_id: "1111111111111111111111111111111111111111111111111111111111111111"
+            .to_string(),
         project_revision: "rev-0000000000000001".to_string(),
-        subject_hash: format!("2222222222222222222222222222222222222222222222222222222222222{:02x}", id_seed),
+        subject_hash: format!(
+            "2222222222222222222222222222222222222222222222222222222222222{:02x}",
+            id_seed
+        ),
         decision_target: target,
         decision_action: DecisionAction::Approve,
         decision_reason: reason,
@@ -69,7 +76,10 @@ fn empty_evidence_is_unsupported() {
         false,
     );
     assert!(!estimate_is_supported(&e));
-    assert!(matches!(e.insufficient_reason, Some(InsufficientReason::InsufficientSamples)));
+    assert!(matches!(
+        e.insufficient_reason,
+        Some(InsufficientReason::InsufficientSamples)
+    ));
 }
 
 #[test]

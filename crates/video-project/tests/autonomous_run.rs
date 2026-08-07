@@ -7,8 +7,7 @@
 
 use video_jobs::autonomous::AutonomousDigestStatus;
 use video_project::autonomous_run::{
-    evaluate_project_autonomous, is_ready, ProjectAutonomousEscalation,
-    ProjectAutonomousInputs,
+    evaluate_project_autonomous, is_ready, ProjectAutonomousEscalation, ProjectAutonomousInputs,
 };
 
 fn base_inputs() -> ProjectAutonomousInputs {
@@ -88,7 +87,11 @@ fn reviewer_required_when_blocker_pending() {
     // A non-blocking reviewer signal may still leave the digest ready;
     // verify the contract that the digest *reports* the truth.
     let digest = evaluate_project_autonomous(&inputs);
-    assert!(digest.ready_for_final_approval || digest.reviewer_required || digest.summary.contains("autonomous"));
+    assert!(
+        digest.ready_for_final_approval
+            || digest.reviewer_required
+            || digest.summary.contains("autonomous")
+    );
 }
 
 #[test]

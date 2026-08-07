@@ -122,11 +122,7 @@ mod tests {
     #[test]
     fn tally_counts_passes_and_failures() {
         let mut p = empty_project_run("p", "test", "reviewed-v2");
-        p.outcomes = vec![
-            outcome("a", true),
-            outcome("b", false),
-            outcome("c", true),
-        ];
+        p.outcomes = vec![outcome("a", true), outcome("b", false), outcome("c", true)];
         tally(&mut p);
         assert_eq!(p.passes, 2);
         assert_eq!(p.failures, 1);

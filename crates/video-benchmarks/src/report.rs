@@ -46,22 +46,22 @@ pub fn build_report(run: &BenchmarkRun) -> Report {
                     k.0.clone(),
                     v.clone(),
                 );
-                rows.entry(key.clone())
-                    .or_insert(SliceRow {
-                        axis: key.0.clone(),
-                        metric_id: key.1.clone(),
-                        slice_key: key.2.clone(),
-                        slice_value: key.3.clone(),
-                        value: o.value,
-                        status: format!("{:?}", o.status),
-                    });
+                rows.entry(key.clone()).or_insert(SliceRow {
+                    axis: key.0.clone(),
+                    metric_id: key.1.clone(),
+                    slice_key: key.2.clone(),
+                    slice_value: key.3.clone(),
+                    value: o.value,
+                    status: format!("{:?}", o.status),
+                });
             }
-            if matches!(
-                o.status,
-                crate::MetricStatus::Fail
-            ) {
-                failures.push(format!("{}:{} {}", p.project_id, o.metric_id,
-                    o.reason.clone().unwrap_or_default()));
+            if matches!(o.status, crate::MetricStatus::Fail) {
+                failures.push(format!(
+                    "{}:{} {}",
+                    p.project_id,
+                    o.metric_id,
+                    o.reason.clone().unwrap_or_default()
+                ));
             }
         }
     }
@@ -123,11 +123,7 @@ mod tests {
     #[test]
     fn build_report_records_failures() {
         let mut p = empty_project_run("p", "test", "reviewed-v2");
-        p.outcomes = vec![EvalOutcome::fail(
-            "metric.x",
-            AxisId::Editorial,
-            "boom",
-        )];
+        p.outcomes = vec![EvalOutcome::fail("metric.x", AxisId::Editorial, "boom")];
         let r = run_with(p);
         let rep = build_report(&r);
         assert_eq!(rep.failures.len(), 1);

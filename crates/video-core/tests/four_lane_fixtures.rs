@@ -5,10 +5,10 @@
 //! native-renderer) against the frozen golden fixtures and confirm that
 //! the legacy `remotion` / `hyperframes` paths are no longer reachable.
 
-use video_core::creative_critic::{CreativeCritic, DeterministicVisualQa, AxisScore};
-use video_core::native_compositor::{NodeKind, NativeCompositor, RenderGraph, RenderNode};
-use video_core::render_graph_compiler::RenderGraphCompiler;
 use std::collections::BTreeMap;
+use video_core::creative_critic::{AxisScore, CreativeCritic, DeterministicVisualQa};
+use video_core::native_compositor::{NativeCompositor, NodeKind, RenderGraph, RenderNode};
+use video_core::render_graph_compiler::RenderGraphCompiler;
 
 fn source_graph() -> RenderGraph {
     RenderGraph {

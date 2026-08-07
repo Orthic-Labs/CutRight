@@ -37,7 +37,7 @@
    for what it visually is rather than what it used to be:
      cutting-room → Graphite  — neutral near-black ramp, warm-bone accent
                                  `#E6E1D8`. Purest monochrome, highest
-                                 contrast. Default register.
+                                 contrast. Locked product register.
      bench        → Tungsten  — same grey/black structure, whole ramp
                                  carries a barely-perceptible warm cast,
                                  low-saturation warm-bone accent `#D8C6AC`
@@ -46,15 +46,13 @@
                                  stays ~0 in Lab — verified, see design/
                                  REDESIGN-SPEC.md follow-up notes), pure
                                  white accent `#FFFFFF`. Most clinical.
-   RegisterSwitch.tsx renders "Graphite / Tungsten / Pewter" as the button
-   labels; ../types.ts's REGISTER_LABEL strings ("R1 · Cutting Room" etc.)
-   are legacy display text this pass does not own and are superseded by
-   that in-component override.
+   RegisterSwitch.tsx renders the locked Graphite label plus QA-only
+   Tungsten and Pewter labels from ../types.ts's REGISTER_LABEL map.
 
    This is a PURE TOKEN/THEME pass: structure (mode rail, Word-Locked
    Bench, receipt verdicts, transcript spine, two-zone status strip) is
    unchanged. Density and type are now IDENTICAL across all three variants
-   (Hanken Grotesk UI / Spline Sans Mono data / 12px / 1.35 leading / 52px
+   (Geist UI / Spline Sans Mono data / 12px / 1.35 leading / 52px
    rows) — R1's structural base, since Adrian's verdict was about base
    colour, not density, and the three new variants are explicitly grey-ramp
    siblings of one structure rather than three differently-dense registers.
@@ -88,9 +86,8 @@
    monitor... low-luminance base, no pure white, accent reserved for
    state").
 
-   Registers differ on base, accent, density, and type (spec's ≥2-axis
-   requirement, met on all four): R1 Cutting Room is the default until
-   Adrian locks one into brands.md via the QA-only RegisterSwitch.
+   Registers differ only in base and accent tokens: Graphite is the locked
+   default; Tungsten and Pewter remain QA-only regression themes.
 
    Type note (deviation, documented once here): the R2/R3 stacks reference
    "General Sans" and "JetBrains Mono" by name per the spec table. This repo
@@ -129,8 +126,8 @@
   background: var(--bg);
 }
 
-/* --- Graphite (was "R1 · Cutting Room") — neutral near-black, purest
-   monochrome, highest contrast. Default register. ---------------------- */
+/* --- Graphite — locked product register; neutral near-black, purest
+   monochrome, highest contrast. ---------------------------------------- */
 :root,
 :root[data-register="cutting-room"] {
   --bg: #0e0e0f;
@@ -144,7 +141,7 @@
   --accent: #e6e1d8;
   --accent-ink: #1b1916;
   --focus: #e6e1d8;
-  --font-ui: "Hanken Grotesk", ui-sans-serif, -apple-system, sans-serif;
+  --font-ui: "Geist", ui-sans-serif, -apple-system, sans-serif;
   --font-mono: "Spline Sans Mono", ui-monospace, monospace;
   --text-scale: 12px;
   --leading-base: 1.35;
@@ -169,7 +166,7 @@
   --accent: #d8c6ac;
   --accent-ink: #1c1712;
   --focus: #d8c6ac;
-  --font-ui: "Hanken Grotesk", ui-sans-serif, -apple-system, sans-serif;
+  --font-ui: "Geist", ui-sans-serif, -apple-system, sans-serif;
   --font-mono: "Spline Sans Mono", ui-monospace, monospace;
   --text-scale: 12px;
   --leading-base: 1.35;
@@ -195,7 +192,7 @@
   --accent: #ffffff;
   --accent-ink: #101110;
   --focus: #ffffff;
-  --font-ui: "Hanken Grotesk", ui-sans-serif, -apple-system, sans-serif;
+  --font-ui: "Geist", ui-sans-serif, -apple-system, sans-serif;
   --font-mono: "Spline Sans Mono", ui-monospace, monospace;
   --text-scale: 12px;
   --leading-base: 1.35;
@@ -1616,9 +1613,6 @@ mark.warn {
   color: var(--text);
   font-size: 13px;
   font-family: var(--font-mono);
-}
-.budget-input-wrap input:focus-visible {
-  outline: none;
 }
 .consent-toggle {
   min-width: 100px;

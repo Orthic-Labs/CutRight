@@ -79,12 +79,18 @@ mod tests {
                 Variant {
                     id: "v1".to_string(),
                     style_direction_id: "sd_a".to_string(),
-                    axis_tokens: BTreeMap::from([("palette.warmth".to_string(), "warm".to_string())]),
+                    axis_tokens: BTreeMap::from([(
+                        "palette.warmth".to_string(),
+                        "warm".to_string(),
+                    )]),
                 },
                 Variant {
                     id: "v2".to_string(),
                     style_direction_id: "sd_b".to_string(),
-                    axis_tokens: BTreeMap::from([("palette.warmth".to_string(), "cool".to_string())]),
+                    axis_tokens: BTreeMap::from([(
+                        "palette.warmth".to_string(),
+                        "cool".to_string(),
+                    )]),
                 },
             ],
             content_geometry_id: "cg_1".to_string(),

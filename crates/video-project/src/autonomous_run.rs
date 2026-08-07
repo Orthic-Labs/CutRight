@@ -39,10 +39,7 @@ impl ProjectAutonomousInputs {
     /// current escalations. Returns the requested mode unless a blocking
     /// escalation forces a downgrade, in which case it returns `"reviewed"`.
     pub fn effective_mode(&self) -> String {
-        let blocking = self
-            .escalations
-            .iter()
-            .any(|e| e.blocking);
+        let blocking = self.escalations.iter().any(|e| e.blocking);
         if blocking {
             "reviewed".to_string()
         } else {

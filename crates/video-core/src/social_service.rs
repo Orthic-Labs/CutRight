@@ -148,7 +148,10 @@ mod tests {
     fn rejects_over_max_duration() {
         let mut svc = SocialService::new();
         svc.load_profile(test_profile());
-        let err = svc.check_duration("ig.reels.v1", 95_000).err().expect("err");
+        let err = svc
+            .check_duration("ig.reels.v1", 95_000)
+            .err()
+            .expect("err");
         assert!(matches!(err, SocialError::ConstraintViolated(_)));
     }
 

@@ -250,19 +250,21 @@ impl ActionExecutor {
         let mut checked_actions: Vec<Action> = Vec::with_capacity(batch.actions.len());
         let mut failures: Vec<ReceiptFailure> = Vec::new();
         for (index, executor_action) in batch.actions.iter().enumerate() {
-            let cap_id = if video_capabilities::CapabilityId::is_well_formed(&executor_action.capability_id) {
-                video_capabilities::CapabilityId::new(&executor_action.capability_id)
-            } else {
-                failures.push(ReceiptFailure {
-                    code: FailureCode::UnknownActionKind,
-                    message: format!(
-                        "capability_id {:?} is not well-formed",
-                        executor_action.capability_id
-                    ),
-                    action_index: index,
-                });
-                continue;
-            };
+            let cap_id =
+                if video_capabilities::CapabilityId::is_well_formed(&executor_action.capability_id)
+                {
+                    video_capabilities::CapabilityId::new(&executor_action.capability_id)
+                } else {
+                    failures.push(ReceiptFailure {
+                        code: FailureCode::UnknownActionKind,
+                        message: format!(
+                            "capability_id {:?} is not well-formed",
+                            executor_action.capability_id
+                        ),
+                        action_index: index,
+                    });
+                    continue;
+                };
             let capability = match registry.capabilities.get(&cap_id) {
                 Some(cap) => cap,
                 None => {
@@ -277,7 +279,12 @@ impl ActionExecutor {
                     continue;
                 }
             };
-            match check_session(sessions, executor_action.session_binding_id.as_deref(), capability, index) {
+            match check_session(
+                sessions,
+                executor_action.session_binding_id.as_deref(),
+                capability,
+                index,
+            ) {
                 Ok(()) => {}
                 Err(failure) => failures.push(failure),
             }
@@ -293,10 +300,7 @@ impl ActionExecutor {
                 "target".to_string(),
                 serde_json::Value::String(executor_action.target.clone()),
             );
-            envelope.insert(
-                "params".to_string(),
-                executor_action.params.clone(),
-            );
+            envelope.insert("params".to_string(), executor_action.params.clone());
             match serde_json::from_value::<Action>(serde_json::Value::Object(envelope)) {
                 Ok(action) => checked_actions.push(action),
                 Err(err) => failures.push(ReceiptFailure {
@@ -360,10 +364,9 @@ impl ActionExecutor {
         )?;
         let (receipt, applied_flag) = match applied {
             video_actions::apply::ApplyOutcome::Applied { receipt, .. } => (receipt, true),
-            video_actions::apply::ApplyOutcome::Failed { batch_id, failures } => (
-                Receipt::failed(&batch_id, &batch_id, failures),
-                false,
-            ),
+            video_actions::apply::ApplyOutcome::Failed { batch_id, failures } => {
+                (Receipt::failed(&batch_id, &batch_id, failures), false)
+            }
         };
         Ok(ExecutorReport {
             schema: EXECUTOR_REPORT_SCHEMA.to_string(),

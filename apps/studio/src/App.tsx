@@ -34,14 +34,14 @@ export function App() {
       localStorage.getItem("cutright-theme") ??
       (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"),
   );
-  // Three parked register variants (redesign spec Phase 2), QA-only picker
-  // — see TitleBar/RegisterSwitch. R1 is the default until Adrian locks one
-  // into brands.md; a real user never sees the switcher (gated on `qaMode`
-  // from lib/api, the same flag the browser-QA fixture path uses).
+  // Graphite is the locked product register. The QA-only picker keeps
+  // Tungsten and Pewter available for token regression captures; a real user
+  // never sees it (gated on `qaMode` from lib/api).
   const [register, setRegister] = useState<Register>(
-    () =>
-      (new URLSearchParams(location.search).get("register") as Register) ||
-      "cutting-room",
+    () => qaMode
+      ? (new URLSearchParams(location.search).get("register") as Register) ||
+        "cutting-room"
+      : "cutting-room",
   );
   // Last swap's word-cut delta (word-lock.ts's `swapTarget().cut_count`),
   // shown at the bench switch's lock point — spec Phase 1's "3 words cut

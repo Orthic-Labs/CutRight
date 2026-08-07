@@ -107,7 +107,12 @@ impl EvalOutcome {
         }
     }
 
-    pub fn pass(metric_id: impl Into<String>, axis: AxisId, value: f64, unit: impl Into<String>) -> Self {
+    pub fn pass(
+        metric_id: impl Into<String>,
+        axis: AxisId,
+        value: f64,
+        unit: impl Into<String>,
+    ) -> Self {
         Self {
             metric_id: metric_id.into(),
             axis,
@@ -144,14 +149,14 @@ pub enum EvalError {
     InvalidInput(String),
 }
 
-pub mod speech;
-pub mod audio_visual;
 pub mod audio;
-pub mod visual;
-pub mod crop;
+pub mod audio_visual;
 pub mod collision;
-pub mod reliability;
+pub mod crop;
 pub mod editorial;
-pub mod runner;
-pub mod report;
 pub mod profile;
+pub mod reliability;
+pub mod report;
+pub mod runner;
+pub mod speech;
+pub mod visual;

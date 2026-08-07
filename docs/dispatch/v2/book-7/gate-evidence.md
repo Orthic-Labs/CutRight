@@ -20,18 +20,22 @@ is created alongside `final-gate.md`, `final-manifest.json` and
 
 ## Outcome
 
+Current repaired source is ready for build. These build-phase checks have not
+been rerun against a newly built candidate, so no pass is recorded here.
+
 | Check | Status |
 |---|---|
-| `python3 scripts/release/v2-audit.py --bundle release/v2/rc --out release/v2/audit-final` | pass |
-| `python3 scripts/qa/v2-clean-machine/run.py --target host --bundle release/v2/rc --result release/v2/clean-machine-final-host.json` | pass |
-| `bash scripts/gate.sh --with-qa` | pass |
-| `python3 scripts/release/v2-seal.py --checksums release/v2/rc --out release/v2/SHA256SUMS.txt` | pass |
+| `python3 scripts/release/v2-audit.py --bundle release/v2/rc --out release/v2/audit-final` | pending |
+| `python3 scripts/release/v2-seal.py --verify release/v2/rc` | pending |
+| `python3 scripts/qa/v2-clean-machine/run.py --target host --bundle release/v2/rc --result release/v2/clean-machine-final-host.json --fresh-os-user` | pending |
+| `bash scripts/gate.sh --with-qa` | pending |
+| `python3 scripts/release/v2-seal.py --checksums release/v2/rc --out release/v2/SHA256SUMS.txt` | pending |
 
 ## Targets
 
 | Target | Status | Checksum verified |
 |---|---|---|
-| host | pass | yes |
+| host | pending | pending |
 
 ## Evidence pointers
 

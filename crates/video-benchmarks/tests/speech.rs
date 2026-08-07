@@ -1,7 +1,7 @@
 // Tests for the speech preservation evaluator (Book 4 lane A, B4-007).
 use video_benchmarks::speech::{
-    evaluate_speech, is_word_kept, protected_interval, OutputMapping, Word, WordClippingEvaluator,
-    BoundaryConsensusEvaluator, DEFAULT_TOLERANCE_IN_MS, DEFAULT_TOLERANCE_OUT_MS,
+    evaluate_speech, is_word_kept, protected_interval, BoundaryConsensusEvaluator, OutputMapping,
+    Word, WordClippingEvaluator, DEFAULT_TOLERANCE_IN_MS, DEFAULT_TOLERANCE_OUT_MS,
 };
 use video_benchmarks::{BenchmarkEvaluator, EvalContext, MetricStatus};
 
@@ -80,7 +80,12 @@ fn is_word_kept_requires_fully_covering_mapping() {
         output_end_ms: 50,
         kept: true,
     }];
-    assert!(!is_word_kept(&word, &mappings_partial, DEFAULT_TOLERANCE_IN_MS, DEFAULT_TOLERANCE_OUT_MS));
+    assert!(!is_word_kept(
+        &word,
+        &mappings_partial,
+        DEFAULT_TOLERANCE_IN_MS,
+        DEFAULT_TOLERANCE_OUT_MS
+    ));
     let mappings_full = vec![OutputMapping {
         source_start_ms: 1000,
         source_end_ms: 1100,
@@ -88,7 +93,12 @@ fn is_word_kept_requires_fully_covering_mapping() {
         output_end_ms: 100,
         kept: true,
     }];
-    assert!(is_word_kept(&word, &mappings_full, DEFAULT_TOLERANCE_IN_MS, DEFAULT_TOLERANCE_OUT_MS));
+    assert!(is_word_kept(
+        &word,
+        &mappings_full,
+        DEFAULT_TOLERANCE_IN_MS,
+        DEFAULT_TOLERANCE_OUT_MS
+    ));
 }
 
 #[test]
@@ -101,7 +111,12 @@ fn dropped_mappings_never_count_as_kept() {
         output_end_ms: 100,
         kept: false,
     }];
-    assert!(!is_word_kept(&word, &mappings, DEFAULT_TOLERANCE_IN_MS, DEFAULT_TOLERANCE_OUT_MS));
+    assert!(!is_word_kept(
+        &word,
+        &mappings,
+        DEFAULT_TOLERANCE_IN_MS,
+        DEFAULT_TOLERANCE_OUT_MS
+    ));
 }
 
 #[test]

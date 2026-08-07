@@ -1,9 +1,9 @@
-use video_feedback::decision::{
-    compute_record_hash, hash_chain_zero, record_hash_mismatch, append_record,
-    DecisionRecord, DecisionTarget, DecisionAction, DecisionReason, DecisionAxis,
-    FormatKey, ReviewMode, UserOrigin, SessionOrigin,
-};
 use chrono::{TimeZone, Utc};
+use video_feedback::decision::{
+    append_record, compute_record_hash, hash_chain_zero, record_hash_mismatch, DecisionAction,
+    DecisionAxis, DecisionReason, DecisionRecord, DecisionTarget, FormatKey, ReviewMode,
+    SessionOrigin, UserOrigin,
+};
 
 fn sample_record() -> DecisionRecord {
     DecisionRecord {
@@ -11,9 +11,11 @@ fn sample_record() -> DecisionRecord {
         decision_id: String::new(),
         prev_hash: hash_chain_zero().to_string(),
         record_hash: String::new(),
-        project_instance_id: "1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+        project_instance_id: "1111111111111111111111111111111111111111111111111111111111111111"
+            .to_string(),
         project_revision: "rev-0000000000000001".to_string(),
-        subject_hash: "2222222222222222222222222222222222222222222222222222222222222222".to_string(),
+        subject_hash: "2222222222222222222222222222222222222222222222222222222222222222"
+            .to_string(),
         decision_target: DecisionTarget::Take,
         decision_action: DecisionAction::Approve,
         decision_reason: DecisionReason::TakeChoice,
@@ -25,13 +27,18 @@ fn sample_record() -> DecisionRecord {
             variant: "v1".to_string(),
         },
         pack_set_id: "creator-minimal".to_string(),
-        pack_set_fingerprint: "3333333333333333333333333333333333333333333333333333333333333333".to_string(),
+        pack_set_fingerprint: "3333333333333333333333333333333333333333333333333333333333333333"
+            .to_string(),
         app_version: "0.1.0".to_string(),
         user_origin: UserOrigin::UserReviewed,
         session_origin: SessionOrigin::StudioReview,
-        asset_hash: Some("4444444444444444444444444444444444444444444444444444444444444444".to_string()),
+        asset_hash: Some(
+            "4444444444444444444444444444444444444444444444444444444444444444".to_string(),
+        ),
         effect_id: None,
-        final_hash: Some("5555555555555555555555555555555555555555555555555555555555555555".to_string()),
+        final_hash: Some(
+            "5555555555555555555555555555555555555555555555555555555555555555".to_string(),
+        ),
         review_mode: ReviewMode::Reviewed,
         sample_count: 1,
         confidence: 0.91,
@@ -42,7 +49,11 @@ fn sample_record() -> DecisionRecord {
     }
 }
 
-fn make_record(target: DecisionTarget, reason: DecisionReason, axis: DecisionAxis) -> DecisionRecord {
+fn make_record(
+    target: DecisionTarget,
+    reason: DecisionReason,
+    axis: DecisionAxis,
+) -> DecisionRecord {
     let mut r = sample_record();
     r.decision_target = target;
     r.decision_reason = reason;
@@ -78,8 +89,16 @@ fn stale_subject_is_retained() {
 
 #[test]
 fn every_axis_is_distinguishable() {
-    let r_caption = make_record(DecisionTarget::Caption, DecisionReason::CaptionChoice, DecisionAxis::Caption);
-    let r_audio = make_record(DecisionTarget::Audio, DecisionReason::AudioChoice, DecisionAxis::Audio);
+    let r_caption = make_record(
+        DecisionTarget::Caption,
+        DecisionReason::CaptionChoice,
+        DecisionAxis::Caption,
+    );
+    let r_audio = make_record(
+        DecisionTarget::Audio,
+        DecisionReason::AudioChoice,
+        DecisionAxis::Audio,
+    );
     let h_caption = compute_record_hash(&r_caption);
     let h_audio = compute_record_hash(&r_audio);
     assert_ne!(h_caption, h_audio);

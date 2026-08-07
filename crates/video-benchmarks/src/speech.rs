@@ -65,7 +65,12 @@ pub fn protected_interval(word: &Word, tolerance_in: i64, tolerance_out: i64) ->
 }
 
 /// Check whether an output mapping keeps the protected interval intact.
-pub fn is_word_kept(word: &Word, mappings: &[OutputMapping], tolerance_in: i64, tolerance_out: i64) -> bool {
+pub fn is_word_kept(
+    word: &Word,
+    mappings: &[OutputMapping],
+    tolerance_in: i64,
+    tolerance_out: i64,
+) -> bool {
     let (start, end) = protected_interval(word, tolerance_in, tolerance_out);
     mappings
         .iter()
@@ -75,15 +80,13 @@ pub fn is_word_kept(word: &Word, mappings: &[OutputMapping], tolerance_in: i64, 
 
 /// Compute the per-evaluator speech preservation result.
 pub fn evaluate_speech(words: &[Word], mappings: &[OutputMapping]) -> SpeechResult {
-    let high_conf: Vec<&Word> = words
-        .iter()
-        .filter(|w| w.confidence >= 0.8)
-        .collect();
+    let high_conf: Vec<&Word> = words.iter().filter(|w| w.confidence >= 0.8).collect();
     let kept_count = high_conf.len();
     let mut clipped: Vec<ClippedWord> = Vec::new();
     let mut preserved = 0usize;
     for word in &high_conf {
-        let (start, end) = protected_interval(word, DEFAULT_TOLERANCE_IN_MS, DEFAULT_TOLERANCE_OUT_MS);
+        let (start, end) =
+            protected_interval(word, DEFAULT_TOLERANCE_IN_MS, DEFAULT_TOLERANCE_OUT_MS);
         let overlap = mappings
             .iter()
             .filter(|m| m.kept)
@@ -172,11 +175,6 @@ impl BenchmarkEvaluator for BoundaryConsensusEvaluator {
 
     fn evaluate(&self, ctx: &EvalContext) -> Result<EvalOutcome, EvalError> {
         let _ = ctx;
-        Ok(EvalOutcome::pass(
-            self.id(),
-            self.axis(),
-            1.0,
-            "ratio",
-        ))
+        Ok(EvalOutcome::pass(self.id(), self.axis(), 1.0, "ratio"))
     }
 }

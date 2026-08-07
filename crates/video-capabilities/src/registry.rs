@@ -230,8 +230,7 @@ impl RegistryDocument {
         }
 
         let mut seen: BTreeSet<(String, u32)> = BTreeSet::new();
-        let known_owners: BTreeSet<&'static str> =
-            KNOWN_OWNER_COMPONENTS.iter().copied().collect();
+        let known_owners: BTreeSet<&'static str> = KNOWN_OWNER_COMPONENTS.iter().copied().collect();
 
         for (index, cap) in self.capabilities.iter().enumerate() {
             if cap.schema != REGISTRY_SCHEMA {
@@ -359,8 +358,10 @@ pub fn build_registry(
         permission_sets,
     };
     // Ensure deterministic order for tests.
-    doc.capabilities.sort_by(|a, b| a.capability_id.cmp(&b.capability_id));
-    doc.permission_sets.sort_by(|a, b| a.permission_set_id.cmp(&b.permission_set_id));
+    doc.capabilities
+        .sort_by(|a, b| a.capability_id.cmp(&b.capability_id));
+    doc.permission_sets
+        .sort_by(|a, b| a.permission_set_id.cmp(&b.permission_set_id));
     doc.validate()?;
     Ok(doc.into_registry())
 }

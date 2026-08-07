@@ -250,11 +250,7 @@ impl StagedRevision {
     /// matching the `revision/v1` schema. Caller is responsible for writing
     /// it atomically and only after the active pointer is ready to be
     /// swapped (steps 4 + 6 of `V2-TRANSACTIONS-UNDO.md` §1).
-    pub fn commit(
-        &self,
-        created_at_ns: i64,
-        compatibility_fp: impl Into<String>,
-    ) -> Revision {
+    pub fn commit(&self, created_at_ns: i64, compatibility_fp: impl Into<String>) -> Revision {
         Revision {
             schema: REVISION_SCHEMA.to_string(),
             revision_id: self.staged_revision_id.clone(),
@@ -324,8 +320,7 @@ mod tests {
             "compatibility_fp": "deadbeefcafebabe1234567890abcdef",
             "rogue": true,
         });
-        serde_json::from_value::<Revision>(bogus)
-            .expect_err("unknown field must fail closed");
+        serde_json::from_value::<Revision>(bogus).expect_err("unknown field must fail closed");
     }
 
     #[test]

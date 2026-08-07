@@ -260,12 +260,10 @@ impl LogWriter {
         let mut line_number: u64 = 0;
         loop {
             line.clear();
-            let n = reader
-                .read_line(&mut line)
-                .map_err(|source| LogError::Io {
-                    path: path.to_path_buf(),
-                    source,
-                })?;
+            let n = reader.read_line(&mut line).map_err(|source| LogError::Io {
+                path: path.to_path_buf(),
+                source,
+            })?;
             if n == 0 {
                 break;
             }
@@ -292,11 +290,7 @@ impl LogWriter {
     /// `payload` is any `Serialize` value. The chain hash is computed from
     /// the previous tail hash (or the zero hash, for the first record) and
     /// the JSON encoding of the payload. The seq is `prev_seq + 1`.
-    pub fn append<T: Serialize>(
-        &self,
-        kind: LogKind,
-        payload: &T,
-    ) -> Result<LogRecord, LogError> {
+    pub fn append<T: Serialize>(&self, kind: LogKind, payload: &T) -> Result<LogRecord, LogError> {
         let _ = self.ensure_logs_dir()?;
         let path = self.log_path(kind);
         let (prev_seq, prev_hash) = self.tail(&path)?;
@@ -322,10 +316,11 @@ impl LogWriter {
                 source,
             })?;
         exclusive_lock(&file, &path)?;
-        file.write_all(line.as_bytes()).map_err(|source| LogError::Io {
-            path: path.clone(),
-            source,
-        })?;
+        file.write_all(line.as_bytes())
+            .map_err(|source| LogError::Io {
+                path: path.clone(),
+                source,
+            })?;
         file.flush().map_err(|source| LogError::Io {
             path: path.clone(),
             source,
@@ -372,13 +367,12 @@ impl LogReader {
             if line.is_empty() {
                 continue;
             }
-            let record: LogRecord = serde_json::from_slice(line).map_err(|err| {
-                LogError::Malformed {
+            let record: LogRecord =
+                serde_json::from_slice(line).map_err(|err| LogError::Malformed {
                     path: path.clone(),
                     line_number: (idx as u64) + 1,
                     message: err.to_string(),
-                }
-            })?;
+                })?;
             records.push(record);
         }
         Ok(records)
@@ -503,10 +497,13 @@ impl LogVerifier {
             path: path.clone(),
             source,
         })?;
-        let len = file.metadata().map_err(|source| LogError::Io {
-            path: path.clone(),
-            source,
-        })?.len();
+        let len = file
+            .metadata()
+            .map_err(|source| LogError::Io {
+                path: path.clone(),
+                source,
+            })?
+            .len();
         if len == 0 {
             return Ok(LogVerifierReport {
                 kind,
@@ -662,7 +659,10 @@ mod tests {
         fs::write(&path, new_bytes).expect("write tampered");
 
         let report = verifier.verify(LogKind::Actions).expect("verify");
-        assert!(matches!(report.outcome, LogVerifierOutcome::HashMismatch { .. }));
+        assert!(matches!(
+            report.outcome,
+            LogVerifierOutcome::HashMismatch { .. }
+        ));
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -673,10 +673,16 @@ mod tests {
         let verifier = LogVerifier::new(&dir);
 
         writer
-            .append(LogKind::Decisions, &serde_json::json!({"decision": "accept"}))
+            .append(
+                LogKind::Decisions,
+                &serde_json::json!({"decision": "accept"}),
+            )
             .expect("a");
         writer
-            .append(LogKind::Decisions, &serde_json::json!({"decision": "reject"}))
+            .append(
+                LogKind::Decisions,
+                &serde_json::json!({"decision": "reject"}),
+            )
             .expect("b");
 
         let path = writer.log_path(LogKind::Decisions);
@@ -693,7 +699,10 @@ mod tests {
         let tail = verifier
             .detect_truncated_tail(LogKind::Decisions)
             .expect("tail");
-        assert!(matches!(tail.outcome, LogVerifierOutcome::TruncatedTail { .. }));
+        assert!(matches!(
+            tail.outcome,
+            LogVerifierOutcome::TruncatedTail { .. }
+        ));
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -731,7 +740,10 @@ mod tests {
         fs::write(&path, final_bytes).expect("write replayed");
 
         let report = verifier.verify(LogKind::Audit).expect("verify");
-        assert!(matches!(report.outcome, LogVerifierOutcome::OutOfOrder { .. }));
+        assert!(matches!(
+            report.outcome,
+            LogVerifierOutcome::OutOfOrder { .. }
+        ));
         let _ = fs::remove_dir_all(&dir);
     }
 

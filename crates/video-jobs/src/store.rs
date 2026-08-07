@@ -137,10 +137,7 @@ impl JobRecord {
 /// Persistent store errors.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StoreError {
-    IllegalTransition {
-        from: StageState,
-        to: StageState,
-    },
+    IllegalTransition { from: StageState, to: StageState },
     UnknownJob(JobId),
     UnknownStage(StageId),
 }

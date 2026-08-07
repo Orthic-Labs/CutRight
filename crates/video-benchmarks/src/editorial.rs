@@ -133,10 +133,7 @@ mod tests {
 
     #[test]
     fn split_disagreement_higher() {
-        let v = vec![
-            ann("a", "b1", "hook", None),
-            ann("c", "b1", "payoff", None),
-        ];
+        let v = vec![ann("a", "b1", "hook", None), ann("c", "b1", "payoff", None)];
         assert!(disagreement_score(&v) > 0.4);
     }
 

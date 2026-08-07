@@ -3,7 +3,7 @@
   "effects": [
     {
       "effect_id": "caption.bold-karaoke.v1",
-      "renderer": "ass",
+      "renderer": "native",
       "schema_version": 1,
       "props_schema": {
         "type": "object",
@@ -40,7 +40,7 @@
     },
     {
       "effect_id": "lower-third.identity-card.v1",
-      "renderer": "remotion",
+      "renderer": "native",
       "schema_version": 1,
       "props_schema": {
         "type": "object",
@@ -83,7 +83,7 @@
     },
     {
       "effect_id": "stat-counter.v1",
-      "renderer": "remotion",
+      "renderer": "native",
       "schema_version": 1,
       "props_schema": {
         "type": "object",
@@ -127,7 +127,7 @@
     },
     {
       "effect_id": "quote-card.v1",
-      "renderer": "remotion",
+      "renderer": "native",
       "schema_version": 1,
       "props_schema": {
         "type": "object",
@@ -170,7 +170,7 @@
     },
     {
       "effect_id": "cta-end-card.v1",
-      "renderer": "remotion",
+      "renderer": "native",
       "schema_version": 1,
       "props_schema": {
         "type": "object",
@@ -210,6 +210,116 @@
         "kind": "static-fallback",
         "description": "End card appears fully composited at full opacity from frame zero instead of fading in."
       }
+    },
+    {
+      "effect_id": "caption.vertical-phrase.v1",
+      "renderer": "native",
+      "schema_version": 1,
+      "props_schema": {"type":"object","additionalProperties":false,"required":["text","accent_color"],"properties":{"text":{"type":"string"},"accent_color":{"type":"string"}}},
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "restrained",
+      "preview_fixture": {"still":"fixtures/effects/caption.vertical-phrase.v1/still.png","motion":"fixtures/effects/caption.vertical-phrase.v1/motion.mp4"},
+      "footprint":{"top_pct":30,"bottom_pct":25,"left_pct":10,"right_pct":10},
+      "reduced_motion":{"kind":"static-fallback","description":"Phrase is fully visible from frame zero instead of entering."}
+    },
+    {
+      "effect_id": "hook.pullback.v1",
+      "renderer": "native",
+      "schema_version": 1,
+      "props_schema": {"type":"object","additionalProperties":false,"required":["scale_from"],"properties":{"scale_from":{"type":"number","minimum":1,"maximum":1.5}}},
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "expressive",
+      "preview_fixture": {"still":"fixtures/effects/hook.pullback.v1/still.png","motion":"fixtures/effects/hook.pullback.v1/motion.mp4"},
+      "footprint":{"top_pct":20,"bottom_pct":25,"left_pct":10,"right_pct":10},
+      "reduced_motion":{"kind":"static-fallback","description":"Locked framing renders without pull-back motion."}
+    },
+    {
+      "effect_id": "punch.wave.v1",
+      "renderer": "native",
+      "schema_version": 1,
+      "props_schema": {"type":"object","additionalProperties":false,"required":["peak_scale"],"properties":{"peak_scale":{"type":"number","minimum":1,"maximum":1.5}}},
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "expressive",
+      "preview_fixture": {"still":"fixtures/effects/punch.wave.v1/still.png","motion":"fixtures/effects/punch.wave.v1/motion.mp4"},
+      "footprint":{"top_pct":20,"bottom_pct":25,"left_pct":10,"right_pct":10},
+      "reduced_motion":{"kind":"static-fallback","description":"Peak framing renders without punch-wave motion."}
+    },
+    {
+      "effect_id": "pushin.biased-center.v1",
+      "renderer": "native",
+      "schema_version": 1,
+      "props_schema": {"type":"object","additionalProperties":false,"required":["scale_to","anchor_x"],"properties":{"scale_to":{"type":"number","minimum":1,"maximum":1.3},"anchor_x":{"type":"number","minimum":0,"maximum":1}}},
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "restrained",
+      "preview_fixture": {"still":"fixtures/effects/pushin.biased-center.v1/still.png","motion":"fixtures/effects/pushin.biased-center.v1/motion.mp4"},
+      "footprint":{"top_pct":20,"bottom_pct":25,"left_pct":10,"right_pct":10},
+      "reduced_motion":{"kind":"static-fallback","description":"Final framing renders without push-in motion."}
+    },
+    {
+      "effect_id": "text.bloom-reveal.v1",
+      "renderer": "native",
+      "schema_version": 1,
+      "props_schema": {"type":"object","additionalProperties":false,"required":["text","accent_color"],"properties":{"text":{"type":"string"},"accent_color":{"type":"string"}}},
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "restrained",
+      "preview_fixture": {"still":"fixtures/effects/text.bloom-reveal.v1/still.png","motion":"fixtures/effects/text.bloom-reveal.v1/motion.mp4"},
+      "footprint":{"top_pct":30,"bottom_pct":25,"left_pct":10,"right_pct":10},
+      "reduced_motion":{"kind":"static-fallback","description":"Text renders fully sharp at frame zero."}
+    },
+    {
+      "effect_id": "authority.stack.v1",
+      "renderer": "native",
+      "schema_version": 1,
+      "props_schema": {"type":"object","additionalProperties":false,"required":["headline","accent_color"],"properties":{"headline":{"type":"string"},"detail":{"type":"string"},"accent_color":{"type":"string"}}},
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "restrained",
+      "preview_fixture": {"still":"fixtures/effects/authority.stack.v1/still.png","motion":"fixtures/effects/authority.stack.v1/motion.mp4"},
+      "footprint":{"top_pct":25,"bottom_pct":25,"left_pct":10,"right_pct":10},
+      "reduced_motion":{"kind":"static-fallback","description":"All stack lines render together without stagger."}
+    },
+    {
+      "effect_id": "cutaway.payoff.v1",
+      "renderer": "native",
+      "schema_version": 1,
+      "props_schema": {"type":"object","additionalProperties":false,"required":["asset_label","accent_color"],"properties":{"asset_label":{"type":"string"},"accent_color":{"type":"string"}}},
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "restrained",
+      "preview_fixture": {"still":"fixtures/effects/cutaway.payoff.v1/still.png","motion":"fixtures/effects/cutaway.payoff.v1/motion.mp4"},
+      "footprint":{"top_pct":20,"bottom_pct":25,"left_pct":10,"right_pct":10},
+      "reduced_motion":{"kind":"static-fallback","description":"Cutaway card holds static instead of transitioning."}
+    },
+    {
+      "effect_id": "audio.sync.v1",
+      "renderer": "native",
+      "schema_version": 1,
+      "props_schema": {"type":"object","additionalProperties":false,"required":["event_ms","accent_color"],"properties":{"event_ms":{"type":"number","minimum":0},"accent_color":{"type":"string"}}},
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "expressive",
+      "preview_fixture": {"still":"fixtures/effects/audio.sync.v1/still.png","motion":"fixtures/effects/audio.sync.v1/motion.mp4"},
+      "footprint":{"top_pct":25,"bottom_pct":25,"left_pct":10,"right_pct":10},
+      "reduced_motion":{"kind":"static-fallback","description":"Event marker stays visible without pulse."}
+    },
+    {
+      "effect_id": "sfx.peak-align.v1",
+      "renderer": "native",
+      "schema_version": 1,
+      "props_schema": {"type":"object","additionalProperties":false,"required":["peak_ms"],"properties":{"peak_ms":{"type":"number","minimum":0}}},
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "static",
+      "preview_fixture": {"still":"fixtures/effects/sfx.peak-align.v1/still.png","motion":null},
+      "footprint":{"top_pct":25,"bottom_pct":25,"left_pct":10,"right_pct":10},
+      "reduced_motion":{"kind":"not-meaningful"}
+    },
+    {
+      "effect_id": "transition.hard-cut.v1",
+      "renderer": "native",
+      "schema_version": 1,
+      "props_schema": {"type":"object","additionalProperties":false,"required":["accent_color"],"properties":{"accent_color":{"type":"string"}}},
+      "safe_zones": ["youtube-lower-third", "vertical-bottom"],
+      "motion_profile": "static",
+      "preview_fixture": {"still":"fixtures/effects/transition.hard-cut.v1/still.png","motion":null},
+      "footprint":{"top_pct":25,"bottom_pct":25,"left_pct":10,"right_pct":10},
+      "reduced_motion":{"kind":"not-meaningful"}
     }
   ]
 }

@@ -135,7 +135,9 @@ mod tests {
     fn critic_requires_qa_pass() {
         let mut qa = DeterministicVisualQa::run("fpl_1").expect("ok");
         qa.verdict = Verdict::Blocked;
-        let err = CreativeCritic::run("fpl_1", &qa, BTreeMap::new()).err().expect("err");
+        let err = CreativeCritic::run("fpl_1", &qa, BTreeMap::new())
+            .err()
+            .expect("err");
         assert!(matches!(err, CriticError::QaNotPassed(_)));
     }
 

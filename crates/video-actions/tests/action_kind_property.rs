@@ -7,8 +7,7 @@ use serde_json::{json, Value};
 use video_actions::{Action, ACTION_KINDS};
 
 fn unknown_kinds() -> Vec<&'static str> {
-    let known: std::collections::HashSet<&'static str> =
-        ACTION_KINDS.iter().copied().collect();
+    let known: std::collections::HashSet<&'static str> = ACTION_KINDS.iter().copied().collect();
     // A small alphabet of strings that should all be rejected.
     let candidates = [
         "",

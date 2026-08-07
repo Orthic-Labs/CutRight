@@ -76,7 +76,11 @@ impl fmt::Display for DriftReport {
         writeln!(f, "  canonical count: {}", self.canonical.len())?;
         writeln!(f, "  referenced count: {}", self.referenced.len())?;
         writeln!(f, "  unknown references: {:?}", self.unknown_references)?;
-        writeln!(f, "  unreferenced (warning): {:?}", self.unreferenced_capabilities)?;
+        writeln!(
+            f,
+            "  unreferenced (warning): {:?}",
+            self.unreferenced_capabilities
+        )?;
         for drift in &self.generated_artifacts_drift {
             writeln!(
                 f,

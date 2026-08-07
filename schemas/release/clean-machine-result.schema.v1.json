@@ -1,56 +1,16 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://cutright.local/schemas/release/clean-machine-result.schema.v1.json",
-  "title": "CutRight v2 clean-machine result",
-  "description": "Result emitted by scripts/qa/v2-clean-machine/run.py on a fresh, blocked-network target.",
+  "title": "CutRight v2 exact-RC clean-machine result",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "target",
-    "ran_at",
-    "platform",
-    "external_runtime_dependencies",
-    "network_attempts",
-    "ci",
-    "publish",
-    "upload_status",
-    "overall_passed",
-    "checks"
-  ],
+  "required": ["schema_version", "target", "ran_at", "platform", "preconditions", "external_runtime_dependencies", "network_attempts", "ci", "publish", "upload_status", "overall_passed", "checks", "sample_results", "blocked_by"],
   "properties": {
-    "schema_version": {"const": "v2"},
-    "target": {"type": "string"},
-    "ran_at": {"type": "string", "format": "date-time"},
-    "platform": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["system", "release", "machine", "python"],
-      "properties": {
-        "system": {"type": "string"},
-        "release": {"type": "string"},
-        "machine": {"type": "string"},
-        "python": {"type": "string"}
-      }
-    },
-    "external_runtime_dependencies": {"type": "integer", "minimum": 0},
-    "network_attempts": {"type": "integer", "minimum": 0},
-    "ci": {"type": "string", "enum": ["forbidden", "absent", "permitted"]},
-    "publish": {"type": "boolean"},
-    "upload_status": {"type": "string"},
-    "overall_passed": {"type": "boolean"},
-    "checks": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["check", "passed", "evidence"],
-        "properties": {
-          "check": {"type": "string"},
-          "passed": {"type": "boolean"},
-          "evidence": {"type": "object"}
-        }
-      }
-    }
+    "schema_version": {"const": "v2"}, "target": {"type": "string", "minLength": 1}, "ran_at": {"type": "string"},
+    "platform": {"type": "object", "additionalProperties": false, "required": ["system", "release", "machine", "python"], "properties": {"system": {"type": "string"}, "release": {"type": "string"}, "machine": {"type": "string"}, "python": {"type": "string"}}},
+    "preconditions": {"type": "object", "additionalProperties": false, "required": ["fresh_os_user", "isolated_runner", "runtime_path", "blocked_network"], "properties": {"fresh_os_user": {"type": "boolean"}, "isolated_runner": {"type": "boolean"}, "runtime_path": {"const": ""}, "blocked_network": {"type": "object", "additionalProperties": false, "required": ["enforced", "mechanism", "policy", "network_attempt_total"], "properties": {"enforced": {"type": "boolean"}, "mechanism": {"type": "string"}, "policy": {"type": "string"}, "network_attempt_total": {"const": 0}}}}},
+    "external_runtime_dependencies": {"const": 0}, "network_attempts": {"type": "integer", "minimum": 0}, "ci": {"const": "forbidden"}, "publish": {"const": false}, "upload_status": {"const": "not_performed"}, "overall_passed": {"type": "boolean"}, "blocked_by": {"type": ["string", "null"]},
+    "checks": {"type": "array", "minItems": 7, "items": {"type": "object", "additionalProperties": false, "required": ["check", "passed", "evidence"], "properties": {"check": {"type": "string"}, "passed": {"type": "boolean"}, "evidence": {"type": "object"}}}},
+    "sample_results": {"type": "array", "minItems": 4, "items": {"type": "object", "additionalProperties": false, "required": ["sample", "lane", "outcome", "reason", "command", "exit_code", "network_attempt_total", "pack_ids", "lifecycle"], "properties": {"sample": {"type": "string"}, "lane": {"type": "string"}, "outcome": {"enum": ["ready_review", "failed", "not_run"]}, "reason": {"type": "string"}, "command": {"type": "array", "items": {"type": "string"}}, "exit_code": {"type": ["integer", "null"]}, "network_attempt_total": {"type": "integer", "minimum": 0}, "pack_ids": {"type": "array", "items": {"type": "string"}}, "lifecycle": {"type": "object", "additionalProperties": false, "required": ["correction_undo", "restart_resume", "repair_rollback", "uninstall_preservation"], "properties": {"correction_undo": {"type": "boolean"}, "restart_resume": {"type": "boolean"}, "repair_rollback": {"type": "boolean"}, "uninstall_preservation": {"type": "boolean"}}}}}}
   }
 }

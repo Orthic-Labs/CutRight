@@ -27,7 +27,10 @@ pub mod registry;
 #[path = "generated.rs"]
 mod generated_inner;
 
-pub use codegen::{generate_all, render_mcp_tool_registry, render_rust_enum, render_typescript, CodegenError, GENERATOR_SCHEMA};
+pub use codegen::{
+    generate_all, render_mcp_tool_registry, render_rust_enum, render_typescript, CodegenError,
+    GENERATOR_SCHEMA,
+};
 pub use error::{RegistryError, RegistryResult};
 pub use generated_inner::generated;
 pub use permission::{PermissionGrant, PermissionSet, PermissionSetId, Scope, SCOPES};

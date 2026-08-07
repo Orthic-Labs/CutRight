@@ -136,21 +136,14 @@ impl TargetRef {
     /// The kind component of the target id.
     pub fn kind(&self) -> TargetKind {
         // SAFETY: `TargetRef::new` validated the prefix kind.
-        let kind_str = self
-            .0
-            .split_once(':')
-            .map(|(k, _)| k)
-            .unwrap_or("");
+        let kind_str = self.0.split_once(':').map(|(k, _)| k).unwrap_or("");
         TargetKind::parse(kind_str).expect("TargetRef invariant: validated kind prefix")
     }
 
     /// The local id portion (after the `:` separator).
     pub fn local(&self) -> &str {
         // SAFETY: `TargetRef::new` validated the suffix as non-empty.
-        self.0
-            .split_once(':')
-            .map(|(_, l)| l)
-            .unwrap_or("")
+        self.0.split_once(':').map(|(_, l)| l).unwrap_or("")
     }
 
     /// Borrow the full wire string (e.g. `"clip:clip_5"`).
@@ -613,7 +606,8 @@ mod tests {
                 source_batch_id: "batch_0001".into(),
             },
         };
-        let decoded: Action = serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
+        let decoded: Action =
+            serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
         assert_eq!(decoded, action);
     }
 
@@ -629,7 +623,8 @@ mod tests {
                 new_start_ns: 5_000,
             },
         };
-        let decoded: Action = serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
+        let decoded: Action =
+            serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
         assert_eq!(decoded, action);
     }
 
@@ -645,7 +640,8 @@ mod tests {
                 replacement_clip_id: "clip_alt_9".into(),
             },
         };
-        let decoded: Action = serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
+        let decoded: Action =
+            serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
         assert_eq!(decoded, action);
     }
 
@@ -662,7 +658,8 @@ mod tests {
                 speed_den: 2,
             },
         };
-        let decoded: Action = serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
+        let decoded: Action =
+            serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
         assert_eq!(decoded, action);
     }
 
@@ -678,7 +675,8 @@ mod tests {
                 text: "Today we ship.".into(),
             },
         };
-        let decoded: Action = serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
+        let decoded: Action =
+            serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
         assert_eq!(decoded, action);
     }
 
@@ -694,7 +692,8 @@ mod tests {
                 graphic_id: "graphic_logo".into(),
             },
         };
-        let decoded: Action = serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
+        let decoded: Action =
+            serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
         assert_eq!(decoded, action);
     }
 
@@ -710,7 +709,8 @@ mod tests {
                 gain: 1.5,
             },
         };
-        let decoded: Action = serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
+        let decoded: Action =
+            serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
         assert_eq!(decoded, action);
     }
 
@@ -726,7 +726,8 @@ mod tests {
                 lut_id: "lut_cinematic_v3".into(),
             },
         };
-        let decoded: Action = serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
+        let decoded: Action =
+            serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
         assert_eq!(decoded, action);
     }
 
@@ -743,7 +744,8 @@ mod tests {
                 white_balance_kelvin: 200,
             },
         };
-        let decoded: Action = serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
+        let decoded: Action =
+            serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
         assert_eq!(decoded, action);
     }
 
@@ -756,7 +758,8 @@ mod tests {
                 target_revision: Some("rev_0042".into()),
             },
         };
-        let decoded: Action = serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
+        let decoded: Action =
+            serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
         assert_eq!(decoded, action);
     }
 
@@ -769,7 +772,8 @@ mod tests {
                 value: "autonomous".into(),
             },
         };
-        let decoded: Action = serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
+        let decoded: Action =
+            serde_json::from_value(serde_json::to_value(&action).unwrap()).unwrap();
         assert_eq!(decoded, action);
     }
 
@@ -783,7 +787,8 @@ mod tests {
         let err = serde_json::from_value::<Action>(bogus).unwrap_err();
         // Serde emits "unknown variant" for internally-tagged enums.
         assert!(
-            err.to_string().contains("unknown variant") || err.to_string().contains("no.such.action"),
+            err.to_string().contains("unknown variant")
+                || err.to_string().contains("no.such.action"),
             "unexpected error: {err}"
         );
     }

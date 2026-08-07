@@ -7,6 +7,15 @@ use std::path::{Path, PathBuf};
 use video_core::{
     models::SCHEMA_VERSION, CandidateManifest, CutPlan, CutSegment, SourceManifest, VadSignal, Word,
 };
+use video_editorial::rough_cut::SemanticEditorialPlan;
+
+#[derive(Debug)]
+struct PlannedCandidate<'a> {
+    candidate: &'a video_core::Candidate,
+    start_ms: i64,
+    end_ms: i64,
+    reason: String,
+}
 
 pub fn build_cut_plan(
     project_path: &Path,
@@ -29,6 +38,8 @@ pub fn build_cut_plan(
             "candidate pass must produce at least one candidate before rendering".into(),
         ));
     }
+    let editorial_path = project_path.join("edit/editorial-plan.json");
+    let planned_candidates = semantic_candidates(&candidates, &editorial_path, variant)?;
     let vad_by_source = sources
         .sources
         .iter()
@@ -45,11 +56,8 @@ pub fn build_cut_plan(
         .collect::<Result<std::collections::HashMap<_, _>, ProjectError>>()?;
     let transcripts = load_transcripts(project_path)?;
     let mut segments = Vec::new();
-    for candidate in candidates
-        .candidates
-        .iter()
-        .filter(|candidate| candidate.drop_reason.is_none())
-    {
+    for planned in planned_candidates {
+        let candidate = planned.candidate;
         let source_duration = sources
             .sources
             .iter()
@@ -59,7 +67,7 @@ pub fn build_cut_plan(
             .iter()
             .filter(|transcript| transcript.source_id == candidate.source_id)
             .flat_map(|transcript| transcript.words.iter())
-            .filter(|word| word.end_ms > candidate.start_ms && word.start_ms < candidate.end_ms)
+            .filter(|word| word.end_ms > planned.start_ms && word.start_ms < planned.end_ms)
             .collect();
         candidate_words.sort_by_key(|word| word.start_ms);
         let chunks = candidate_chunks(
@@ -75,7 +83,7 @@ pub fn build_cut_plan(
                 ProjectError::InvalidState(format!("missing VAD for {}", candidate.source_id))
             })?;
             let (speech_start, speech_end) =
-                vad_adjusted_bounds(candidate.start_ms, candidate.end_ms, vad);
+                vad_adjusted_bounds(planned.start_ms, planned.end_ms, vad);
             let start = speech_start.saturating_sub(head_margin_ms).max(0);
             let mut end = speech_end.saturating_add(tail_margin_ms);
             if let Some(duration) = source_duration {
@@ -93,7 +101,7 @@ pub fn build_cut_plan(
                     source_id: candidate.source_id.clone(),
                     source_start_ms: start,
                     source_end_ms: end,
-                    reason: format!("{}:{}", variant, candidate.beat_label),
+                    reason: planned.reason.clone(),
                 });
             }
         } else {
@@ -103,7 +111,7 @@ pub fn build_cut_plan(
                     source_id: candidate.source_id.clone(),
                     source_start_ms: start,
                     source_end_ms: end,
-                    reason: format!("{}:{}", variant, candidate.beat_label),
+                    reason: planned.reason.clone(),
                 });
             }
         }
@@ -136,6 +144,9 @@ pub fn build_cut_plan(
         )?;
         let candidates_path = project_path.join("edit/candidates.json");
         let mut input_paths: Vec<PathBuf> = vec![candidates_path];
+        if editorial_path.is_file() {
+            input_paths.push(editorial_path);
+        }
         for source in &sources.sources {
             input_paths.push(project_path.join(format!("analysis/vad-{}.json", source.source_id)));
         }
@@ -160,6 +171,69 @@ pub fn build_cut_plan(
         path,
         count: if dry_run { 0 } else { segment_count },
     })
+}
+
+/// Use an explicitly evidenced editorial red thread when one is present. The
+/// old candidate order remains a deterministic fallback only when no editorial
+/// plan has been produced yet. Present-but-invalid evidence never becomes a
+/// guessed cut: it returns the existing stage error with a reviewable state.
+fn semantic_candidates<'a>(
+    candidates: &'a CandidateManifest,
+    editorial_path: &Path,
+    variant: &str,
+) -> Result<Vec<PlannedCandidate<'a>>, ProjectError> {
+    if !editorial_path.is_file() {
+        return Ok(candidates
+            .candidates
+            .iter()
+            .filter(|candidate| candidate.drop_reason.is_none())
+            .map(|candidate| PlannedCandidate {
+                candidate,
+                start_ms: candidate.start_ms,
+                end_ms: candidate.end_ms,
+                reason: format!("{variant}:{}", candidate.beat_label),
+            })
+            .collect());
+    }
+    let plan: SemanticEditorialPlan = read_json(editorial_path).map_err(|error| {
+        ProjectError::InvalidState(format!(
+            "editorial evidence is unproven; manual_review_required: {error}"
+        ))
+    })?;
+    let beats = plan.select_beats().map_err(|error| {
+        ProjectError::InvalidState(format!(
+            "editorial evidence is unproven; manual_review_required: {error}"
+        ))
+    })?;
+    let mut selected = Vec::new();
+    for beat in beats {
+        let candidate = candidates
+            .candidates
+            .iter()
+            .find(|candidate| candidate.id == beat.selected_take)
+            .filter(|candidate| candidate.drop_reason.is_none())
+            .ok_or_else(|| {
+                ProjectError::InvalidState(format!(
+                    "editorial evidence is unproven; manual_review_required: beat {} selects unavailable take {}",
+                    beat.beat_id, beat.selected_take
+                ))
+            })?;
+        for [start_ms, end_ms] in beat.source_ranges {
+            if start_ms < candidate.start_ms || end_ms > candidate.end_ms {
+                return Err(ProjectError::InvalidState(format!(
+                    "editorial evidence is unproven; manual_review_required: beat {} range {}..{} is outside selected take {}",
+                    beat.beat_id, start_ms, end_ms, candidate.id
+                )));
+            }
+            selected.push(PlannedCandidate {
+                candidate,
+                start_ms,
+                end_ms,
+                reason: format!("{variant}:semantic:{}:{}", beat.beat_id, beat.label),
+            });
+        }
+    }
+    Ok(selected)
 }
 
 fn vad_adjusted_bounds(start_ms: i64, end_ms: i64, vad: &VadSignal) -> (i64, i64) {
@@ -286,6 +360,106 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn semantic_plan_selects_evidenced_red_thread_in_declared_order() {
+        let temp = tempfile::tempdir().unwrap();
+        let candidates = CandidateManifest {
+            schema_version: SCHEMA_VERSION,
+            candidates: vec![
+                Candidate {
+                    id: "take-hook".into(),
+                    source_id: "source-a".into(),
+                    start_ms: 0,
+                    end_ms: 1_000,
+                    text: "hook".into(),
+                    beat_label: "incidental".into(),
+                    take_rank: 1,
+                    drop_reason: None,
+                    filler_count: 0,
+                },
+                Candidate {
+                    id: "take-payoff".into(),
+                    source_id: "source-a".into(),
+                    start_ms: 1_000,
+                    end_ms: 2_000,
+                    text: "payoff".into(),
+                    beat_label: "incidental".into(),
+                    take_rank: 2,
+                    drop_reason: None,
+                    filler_count: 0,
+                },
+            ],
+        };
+        let path = temp.path().join("editorial-plan.json");
+        write_json_atomic(&path, &serde_json::json!({
+            "schema_version": 2,
+            "beats": [
+                { "beat_id": "hook", "label": "hook", "selected_take": "take-hook", "confidence": 0.9, "evidence": [{ "source_range": [100, 400] }] },
+                { "beat_id": "payoff", "label": "payoff", "selected_take": "take-payoff", "confidence": 0.9, "evidence": [{ "source_range": [1200, 1800] }] }
+            ],
+            "order": ["payoff", "hook"],
+            "chronological_status": "truthful_with_disclosed_reorder",
+            "review_flags": []
+        })).unwrap();
+
+        let selected = semantic_candidates(&candidates, &path, "tight").unwrap();
+        assert_eq!(selected.len(), 2);
+        assert_eq!(selected[0].candidate.id, "take-payoff");
+        assert_eq!((selected[0].start_ms, selected[0].end_ms), (1_200, 1_800));
+        assert_eq!(selected[0].reason, "tight:semantic:payoff:payoff");
+        assert_eq!(selected[1].candidate.id, "take-hook");
+    }
+
+    #[test]
+    fn missing_editorial_plan_uses_deterministic_candidate_fallback() {
+        let temp = tempfile::tempdir().unwrap();
+        let candidates = CandidateManifest {
+            schema_version: SCHEMA_VERSION,
+            candidates: vec![Candidate {
+                id: "take-1".into(),
+                source_id: "source-a".into(),
+                start_ms: 0,
+                end_ms: 1_000,
+                text: "fallback".into(),
+                beat_label: "hook".into(),
+                take_rank: 1,
+                drop_reason: None,
+                filler_count: 0,
+            }],
+        };
+        let selected =
+            semantic_candidates(&candidates, &temp.path().join("missing.json"), "tight").unwrap();
+        assert_eq!(selected.len(), 1);
+        assert_eq!(selected[0].reason, "tight:hook");
+    }
+
+    #[test]
+    fn semantic_evidence_outside_selected_take_requires_review() {
+        let temp = tempfile::tempdir().unwrap();
+        let candidates = CandidateManifest {
+            schema_version: SCHEMA_VERSION,
+            candidates: vec![Candidate {
+                id: "take-1".into(),
+                source_id: "source-a".into(),
+                start_ms: 0,
+                end_ms: 1_000,
+                text: "proof".into(),
+                beat_label: "hook".into(),
+                take_rank: 1,
+                drop_reason: None,
+                filler_count: 0,
+            }],
+        };
+        let path = temp.path().join("editorial-plan.json");
+        write_json_atomic(&path, &serde_json::json!({
+            "schema_version": 2,
+            "beats": [{ "beat_id": "hook", "label": "hook", "selected_take": "take-1", "confidence": 1.0, "evidence": [{ "source_range": [900, 1_100] }] }],
+            "order": ["hook"], "chronological_status": "truthful", "review_flags": []
+        })).unwrap();
+        let error = semantic_candidates(&candidates, &path, "tight").unwrap_err();
+        assert!(error.to_string().contains("manual_review_required"));
     }
 
     #[test]

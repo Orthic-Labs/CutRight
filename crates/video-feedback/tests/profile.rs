@@ -1,15 +1,16 @@
-use video_feedback::decision::{DecisionAxis, DecisionReason, DecisionTarget, FormatKey};
-use video_feedback::learn::{compute_recommendation, compute_preference, EstimateScope};
-use video_feedback::profile::{
-    apply_profile, approve_profile, profile_compatibility_mismatch,
-    ProfileApprovedBy, ProfileCompatibility,
-};
 use chrono::{TimeZone, Utc};
+use video_feedback::decision::{DecisionAxis, DecisionReason, DecisionTarget, FormatKey};
+use video_feedback::learn::{compute_preference, compute_recommendation, EstimateScope};
+use video_feedback::profile::{
+    apply_profile, approve_profile, profile_compatibility_mismatch, ProfileApprovedBy,
+    ProfileCompatibility,
+};
 
 fn sample_compatibility() -> ProfileCompatibility {
     ProfileCompatibility {
         pack_set_id: "creator-minimal".to_string(),
-        pack_set_fingerprint: "0000000000000000000000000000000000000000000000000000000000000099".to_string(),
+        pack_set_fingerprint: "0000000000000000000000000000000000000000000000000000000000000099"
+            .to_string(),
         benchmark_profile: "reviewed-v2".to_string(),
         skill_version: "0.1.0".to_string(),
         render_version: "0.1.0".to_string(),
@@ -57,7 +58,8 @@ fn profile_compatibility_mismatch_blocks_application() {
     };
     let compat = sample_compatibility();
     let mut active = compat.clone();
-    active.pack_set_fingerprint = "1111111111111111111111111111111111111111111111111111111111111111".to_string();
+    active.pack_set_fingerprint =
+        "1111111111111111111111111111111111111111111111111111111111111111".to_string();
     let empty: Vec<video_feedback::decision::DecisionRecord> = Vec::new();
     let e = compute_preference(
         "take",

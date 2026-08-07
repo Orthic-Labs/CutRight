@@ -47,22 +47,34 @@ impl CompiledFinishPlanCompiler {
         audit_id: &str,
     ) -> Result<CompiledFinishPlan, CompiledFinishPlanError> {
         if creative_plan_id.is_empty() {
-            return Err(CompiledFinishPlanError::MissingSubplan("creative_plan_id".to_string()));
+            return Err(CompiledFinishPlanError::MissingSubplan(
+                "creative_plan_id".to_string(),
+            ));
         }
         if render_plan_id.is_empty() {
-            return Err(CompiledFinishPlanError::MissingSubplan("render_plan_id".to_string()));
+            return Err(CompiledFinishPlanError::MissingSubplan(
+                "render_plan_id".to_string(),
+            ));
         }
         if caption_plan_id.is_empty() {
-            return Err(CompiledFinishPlanError::MissingSubplan("caption_plan_id".to_string()));
+            return Err(CompiledFinishPlanError::MissingSubplan(
+                "caption_plan_id".to_string(),
+            ));
         }
         if motion_plan_id.is_empty() {
-            return Err(CompiledFinishPlanError::MissingSubplan("motion_plan_id".to_string()));
+            return Err(CompiledFinishPlanError::MissingSubplan(
+                "motion_plan_id".to_string(),
+            ));
         }
         if audio_plan_id.is_empty() {
-            return Err(CompiledFinishPlanError::MissingSubplan("audio_plan_id".to_string()));
+            return Err(CompiledFinishPlanError::MissingSubplan(
+                "audio_plan_id".to_string(),
+            ));
         }
         if audit_id.is_empty() {
-            return Err(CompiledFinishPlanError::MissingSubplan("audit_id".to_string()));
+            return Err(CompiledFinishPlanError::MissingSubplan(
+                "audit_id".to_string(),
+            ));
         }
         Ok(CompiledFinishPlan {
             id: format!("fpl_{}", creative_plan_id),
@@ -99,7 +111,9 @@ mod tests {
 
     #[test]
     fn rejects_missing_audit() {
-        let err = CompiledFinishPlanCompiler::compile("cp_1", "r", "c", "m", "a", "").err().expect("err");
+        let err = CompiledFinishPlanCompiler::compile("cp_1", "r", "c", "m", "a", "")
+            .err()
+            .expect("err");
         assert!(matches!(err, CompiledFinishPlanError::MissingSubplan(_)));
     }
 }

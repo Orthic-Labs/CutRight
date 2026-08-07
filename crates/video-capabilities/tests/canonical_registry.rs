@@ -23,9 +23,7 @@ fn canonical_registry_path() -> Option<PathBuf> {
 #[test]
 fn canonical_registry_loads_and_validates() {
     let Some(path) = canonical_registry_path() else {
-        eprintln!(
-            "canonical registry not present in this build; skipping"
-        );
+        eprintln!("canonical registry not present in this build; skipping");
         return;
     };
 
@@ -66,6 +64,10 @@ fn canonical_registry_loads_and_validates() {
         let pset = registry
             .permission_set_for(id)
             .unwrap_or_else(|| panic!("missing permission set for {id}"));
-        assert!(!pset.grants.is_empty(), "pset {} is empty", pset.permission_set_id);
+        assert!(
+            !pset.grants.is_empty(),
+            "pset {} is empty",
+            pset.permission_set_id
+        );
     }
 }

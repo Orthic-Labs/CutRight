@@ -2,9 +2,7 @@
 // dead-air decisions (Book 4 lane B, B4-015).
 
 use video_editorial::deterministic::dead_air::{classify_silence, word_safe_range};
-use video_editorial::deterministic::disfluency::{
-    decide_false_start, decide_filler, RemovalTier,
-};
+use video_editorial::deterministic::disfluency::{decide_false_start, decide_filler, RemovalTier};
 
 #[test]
 fn filler_neighbors_automatic() {
@@ -24,7 +22,10 @@ fn false_start_with_replacement_automatic() {
 #[test]
 fn dead_air_pre_speech() {
     let r = classify_silence(0, 1000, None, Some(1500), 300);
-    assert_eq!(r.kind, video_editorial::deterministic::dead_air::DeadAirKind::PreSpeech);
+    assert_eq!(
+        r.kind,
+        video_editorial::deterministic::dead_air::DeadAirKind::PreSpeech
+    );
 }
 
 #[test]

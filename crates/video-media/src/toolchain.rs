@@ -431,12 +431,7 @@ impl PackResourceResolver {
         if self.pack_root.is_empty() {
             return Err(ResolverError::EmptyPackRoot);
         }
-        let path = format!(
-            "{}/{}/{}",
-            self.pack_root,
-            pack.0,
-            resource.as_str()
-        );
+        let path = format!("{}/{}/{}", self.pack_root, pack.0, resource.as_str());
         Ok(VerifiedResource {
             resource,
             pack,
@@ -469,9 +464,7 @@ mod resolver_tests {
     #[test]
     fn resolver_returns_path_from_pack_root() {
         let r = PackResourceResolver::new("/tmp/packs");
-        let v = r
-            .require(PackId::media(), PackResourceId::Ffmpeg)
-            .unwrap();
+        let v = r.require(PackId::media(), PackResourceId::Ffmpeg).unwrap();
         assert_eq!(v.verified_path(), "/tmp/packs/media/ffmpeg");
         assert!(v.is_verified());
     }

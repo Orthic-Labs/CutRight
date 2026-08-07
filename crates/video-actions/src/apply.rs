@@ -33,8 +33,11 @@ use thiserror::Error;
 
 use crate::action::Action;
 use crate::diff::{dry_run, DiffEntry, SemanticDiff, StableDiffKey, DRY_RUN_SCHEMA};
-use crate::revision::{FailureCode, Receipt, ReceiptFailure, ReceiptStatus, Revision, RevisionError, RECEIPT_SCHEMA, REVISION_SCHEMA};
-use crate::validation::{ValidationFailure};
+use crate::revision::{
+    FailureCode, Receipt, ReceiptFailure, ReceiptStatus, Revision, RevisionError, RECEIPT_SCHEMA,
+    REVISION_SCHEMA,
+};
+use crate::validation::ValidationFailure;
 
 /// Where the apply pipeline currently is. Used by atomicity tests to inject
 /// a crash between stages without touching the pipeline itself.
@@ -136,11 +139,8 @@ impl StagedApply {
 
         // Compute the staged revision id deterministically from the
         // batch (same primitive as the dry-run planner).
-        let staged_revision_id = crate::diff::planned_revision_for(
-            batch_id,
-            expected_revision,
-            actions,
-        );
+        let staged_revision_id =
+            crate::diff::planned_revision_for(batch_id, expected_revision, actions);
         staged.staged_revision_id = staged_revision_id.clone();
 
         // ---- Stage 3: atomic artifact writes (temp-file + rename) ----
@@ -156,8 +156,8 @@ impl StagedApply {
         if inject == Some(InjectPoint::BeforeRevisionCommit) {
             return Err(ApplyError::Injected(InjectPoint::BeforeRevisionCommit));
         }
-        let committed_bytes = serde_json::to_vec_pretty(&committed)
-            .map_err(ApplyError::SerializeRevision)?;
+        let committed_bytes =
+            serde_json::to_vec_pretty(&committed).map_err(ApplyError::SerializeRevision)?;
         write_bytes_atomic(&revision_path, &committed_bytes)?;
 
         // ---- Stage 5: receipt emission ----
@@ -171,8 +171,8 @@ impl StagedApply {
             &receipt_id,
             (0..actions.len()).map(|i| format!("act_{i}")).collect(),
         );
-        let receipt_bytes = serde_json::to_vec_pretty(&receipt)
-            .map_err(ApplyError::SerializeReceipt)?;
+        let receipt_bytes =
+            serde_json::to_vec_pretty(&receipt).map_err(ApplyError::SerializeReceipt)?;
         write_bytes_atomic(&receipt_path, &receipt_bytes)?;
 
         // ---- Stage 6: active-pointer swap ----
@@ -223,13 +223,14 @@ impl StagedApply {
             ));
         }
         let ctx = staged.validation_context();
-        let diff = dry_run(batch_id, expected_revision, actions, &ctx)
-            .map_err(map_diff_err_to_apply)?;
-        let receipt = Receipt::dry_run(batch_id, &diff.planned_revision, &make_receipt_id(batch_id, &diff.planned_revision));
-        Ok(DryRunOutcome {
-            diff,
-            receipt,
-        })
+        let diff =
+            dry_run(batch_id, expected_revision, actions, &ctx).map_err(map_diff_err_to_apply)?;
+        let receipt = Receipt::dry_run(
+            batch_id,
+            &diff.planned_revision,
+            &make_receipt_id(batch_id, &diff.planned_revision),
+        );
+        Ok(DryRunOutcome { diff, receipt })
     }
 
     /// Recovery helper used by atomicity tests after a simulated crash.
@@ -354,11 +355,7 @@ impl DryRunOutcome {
     /// caller doesn't have to deal with two error types.
     pub fn failed(batch_id: impl Into<String>, failures: Vec<ReceiptFailure>) -> Self {
         let batch_id = batch_id.into();
-        let receipt = Receipt::failed(
-            "",
-            &make_receipt_id(&batch_id, "dry_run"),
-            failures,
-        );
+        let receipt = Receipt::failed("", &make_receipt_id(&batch_id, "dry_run"), failures);
         Self {
             diff: SemanticDiff {
                 schema: DRY_RUN_SCHEMA.to_string(),
@@ -442,9 +439,7 @@ fn failures_to_receipt(failures: Vec<ValidationFailure>) -> Vec<ReceiptFailure> 
 
 fn map_diff_err_to_apply(err: crate::diff::DiffError) -> ApplyError {
     match err {
-        crate::diff::DiffError::Validation(failures) => {
-            ApplyError::DryRunValidation(failures)
-        }
+        crate::diff::DiffError::Validation(failures) => ApplyError::DryRunValidation(failures),
         crate::diff::DiffError::Hash(source) => {
             // Serialisation failures during diff planning are recovered as
             // I/O-shaped errors at the receipt-emission stage.
@@ -465,15 +460,16 @@ fn write_bytes_atomic(path: &Path, bytes: &[u8]) -> Result<(), ApplyError> {
         stage: "create parent directory",
         source,
     })?;
-    let file_name = path.file_name().and_then(|s| s.to_str()).ok_or_else(|| {
-        ApplyError::Io {
+    let file_name = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| ApplyError::Io {
             stage: "resolve file name",
             source: std::io::Error::new(
                 std::io::ErrorKind::Other,
                 format!("{} has no file name", path.display()),
             ),
-        }
-    })?;
+        })?;
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
@@ -608,13 +604,7 @@ mod tests {
         let pipeline = StagedApply::new(temp.path());
         let mut staged = staged_with_clip5();
         let outcome = pipeline
-            .apply(
-                "batch_0001",
-                "rev_0001",
-                &[cut_action()],
-                &mut staged,
-                None,
-            )
+            .apply("batch_0001", "rev_0001", &[cut_action()], &mut staged, None)
             .unwrap();
         assert!(outcome.is_applied());
 
@@ -651,13 +641,7 @@ mod tests {
         // Empty staged (no known targets) means cut_action will fail validation.
         let mut staged = StagedRevision::from_active(&make_active("rev_0001"), DEFAULT_DURATION_NS);
         let outcome = pipeline
-            .apply(
-                "batch_0001",
-                "rev_0001",
-                &[cut_action()],
-                &mut staged,
-                None,
-            )
+            .apply("batch_0001", "rev_0001", &[cut_action()], &mut staged, None)
             .unwrap();
         assert!(outcome.is_failed());
     }
@@ -676,7 +660,10 @@ mod tests {
                 Some(InjectPoint::BeforeRevisionCommit),
             )
             .unwrap_err();
-        assert!(matches!(err, ApplyError::Injected(InjectPoint::BeforeRevisionCommit)));
+        assert!(matches!(
+            err,
+            ApplyError::Injected(InjectPoint::BeforeRevisionCommit)
+        ));
         let recovery = pipeline.recover();
         assert!(recovery.revisions.is_empty());
         assert!(recovery.receipt_files.is_empty());
@@ -698,12 +685,18 @@ mod tests {
                 Some(InjectPoint::BeforeReceiptEmit),
             )
             .unwrap_err();
-        assert!(matches!(err, ApplyError::Injected(InjectPoint::BeforeReceiptEmit)));
+        assert!(matches!(
+            err,
+            ApplyError::Injected(InjectPoint::BeforeReceiptEmit)
+        ));
         let recovery = pipeline.recover();
         assert!(!recovery.revisions.is_empty(), "revision file should exist");
         assert!(recovery.receipt_files.is_empty(), "receipt must NOT exist");
         assert!(recovery.receipts.is_empty(), "receipt must NOT exist");
-        assert!(recovery.active_pointer.is_none(), "pointer must NOT be swapped");
+        assert!(
+            recovery.active_pointer.is_none(),
+            "pointer must NOT be swapped"
+        );
         assert!(recovery.is_inconsistent());
     }
 
@@ -721,12 +714,18 @@ mod tests {
                 Some(InjectPoint::BeforeActiveSwap),
             )
             .unwrap_err();
-        assert!(matches!(err, ApplyError::Injected(InjectPoint::BeforeActiveSwap)));
+        assert!(matches!(
+            err,
+            ApplyError::Injected(InjectPoint::BeforeActiveSwap)
+        ));
         let recovery = pipeline.recover();
         assert!(!recovery.revisions.is_empty(), "revision file should exist");
         assert!(!recovery.receipt_files.is_empty(), "receipt should exist");
         assert!(!recovery.receipts.is_empty(), "receipt should exist");
-        assert!(recovery.active_pointer.is_none(), "pointer must NOT be swapped");
+        assert!(
+            recovery.active_pointer.is_none(),
+            "pointer must NOT be swapped"
+        );
         assert!(recovery.is_inconsistent());
     }
 
@@ -762,13 +761,7 @@ mod tests {
         let pipeline = StagedApply::new(temp.path());
         let mut staged = staged_with_clip5();
         let outcome = pipeline
-            .apply(
-                "batch_0001",
-                "rev_0001",
-                &[cut_action()],
-                &mut staged,
-                None,
-            )
+            .apply("batch_0001", "rev_0001", &[cut_action()], &mut staged, None)
             .unwrap();
         assert!(outcome.is_applied());
         let recovery = pipeline.recover();

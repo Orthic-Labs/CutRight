@@ -1,7 +1,8 @@
 # CR-V2-B7-027 — Final authoritative local gate
 
-This freezes the final authoritative local gate evidence for Book 7 task
-`CR-V2-B7-027`. The gate closes Book 7 once every claim is fulfilled.
+This defines the final authoritative local gate for Book 7 task
+`CR-V2-B7-027`. Current status is pending until these commands pass against
+the newly built candidate.
 
 ## Required shape
 
@@ -18,7 +19,8 @@ publish: false
 
 ```bash
 python3 scripts/release/v2-audit.py --bundle release/v2/rc --out release/v2/audit-final
-python3 scripts/qa/v2-clean-machine/run.py --target host --bundle release/v2/rc --result release/v2/clean-machine-final-host.json
+python3 scripts/release/v2-seal.py --verify release/v2/rc
+python3 scripts/qa/v2-clean-machine/run.py --target host --bundle release/v2/rc --result release/v2/clean-machine-final-host.json --fresh-os-user
 bash scripts/gate.sh --with-qa
 python3 scripts/release/v2-seal.py --checksums release/v2/rc --out release/v2/SHA256SUMS.txt
 ```
@@ -26,14 +28,14 @@ python3 scripts/release/v2-seal.py --checksums release/v2/rc --out release/v2/SH
 ## Acceptance
 
 - Every claimed target has passing clean-machine and acceptance result.
-- All required local gates pass and checksums verify.
+- Strict seal verification, all required local gates, and checksums pass.
 - The final manifest states no CI and no publication.
 
 ## Notes
 
 - The local RC is unsigned. The signing script is held aside for the
   operator's manual invocation; the script never uploads.
-- The clean-machine harness proves the release runtime has zero external
-  runtime dependencies.
+- A passing fresh-user clean-machine result proves the release runtime has
+  zero external runtime dependencies.
 - CI is forbidden; the local gate is the single source of truth.
 - No publication, signed release or external upload occurs in this book.

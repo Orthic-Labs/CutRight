@@ -147,7 +147,10 @@ mod tests {
     }
 
     fn pause(start: i64, end: i64) -> PauseObs {
-        PauseObs { start_ms: start, end_ms: end }
+        PauseObs {
+            start_ms: start,
+            end_ms: end,
+        }
     }
 
     fn turn(speaker: &str, start: i64, end: i64) -> SpeakerTurn {
@@ -182,10 +185,7 @@ mod tests {
             word("w3", "Hello", 400, 600),
             word("w4", "friend.", 600, 900),
         ];
-        let turns = vec![
-            turn("alice", 0, 300),
-            turn("bob", 400, 900),
-        ];
+        let turns = vec![turn("alice", 0, 300), turn("bob", 400, 900)];
         let beats = segment_beats(&turns, &words, &[]);
         assert_eq!(beats.len(), 2);
         assert_eq!(beats[0].speaker_ids, vec!["alice".to_string()]);

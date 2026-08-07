@@ -89,9 +89,7 @@ fn action_for(kind: &FindingKind) -> RepairAction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scan::{
-        ObjectDigest, PackDigest, ReceiptDigest, RevisionDigest, ScanFinding,
-    };
+    use crate::scan::{ObjectDigest, PackDigest, ReceiptDigest, RevisionDigest, ScanFinding};
 
     fn empty_finding() -> ScanReport {
         ScanReport::default()

@@ -19,12 +19,23 @@ fn loopback_config_rejects_public_bind() {
         "localhost:0",
     ];
     for addr in accept {
-        assert!(is_loopback(addr), "expected {addr} to be accepted as loopback");
+        assert!(
+            is_loopback(addr),
+            "expected {addr} to be accepted as loopback"
+        );
     }
 
-    let reject = ["0.0.0.0:8080", "10.0.0.1:0", "192.168.1.1:0", "host.example:0"];
+    let reject = [
+        "0.0.0.0:8080",
+        "10.0.0.1:0",
+        "192.168.1.1:0",
+        "host.example:0",
+    ];
     for addr in reject {
-        assert!(!is_loopback(addr), "expected {addr} to be rejected as non-loopback");
+        assert!(
+            !is_loopback(addr),
+            "expected {addr} to be rejected as non-loopback"
+        );
     }
 }
 

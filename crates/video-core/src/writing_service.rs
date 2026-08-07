@@ -137,7 +137,9 @@ mod tests {
             copy_atom_ids: vec![],
             evidence_refs: vec!["evidence:ev_1".to_string()],
         };
-        let err = WritingService::assert_package_bound(&pkg).err().expect("err");
+        let err = WritingService::assert_package_bound(&pkg)
+            .err()
+            .expect("err");
         assert!(matches!(err, WritingError::UnboundPackage(_)));
     }
 }

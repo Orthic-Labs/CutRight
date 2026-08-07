@@ -111,11 +111,9 @@ impl PermissionSet {
     /// Load + parse from a UTF-8 JSON file.
     pub fn load(path: impl AsRef<std::path::Path>) -> RegistryResult<Self> {
         let path_ref = path.as_ref();
-        let bytes = std::fs::read(path_ref).map_err(|source| {
-            crate::error::RegistryError::Io {
-                path: path_ref.to_path_buf(),
-                source,
-            }
+        let bytes = std::fs::read(path_ref).map_err(|source| crate::error::RegistryError::Io {
+            path: path_ref.to_path_buf(),
+            source,
         })?;
         let value: Self = serde_json::from_slice(&bytes)?;
         if value.schema != PERMISSION_SET_SCHEMA {

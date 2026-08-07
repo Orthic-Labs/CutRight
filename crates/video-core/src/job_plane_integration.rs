@@ -64,7 +64,9 @@ pub struct JobPlaneIntegration;
 impl JobPlaneIntegration {
     pub fn submit(job: &CreativeJob) -> Result<JobHandle, JobPlaneIntegrationError> {
         if job.creative_plan_id.is_empty() {
-            return Err(JobPlaneIntegrationError::MissingCreativePlan(job.id.clone()));
+            return Err(JobPlaneIntegrationError::MissingCreativePlan(
+                job.id.clone(),
+            ));
         }
         if job.finish_plan_id.is_empty() {
             return Err(JobPlaneIntegrationError::MissingFinishPlan(job.id.clone()));
@@ -118,6 +120,9 @@ mod tests {
         let mut j = sample();
         j.finish_plan_id = "".to_string();
         let err = JobPlaneIntegration::submit(&j).err().expect("err");
-        assert!(matches!(err, JobPlaneIntegrationError::MissingFinishPlan(_)));
+        assert!(matches!(
+            err,
+            JobPlaneIntegrationError::MissingFinishPlan(_)
+        ));
     }
 }

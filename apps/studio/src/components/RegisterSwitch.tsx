@@ -1,11 +1,8 @@
 import { REGISTER_LABEL, REGISTER_ORDER, type Register } from "../types";
 
-// QA-only register switcher (redesign spec Phase 2: "PARKED for Adrian's
-// eyes as rendered screenshots"). Only ever mounted behind `?qa=1` — see
-// App.tsx — so it never ships as a real in-app control before Adrian picks
-// a register and it gets locked into brands.md. Exists purely so this pass
-// can screenshot all three registers from one running instance instead of
-// three separate builds.
+// QA-only register switcher. Graphite is locked for production; Tungsten and
+// Pewter remain capture-only regression themes. This control is mounted only
+// behind `?qa=1` and never becomes a user-facing identity picker.
 export function RegisterSwitch({
   register,
   setRegister,

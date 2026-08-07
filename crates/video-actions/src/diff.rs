@@ -236,11 +236,7 @@ pub fn dry_run(
 /// canonicalised (sorted-keys, sorted-actions) batch JSON. Two calls with
 /// identical inputs always produce identical ids, regardless of process id,
 /// thread id, or clock.
-pub fn planned_revision_for(
-    batch_id: &str,
-    expected_revision: &str,
-    actions: &[Action],
-) -> String {
+pub fn planned_revision_for(batch_id: &str, expected_revision: &str, actions: &[Action]) -> String {
     let mut sorted_actions: Vec<&Action> = actions.iter().collect();
     sorted_actions.sort_by(|a, b| action_kind(a).cmp(action_kind(b)));
     let canonical = serde_json::json!({
@@ -269,7 +265,10 @@ pub fn plan_entry(action: &Action) -> DiffEntry {
         .map(TargetRef::as_str)
         .unwrap_or("")
         .to_string();
-    let range = action_range(action).unwrap_or(RangeNs { start_ns: 0, end_ns: 0 });
+    let range = action_range(action).unwrap_or(RangeNs {
+        start_ns: 0,
+        end_ns: 0,
+    });
     let duration_delta_ns = compute_duration_delta(action);
     let after_id = if target_id.is_empty() {
         String::new()
@@ -349,8 +348,8 @@ mod tests {
     use super::*;
     use crate::action::{
         AudioParams, CaptionParams, ColourCorrectionParams, ColourLutParams, CutParams,
-        ExportRenderParams, GraphicParams, MoveParams, RetimeParams, RestoreParams,
-        SettingParams, TakeSwapParams, TargetKind,
+        ExportRenderParams, GraphicParams, MoveParams, RestoreParams, RetimeParams, SettingParams,
+        TakeSwapParams, TargetKind,
     };
     use std::collections::BTreeSet;
 
@@ -399,7 +398,10 @@ mod tests {
     fn cut(target: TargetRef, range: RangeNs) -> Action {
         Action::Cut {
             target,
-            params: CutParams { range, reason: None },
+            params: CutParams {
+                range,
+                reason: None,
+            },
         }
     }
 
@@ -624,7 +626,10 @@ mod tests {
         assert_eq!(value["schema"], "cutright.semantic_diff/v1");
         assert_eq!(value["batch_id"], "batch_0001");
         assert_eq!(value["expected_revision"], "rev_0001");
-        assert!(value["planned_revision"].as_str().unwrap().starts_with("rev_"));
+        assert!(value["planned_revision"]
+            .as_str()
+            .unwrap()
+            .starts_with("rev_"));
         let entry = &value["diff"][0];
         assert_eq!(entry["action_kind"], "timeline.cut");
         assert_eq!(entry["target_id"], "clip:clip_5");
@@ -645,8 +650,8 @@ mod tests {
             &ctx,
         )
         .unwrap();
-        let round = serde_json::from_value::<SemanticDiff>(serde_json::to_value(&diff).unwrap())
-            .unwrap();
+        let round =
+            serde_json::from_value::<SemanticDiff>(serde_json::to_value(&diff).unwrap()).unwrap();
         assert_eq!(round, diff);
     }
 
@@ -660,8 +665,7 @@ mod tests {
             "diff": [],
             "rogue": true,
         });
-        serde_json::from_value::<SemanticDiff>(bogus)
-            .expect_err("unknown field must fail closed");
+        serde_json::from_value::<SemanticDiff>(bogus).expect_err("unknown field must fail closed");
     }
 
     #[test]

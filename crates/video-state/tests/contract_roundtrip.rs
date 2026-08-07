@@ -66,7 +66,8 @@ fn load_revision_chain(chain_dir: &Path) -> BTreeMap<String, Value> {
 fn assert_revision(value: &Value, path: &Path) {
     let schema = value["schema"].as_str().expect("schema is a string");
     assert_eq!(
-        schema, REVISION_SCHEMA,
+        schema,
+        REVISION_SCHEMA,
         "wrong schema tag in {}",
         path.display()
     );
@@ -89,7 +90,9 @@ fn assert_revision(value: &Value, path: &Path) {
             "parent id `{parent_id}` does not match the schema regex"
         );
     }
-    let created_at = value["created_at_ns"].as_u64().expect("created_at_ns is u64");
+    let created_at = value["created_at_ns"]
+        .as_u64()
+        .expect("created_at_ns is u64");
     let fp = value["compatibility_fp"]
         .as_str()
         .expect("compatibility_fp is a string");
@@ -112,7 +115,10 @@ fn assert_chain_acyclic(by_id: &BTreeMap<String, Value>) {
         let mut visited = std::collections::HashSet::new();
         let mut current = id.clone();
         while let Some(rev) = by_id.get(&current) {
-            assert!(visited.insert(current.clone()), "cycle detected at `{current}`");
+            assert!(
+                visited.insert(current.clone()),
+                "cycle detected at `{current}`"
+            );
             let parents = rev["parents"].as_array().expect("parents is an array");
             match parents.len() {
                 0 => break,
@@ -127,13 +133,20 @@ fn assert_chain_acyclic(by_id: &BTreeMap<String, Value>) {
 
 fn assert_action_batch(value: &Value, path: &Path) {
     let schema = value["schema"].as_str().expect("schema is a string");
-    assert_eq!(schema, ACTION_BATCH_SCHEMA, "wrong schema in {}", path.display());
+    assert_eq!(
+        schema,
+        ACTION_BATCH_SCHEMA,
+        "wrong schema in {}",
+        path.display()
+    );
     let _batch_id = value["batch_id"].as_str().expect("batch_id is a string");
     let expected_revision = value["expected_revision"]
         .as_str()
         .expect("expected_revision is a string");
     let _intent = value["intent"].as_str().expect("intent is a string");
-    let evidence_refs = value["evidence_refs"].as_array().expect("evidence_refs is an array");
+    let evidence_refs = value["evidence_refs"]
+        .as_array()
+        .expect("evidence_refs is an array");
     for evidence in evidence_refs {
         assert!(evidence.is_string(), "evidence_ref must be a string");
     }
@@ -143,9 +156,7 @@ fn assert_action_batch(value: &Value, path: &Path) {
         let kind = action["action_kind"]
             .as_str()
             .expect("action_kind is a string");
-        let target = action["target_id"]
-            .as_str()
-            .expect("target_id is a string");
+        let target = action["target_id"].as_str().expect("target_id is a string");
         assert!(!kind.is_empty(), "action_kind is empty");
         assert!(!target.is_empty(), "target_id is empty");
     }
@@ -200,12 +211,7 @@ fn verify_fixture(fixture_dir: &Path) {
     let diff_path = fixture_dir.join("expected_diff.json");
     let receipt_path = fixture_dir.join("expected_receipt.json");
     let chain_dir = fixture_dir.join("expected_revision_chain");
-    for required in [
-        &input_batch_path,
-        &diff_path,
-        &receipt_path,
-        &chain_dir,
-    ] {
+    for required in [&input_batch_path, &diff_path, &receipt_path, &chain_dir] {
         assert!(
             required.exists(),
             "fixture `{}` is missing required artifact `{}`",
@@ -214,14 +220,13 @@ fn verify_fixture(fixture_dir: &Path) {
         );
     }
 
-    let input_batch: Value = serde_json::from_slice(
-        &fs::read(&input_batch_path).expect("read input batch"),
-    )
-    .expect("parse input batch");
+    let input_batch: Value =
+        serde_json::from_slice(&fs::read(&input_batch_path).expect("read input batch"))
+            .expect("parse input batch");
     assert_action_batch(&input_batch, &input_batch_path);
 
-    let diff: Value = serde_json::from_slice(&fs::read(&diff_path).expect("read diff"))
-        .expect("parse diff");
+    let diff: Value =
+        serde_json::from_slice(&fs::read(&diff_path).expect("read diff")).expect("parse diff");
 
     let receipt: Value = serde_json::from_slice(&fs::read(&receipt_path).expect("read receipt"))
         .expect("parse receipt");
@@ -244,18 +249,18 @@ fn verify_fixture(fixture_dir: &Path) {
         .as_str()
         .expect("before_revision is a string");
     assert_eq!(
-        expected_revision, before_revision,
+        expected_revision,
+        before_revision,
         "batch.expected_revision disagrees with receipt.before_revision in {}",
         fixture_dir.display()
     );
     let batch_id = input_batch["batch_id"]
         .as_str()
         .expect("batch_id is a string");
-    let receipt_batch_id = receipt["batch_id"]
-        .as_str()
-        .expect("batch_id is a string");
+    let receipt_batch_id = receipt["batch_id"].as_str().expect("batch_id is a string");
     assert_eq!(
-        batch_id, receipt_batch_id,
+        batch_id,
+        receipt_batch_id,
         "batch.batch_id disagrees with receipt.batch_id in {}",
         fixture_dir.display()
     );
@@ -263,8 +268,8 @@ fn verify_fixture(fixture_dir: &Path) {
 
 /// Locate the contract fixture root relative to the workspace manifest.
 fn contract_root() -> PathBuf {
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-        .expect("CARGO_MANIFEST_DIR is set by cargo");
+    let manifest_dir =
+        std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by cargo");
     let crate_dir = PathBuf::from(manifest_dir);
     // The crate lives at `<workspace>/crates/video-state`, so the workspace
     // root is two parents up.

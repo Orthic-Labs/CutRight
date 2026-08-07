@@ -102,7 +102,13 @@ impl CreativeSkillResolver {
     pub fn execute(
         &self,
         req: &SkillRequest,
-    ) -> Result<(crate::creative_skill_runtime::SkillResult, crate::creative_skill_runtime::SkillTrace), ResolverError> {
+    ) -> Result<
+        (
+            crate::creative_skill_runtime::SkillResult,
+            crate::creative_skill_runtime::SkillTrace,
+        ),
+        ResolverError,
+    > {
         let _plan = self.plan(req)?;
         Ok(self.runtime.execute(req)?)
     }

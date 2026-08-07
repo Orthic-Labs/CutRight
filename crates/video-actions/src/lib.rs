@@ -23,11 +23,13 @@ pub mod validation;
 
 pub use action::{
     Action, AudioParams, CaptionParams, ColourCorrectionParams, ColourLutParams, CutParams,
-    ExportRenderParams, GraphicParams, MoveParams, ParamError, RetimeParams, RestoreParams,
+    ExportRenderParams, GraphicParams, MoveParams, ParamError, RestoreParams, RetimeParams,
     SettingParams, TakeSwapParams, TargetRef, TargetRefError, ACTION_KINDS,
 };
 pub use apply::{ApplyError, ApplyOutcome, DryRunOutcome, InjectPoint, RecoveryState, StagedApply};
-pub use diff::{dry_run, DiffEntry, DiffError, DiffRange, SemanticDiff, StableDiffKey, DRY_RUN_SCHEMA};
+pub use diff::{
+    dry_run, DiffEntry, DiffError, DiffRange, SemanticDiff, StableDiffKey, DRY_RUN_SCHEMA,
+};
 pub use revision::{
     FailureCode, Receipt, ReceiptFailure, ReceiptStatus, Revision, RevisionError, StagedRevision,
     RECEIPT_SCHEMA, REVISION_SCHEMA,

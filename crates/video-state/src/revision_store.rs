@@ -106,7 +106,9 @@ pub struct StagedState(pub serde_json::Value);
 impl StagedState {
     /// Build a staged state from any `Serialize` value.
     pub fn from_value<T: Serialize>(value: &T) -> Result<Self, RevisionError> {
-        serde_json::to_value(value).map(Self).map_err(RevisionError::Serialize)
+        serde_json::to_value(value)
+            .map(Self)
+            .map_err(RevisionError::Serialize)
     }
 
     /// Borrow the underlying JSON value.
@@ -262,8 +264,8 @@ impl RevisionStore {
             }
         }
 
-        let state_bytes = serde_json::to_vec(staged_state.as_value())
-            .map_err(RevisionError::Serialize)?;
+        let state_bytes =
+            serde_json::to_vec(staged_state.as_value()).map_err(RevisionError::Serialize)?;
         let mut hasher = blake3::Hasher::new();
         hasher.update(REVISION_SCHEMA.as_bytes());
         hasher.update(b"\n");
@@ -295,8 +297,8 @@ impl RevisionStore {
         fs::create_dir_all(&temp_dir).map_err(|source| RevisionError::io(&temp_dir, source))?;
 
         let metadata_tmp = temp_dir.join("revision.json");
-        let metadata_bytes = serde_json::to_vec_pretty(&revision)
-            .map_err(RevisionError::Serialize)?;
+        let metadata_bytes =
+            serde_json::to_vec_pretty(&revision).map_err(RevisionError::Serialize)?;
         write_atomic(&metadata_tmp, &metadata_bytes)?;
 
         let state_tmp = temp_dir.join("state.json");
@@ -325,7 +327,8 @@ impl RevisionStore {
                 RevisionError::io(&metadata_path, source)
             }
         })?;
-        let revision: Revision = serde_json::from_slice(&bytes).map_err(RevisionError::Serialize)?;
+        let revision: Revision =
+            serde_json::from_slice(&bytes).map_err(RevisionError::Serialize)?;
         if revision.revision_id != *id {
             return Err(RevisionError::RevisionIdMismatch {
                 path: metadata_path,
@@ -342,7 +345,8 @@ impl RevisionStore {
         // before trusting the staged state file.
         let _ = self.get(id)?;
         let state_path = self.revision_state_path(id);
-        let bytes = fs::read(&state_path).map_err(|source| RevisionError::io(state_path, source))?;
+        let bytes =
+            fs::read(&state_path).map_err(|source| RevisionError::io(state_path, source))?;
         let value: serde_json::Value =
             serde_json::from_slice(&bytes).map_err(RevisionError::Serialize)?;
         Ok(StagedState(value))
@@ -354,7 +358,8 @@ impl RevisionStore {
         if !revisions_dir.exists() {
             return Ok(Vec::new());
         }
-        let read = fs::read_dir(&revisions_dir).map_err(|source| RevisionError::io(&revisions_dir, source))?;
+        let read = fs::read_dir(&revisions_dir)
+            .map_err(|source| RevisionError::io(&revisions_dir, source))?;
         let mut ids = Vec::new();
         for entry in read {
             let entry = entry.map_err(|source| RevisionError::io(&revisions_dir, source))?;
@@ -390,12 +395,14 @@ impl RevisionStore {
         let target = self.active_pointer_path();
         let temp = unique_temp_file(&target);
         {
-            let mut file = fs::File::create(&temp).map_err(|source| RevisionError::io(&temp, source))?;
+            let mut file =
+                fs::File::create(&temp).map_err(|source| RevisionError::io(&temp, source))?;
             file.write_all(id.as_str().as_bytes())
                 .map_err(|source| RevisionError::io(&temp, source))?;
             file.write_all(b"\n")
                 .map_err(|source| RevisionError::io(&temp, source))?;
-            file.sync_all().map_err(|source| RevisionError::io(&temp, source))?;
+            file.sync_all()
+                .map_err(|source| RevisionError::io(&temp, source))?;
         }
         fs::rename(&temp, &target).map_err(|source| {
             let _ = fs::remove_file(&temp);
@@ -423,10 +430,12 @@ impl RevisionStore {
 fn write_atomic(target: &Path, bytes: &[u8]) -> Result<(), RevisionError> {
     let temp = unique_temp_file(target);
     {
-        let mut file = fs::File::create(&temp).map_err(|source| RevisionError::io(&temp, source))?;
+        let mut file =
+            fs::File::create(&temp).map_err(|source| RevisionError::io(&temp, source))?;
         file.write_all(bytes)
             .map_err(|source| RevisionError::io(&temp, source))?;
-        file.sync_all().map_err(|source| RevisionError::io(&temp, source))?;
+        file.sync_all()
+            .map_err(|source| RevisionError::io(&temp, source))?;
     }
     fs::rename(&temp, target).map_err(|source| {
         let _ = fs::remove_file(&temp);
@@ -548,7 +557,10 @@ mod tests {
         let store = RevisionStore::new(&dir);
         let id = store.put(None, None, &staged("first"), "fp").expect("put");
         store.set_active_pointer(&id).expect("set active");
-        let pointed = store.active_pointer().expect("active pointer").expect("some");
+        let pointed = store
+            .active_pointer()
+            .expect("active pointer")
+            .expect("some");
         assert_eq!(pointed, id);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -559,7 +571,10 @@ mod tests {
         let store = RevisionStore::new(&dir);
         let phantom = RevisionId::parse("rev_missing").unwrap();
         let result = store.set_active_pointer(&phantom);
-        assert!(matches!(result, Err(RevisionError::UnknownActivePointer(_))));
+        assert!(matches!(
+            result,
+            Err(RevisionError::UnknownActivePointer(_))
+        ));
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -567,7 +582,9 @@ mod tests {
     fn corrupted_metadata_with_wrong_id_is_detected() {
         let dir = unique_dir();
         let store = RevisionStore::new(&dir);
-        let id = store.put(None, None, &staged("corrupt"), "fp").expect("put");
+        let id = store
+            .put(None, None, &staged("corrupt"), "fp")
+            .expect("put");
         let metadata_path = store.revision_metadata_path(&id);
         let bytes = fs::read(&metadata_path).expect("read metadata");
         // Rewrite the metadata with a different `revision_id` but keep the
@@ -577,7 +594,10 @@ mod tests {
         let rewritten = serde_json::to_vec_pretty(&value).expect("rewrite");
         fs::write(&metadata_path, rewritten).expect("write tampered");
         let result = store.get(&id);
-        assert!(matches!(result, Err(RevisionError::RevisionIdMismatch { .. })));
+        assert!(matches!(
+            result,
+            Err(RevisionError::RevisionIdMismatch { .. })
+        ));
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -599,7 +619,11 @@ mod tests {
             .collect();
         ids.sort();
         ids.dedup();
-        assert_eq!(ids.len(), 8, "every thread's put should produce a distinct id");
+        assert_eq!(
+            ids.len(),
+            8,
+            "every thread's put should produce a distinct id"
+        );
         // Active pointer un-set until something calls set_active_pointer.
         assert!(store.active_pointer().expect("active pointer").is_none());
         let _ = fs::remove_dir_all(&dir);

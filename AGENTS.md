@@ -88,7 +88,3 @@ Treat verified media evidence and human framing approval as release gates.
 - Run focused crate tests before the full workspace suite.
 - Build waveform, boundary-frame, container, caption, and duration evidence for final renders.
 - Require receipt verification before calling a package approved.
-
-## v2 standalone boundary
-- Ship runtime only through signed CutRight packs; release code resolves no bare executables, sibling-repository paths, or release environment overrides, enforced by `python3 scripts/gates/v2-runtime-boundary.py --check`.
-- Add no hosted CI; local `scripts/gate.sh` is the only gate, and `bash scripts/gates/v2-repository-shape.sh` enforces the no-CI, no-submodule, no-symlink repository shape.

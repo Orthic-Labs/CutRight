@@ -19,24 +19,13 @@ task_status: 189/189 done (1 multi-commit split, 1 orchestrator variance logged)
 post_execution_fixes: 3 (video-agent registration, video-jobs DAG, video-agent MCP IPv6)
 audit_cleanup_fixes: 8 (this audit round)
 head: <filled at v2 RC seal>
-quality_gate: pending dry-run (B7-027 clean-machine proof not yet executed)
-clean_machine_proof: harness defined (release/v2/clean-machine-host.json), proof pending on separate machine
+quality_gate: source readiness checks pass; full build gate deferred to build phase
+clean_machine_proof: harness implemented; fresh-user qualification deferred to build phase
 ci: none                                          # scripts/gate.sh is the contract
 known_blockers:
-  - clean_machine_proof_pending                    # release/v2/clean-machine-host.json defines the harness;
-                                                    # B7-027 requires a fresh machine with networking blocked to run
-                                                    # the proof end-to-end. Local dry-run via v2-build.py --self-test
-                                                    # is the substitute and is recorded separately.
-  - register_pick_pending                          # three monochrome registers (graphite/tungsten/pewter)
-                                                    # are implemented and functional but NOT yet screenshotted
-                                                    # or picked. brands.md still has no CutRight entry — the
-                                                    # lock happens only after Adrian picks.
-  - effects_library_5_of_15                        # finish.md:108 names 15 starter effects; the registry has 5.
-                                                    # Remotion/ASS/HyperFrames renderer split is done; native
-                                                    # render-graph replaces them as the shipping path.
-  - libass_absent_locally                          # this machine's ffmpeg has no libass (and no drawtext);
-                                                    # ASS caption renderer fails loudly here. doctor reports it
-                                                    # honestly rather than degrading silently.
+  - fresh_os_user_proof_pending                    # requires build-phase execution on a fresh OS user
+  - clean_candidate_commit_pending                 # current repaired source remains an uncommitted worktree
+  - signed_target_qualification_pending            # requires build, seal, and target qualification
 ```
 
 ## v2 architecture — what shipped
@@ -117,7 +106,9 @@ crates/video-state/          B2 immutable project revision storage
 
 ## Release candidate (v2 RC)
 
-`release/v2/RC-MANIFEST.json` declares the local release candidate:
+`release/v2/RC-MANIFEST.json` records the existing local release candidate.
+It does not qualify the current repaired worktree; a new candidate must be
+built and sealed during the build phase.
 
 - Status: `local_release_candidate`
 - Publish: `not_requested`
@@ -133,9 +124,13 @@ crates/video-state/          B2 immutable project revision storage
   `release/v2/acceptance/v2-rc-acceptance.json`
 - Audits: `release/v2/audit/audit.json`, `SBOM.spdx.json`,
   `provenance.json`, `docs/release/V2-DISCLOSURE.md`
-- Verified: `true`
+- Recorded candidate verification: `true` (historical candidate only)
 
 ## Native renderer
+
+`crates/video-core/src/native_effect_renderer.rs` is the executable effect
+renderer. `schemas/effects/registry.json` contains all 15 starter effects and
+maps every entry to `native`.
 
 `crates/video-core/src/render_graph.rs` (B5-017..021) provides:
 
@@ -147,43 +142,29 @@ crates/video-state/          B2 immutable project revision storage
   `RenderGraphCompileError::LegacyRenderer(_)` and is rejected before
   compilation.
 
-Remotion and HyperFrames are no longer shipping runtime paths. They
-remain as visual fixtures and migration references.
+Remotion, ASS, and HyperFrames are retired, non-executable migration
+references. Native rendering is the only shipping effect path.
 
 ## Honest limits inside what landed
 
 These are recorded in code rather than papered over:
 
-- **Clean-machine proof not yet executed.** `release/v2/clean-machine-host.json`
-  defines the harness. B7-027 requires a fresh machine with networking
-  blocked to run the proof end-to-end. Local dry-run via
-  `python3 scripts/release/v2-build.py --self-test --profile release
-  --target host --out release/v2/rc` is the substitute and is recorded
-  separately in `release/v2/acceptance/v2-rc-acceptance.json`. A separate
-  clean-machine run is still required for B7-027 sign-off.
+- **Fresh-user qualification remains build-phase work.** The harness and
+  four sample lifecycle command are implemented, but B7-027 still requires
+  execution against the newly built candidate on a fresh OS user with
+  networking blocked.
 
-- **Three monochrome registers unpicked.** graphite (bone accent),
-  tungsten (warm bone), pewter (white) — implemented as token themes
-  over one structure; functional (typecheck, tests, build all pass), but
-  not screenshotted or chosen. `brands.md` has no CutRight entry and
-  must not get one until Adrian picks.
+- **Graphite is locked.** Production always selects Graphite. Tungsten and
+  Pewter remain QA-only comparison themes, and the suite brand reference
+  records the lock.
 
-- **Effect library 5 of 15.** `finish.md:108` names 15 starter effects.
-  Renderer split (ffmpeg / ass / native) is done; ten effects remain
-  unbuilt. HyperFrames has no implementation anywhere in the repo — it
-  is a reserved enum variant that fails loudly.
+- **All 15 starter effects use native rendering.** ASS, Remotion, and
+  HyperFrames are not executable dependencies, so local libass availability
+  does not block the product path.
 
-- **libass absent locally.** This machine's FFmpeg is built without
-  `libass` and without `drawtext`, so the ASS caption renderer fails
-  loudly here and `doctor` reports it missing. Remotion and the native
-  renderer cover branded-kinetic effects with real type; ASS covers
-  cheap fixed karaoke captions on a machine whose FFmpeg has libass.
-
-- **Rough-cut candidate generation is still gap-based** with best-take
-  scoring, not red-thread editorial selection. B4-019 made SHORTS
-  extraction semantic; this is the separate rough-cut path and the
-  distinction matters. Reframing IS temporal now (B4-009) — sampled
-  tracks with bounded-acceleration smoothing, not one anchor per segment.
+- **Rough-cut selection is semantic.** Red-thread selection uses semantic
+  evidence with deterministic fallback and manual-review escalation when
+  confidence is insufficient.
 
 - **Cloud has no provider, by design.** B7-011 envelope is built —
   consent, hard budget, upload policy, content-hash cache,

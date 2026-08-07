@@ -1,8 +1,6 @@
 //! Offline pack repair integration tests.
 
-use video_runtime::offline_repair::{
-    offline_repair, OfflineRepairAction, OfflineRepairRequest,
-};
+use video_runtime::offline_repair::{offline_repair, OfflineRepairAction, OfflineRepairRequest};
 
 #[test]
 fn corrupt_payload_is_rejected() {
@@ -42,7 +40,8 @@ fn no_network_control_or_url_appears() {
         current_active: None,
     });
     let s = format!("{:?}", r);
-    assert!(!s.contains("https://") || r.action == OfflineRepairAction::Noop,
+    assert!(
+        !s.contains("https://") || r.action == OfflineRepairAction::Noop,
         "non-local URL must be rejected: {}",
         s
     );

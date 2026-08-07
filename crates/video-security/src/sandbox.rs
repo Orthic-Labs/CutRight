@@ -168,7 +168,10 @@ pub fn classify_decompression(
     }
     let ratio = (decompressed_bytes / compressed_bytes) as u32;
     if ratio > limits.max_decompressed_ratio {
-        Err(SandboxError::BombDetected(ratio, limits.max_decompressed_ratio))
+        Err(SandboxError::BombDetected(
+            ratio,
+            limits.max_decompressed_ratio,
+        ))
     } else {
         Ok(())
     }

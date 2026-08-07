@@ -54,11 +54,8 @@ pub fn validate_proposal(
     req: &EditorialRequest,
     prop: &EditorialProposal,
 ) -> Result<(), DirectorError> {
-    let known: std::collections::HashSet<&str> = req
-        .candidates
-        .iter()
-        .map(|c| c.take_id.as_str())
-        .collect();
+    let known: std::collections::HashSet<&str> =
+        req.candidates.iter().map(|c| c.take_id.as_str()).collect();
     for s in &prop.selected {
         if !known.contains(s.take_id.as_str()) {
             return Err(DirectorError::UnknownCandidate(s.take_id.clone()));
@@ -66,8 +63,7 @@ pub fn validate_proposal(
     }
     let sel_ids: std::collections::HashSet<&str> =
         prop.selected.iter().map(|s| s.take_id.as_str()).collect();
-    let ord_ids: std::collections::HashSet<&str> =
-        prop.order.iter().map(|s| s.as_str()).collect();
+    let ord_ids: std::collections::HashSet<&str> = prop.order.iter().map(|s| s.as_str()).collect();
     if sel_ids != ord_ids {
         return Err(DirectorError::SchemaInvalid("order permutation".into()));
     }
@@ -90,8 +86,16 @@ mod tests {
             format: "shorts".into(),
             duration_ms_target: 30_000,
             candidates: vec![
-                CandidateRef { beat_id: "b1".into(), take_id: "t1".into(), role: "hook".into() },
-                CandidateRef { beat_id: "b2".into(), take_id: "t2".into(), role: "payoff".into() },
+                CandidateRef {
+                    beat_id: "b1".into(),
+                    take_id: "t1".into(),
+                    role: "hook".into(),
+                },
+                CandidateRef {
+                    beat_id: "b2".into(),
+                    take_id: "t2".into(),
+                    role: "payoff".into(),
+                },
             ],
             evidence_refs: vec!["e1".into()],
             model_revision: "v1".into(),
@@ -102,8 +106,16 @@ mod tests {
         EditorialProposal {
             proposal_id: "p1".into(),
             selected: vec![
-                CandidateRef { beat_id: "b1".into(), take_id: "t1".into(), role: "hook".into() },
-                CandidateRef { beat_id: "b2".into(), take_id: "t2".into(), role: "payoff".into() },
+                CandidateRef {
+                    beat_id: "b1".into(),
+                    take_id: "t1".into(),
+                    role: "hook".into(),
+                },
+                CandidateRef {
+                    beat_id: "b2".into(),
+                    take_id: "t2".into(),
+                    role: "payoff".into(),
+                },
             ],
             order: vec!["t1".into(), "t2".into()],
             arc_id: "shorts.hook-payoff".into(),
@@ -120,15 +132,25 @@ mod tests {
     #[test]
     fn unknown_candidate_rejected() {
         let mut p = prop_ok();
-        p.selected.push(CandidateRef { beat_id: "bx".into(), take_id: "tx".into(), role: "x".into() });
+        p.selected.push(CandidateRef {
+            beat_id: "bx".into(),
+            take_id: "tx".into(),
+            role: "x".into(),
+        });
         p.order.push("tx".into());
-        assert!(matches!(validate_proposal(&req(), &p), Err(DirectorError::UnknownCandidate(_))));
+        assert!(matches!(
+            validate_proposal(&req(), &p),
+            Err(DirectorError::UnknownCandidate(_))
+        ));
     }
 
     #[test]
     fn missing_rationale_rejected() {
         let mut p = prop_ok();
         p.rationale.clear();
-        assert!(matches!(validate_proposal(&req(), &p), Err(DirectorError::SchemaInvalid(_))));
+        assert!(matches!(
+            validate_proposal(&req(), &p),
+            Err(DirectorError::SchemaInvalid(_))
+        ));
     }
 }

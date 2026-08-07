@@ -82,8 +82,8 @@ fn minimal_registry() -> video_capabilities::CapabilityRegistry {
 fn executor_rejects_unknown_capability() {
     let dir = TempDir::new().expect("tempdir");
     let registry = minimal_registry();
-    let guard = SessionGuard::acquire(dir.path(), video_sessions::ProjectId::new("p"))
-        .expect("guard");
+    let guard =
+        SessionGuard::acquire(dir.path(), video_sessions::ProjectId::new("p")).expect("guard");
     let executor = ActionExecutor::new(dir.path());
 
     let batch = ActionBatch {
@@ -114,8 +114,8 @@ fn executor_rejects_unknown_capability() {
 fn executor_surfaces_schema_envelope_validation() {
     let dir = TempDir::new().expect("tempdir");
     let registry = minimal_registry();
-    let guard = SessionGuard::acquire(dir.path(), video_sessions::ProjectId::new("p"))
-        .expect("guard");
+    let guard =
+        SessionGuard::acquire(dir.path(), video_sessions::ProjectId::new("p")).expect("guard");
     let executor = ActionExecutor::new(dir.path());
 
     let mut batch = ActionBatch {
@@ -141,8 +141,8 @@ fn executor_surfaces_schema_envelope_validation() {
 fn executor_dry_run_emits_receipt_with_dry_run_status() {
     let dir = TempDir::new().expect("tempdir");
     let registry = minimal_registry();
-    let guard = SessionGuard::acquire(dir.path(), video_sessions::ProjectId::new("p"))
-        .expect("guard");
+    let guard =
+        SessionGuard::acquire(dir.path(), video_sessions::ProjectId::new("p")).expect("guard");
     let executor = ActionExecutor::new(dir.path());
 
     let batch = ActionBatch {
@@ -176,8 +176,8 @@ fn executor_dry_run_emits_receipt_with_dry_run_status() {
 fn executor_apply_rejects_when_active_revision_missing() {
     let dir = TempDir::new().expect("tempdir");
     let registry = minimal_registry();
-    let guard = SessionGuard::acquire(dir.path(), video_sessions::ProjectId::new("p"))
-        .expect("guard");
+    let guard =
+        SessionGuard::acquire(dir.path(), video_sessions::ProjectId::new("p")).expect("guard");
     let executor = ActionExecutor::new(dir.path());
 
     // The active revision lookup happens AFTER capability + session
@@ -239,7 +239,12 @@ fn executor_report_envelope_round_trips_through_serde() {
         inner_schema: RECEIPT_SCHEMA.into(),
         applied: true,
         diff: None,
-        receipt: video_actions::revision::Receipt::applied("b", "rev_next", "receipt:b:rev_next", vec!["act_0".into()]),
+        receipt: video_actions::revision::Receipt::applied(
+            "b",
+            "rev_next",
+            "receipt:b:rev_next",
+            vec!["act_0".into()],
+        ),
     };
     let text = serde_json::to_string(&report).expect("serialize");
     let decoded: video_project::ExecutorReport = serde_json::from_str(&text).expect("deserialize");

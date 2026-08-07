@@ -105,6 +105,22 @@ const canvasStyles = {
 
 function DesignCanvas({ title, subtitle, columns = 3, children }) {
   const [expanded, setExpanded] = React.useState(null);
+  const overlayRef = React.useRef(null);
+  const triggerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (expanded !== null) {
+      triggerRef.current = document.activeElement;
+      overlayRef.current?.focus();
+    } else if (triggerRef.current instanceof HTMLElement) {
+      triggerRef.current.focus();
+      triggerRef.current = null;
+    }
+  }, [expanded]);
+
+  const toggleExpanded = idx => {
+    setExpanded(current => (current === idx ? null : idx));
+  };
 
   const gridStyle = {
     ...canvasStyles.grid,
@@ -126,7 +142,7 @@ function DesignCanvas({ title, subtitle, columns = 3, children }) {
             ? React.cloneElement(child, {
                 _index: idx,
                 _expanded: expanded === idx,
-                _onToggle: () => setExpanded(expanded === idx ? null : idx),
+                _onToggle: () => toggleExpanded(idx),
               })
             : child
         )}
@@ -134,7 +150,17 @@ function DesignCanvas({ title, subtitle, columns = 3, children }) {
 
       {expanded !== null && (
         <div
-          onClick={() => setExpanded(null)}
+          ref={overlayRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Expanded design variation"
+          tabIndex={-1}
+          onClick={event => {
+            if (event.target === event.currentTarget) setExpanded(null);
+          }}
+          onKeyDown={event => {
+            if (event.key === 'Escape') setExpanded(null);
+          }}
           style={{
             position: 'fixed',
             inset: 0,
@@ -148,7 +174,6 @@ function DesignCanvas({ title, subtitle, columns = 3, children }) {
           }}
         >
           <div
-            onClick={e => e.stopPropagation()}
             style={{
               background: '#fff',
               borderRadius: 8,
@@ -180,7 +205,18 @@ function Variation({ label, description, number, children, _index, _expanded, _o
       </div>
 
       <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={_expanded}
+        aria-haspopup="dialog"
+        aria-label={`Expand ${label}${description ? `: ${description}` : ''}`}
         onClick={_onToggle}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            _onToggle();
+          }
+        }}
         style={{
           ...canvasStyles.frame,
           aspectRatio,
@@ -190,6 +226,12 @@ function Variation({ label, description, number, children, _index, _expanded, _o
         }}
         onMouseLeave={e => {
           e.currentTarget.style.boxShadow = 'none';
+        }}
+        onFocus={event => {
+          event.currentTarget.style.boxShadow = '0 0 0 3px rgba(26,26,26,0.35), 0 8px 24px rgba(0,0,0,0.08)';
+        }}
+        onBlur={event => {
+          event.currentTarget.style.boxShadow = 'none';
         }}
       >
         <div style={canvasStyles.frameInner}>

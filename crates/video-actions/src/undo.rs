@@ -19,7 +19,7 @@ use thiserror::Error;
 
 use crate::action::{
     Action, AudioParams, CaptionParams, ColourCorrectionParams, ColourLutParams,
-    ExportRenderParams, GraphicParams, MoveParams, RetimeParams, RestoreParams, SettingParams,
+    ExportRenderParams, GraphicParams, MoveParams, RestoreParams, RetimeParams, SettingParams,
     TakeSwapParams,
 };
 use crate::apply::{ApplyError, ApplyOutcome, StagedApply};
@@ -150,8 +150,9 @@ pub fn inverse_of_with_original(
             },
         }),
         Action::TakeSwap { target, params } => {
-            let original_clip = original_clip_id
-                .ok_or_else(|| UndoError::NonReversible("take.swap requires original_clip_id".into()))?;
+            let original_clip = original_clip_id.ok_or_else(|| {
+                UndoError::NonReversible("take.swap requires original_clip_id".into())
+            })?;
             Ok(Action::TakeSwap {
                 target: target.clone(),
                 params: TakeSwapParams {
@@ -302,10 +303,7 @@ impl UndoRedoStack {
         apply: &StagedApply,
         staged: &mut StagedRevision,
     ) -> Result<UndoOutcome, UndoError> {
-        let entry = self
-            .undo_stack
-            .pop_back()
-            .ok_or(UndoError::NothingToUndo)?;
+        let entry = self.undo_stack.pop_back().ok_or(UndoError::NothingToUndo)?;
         let inverse_actions = entry.inverse_actions.clone();
         let original_batch_id = entry.batch_id.clone();
         let expected_revision = entry.receipt.new_revision.clone();
@@ -327,7 +325,10 @@ impl UndoRedoStack {
                     forward_actions: entry.forward_actions,
                     inverse_actions: entry.inverse_actions,
                 });
-                Ok(UndoOutcome::Applied { receipt, was_undo: true })
+                Ok(UndoOutcome::Applied {
+                    receipt,
+                    was_undo: true,
+                })
             }
             ApplyOutcome::Failed { failures, .. } => {
                 // Stack state is unchanged on failure (per the spec).
@@ -336,7 +337,10 @@ impl UndoRedoStack {
                     .first()
                     .map(|f| f.message.clone())
                     .unwrap_or_else(|| "unknown failure".to_string());
-                Ok(UndoOutcome::Failed { reason, was_undo: true })
+                Ok(UndoOutcome::Failed {
+                    reason,
+                    was_undo: true,
+                })
             }
         }
     }
@@ -347,10 +351,7 @@ impl UndoRedoStack {
         apply: &StagedApply,
         staged: &mut StagedRevision,
     ) -> Result<UndoOutcome, UndoError> {
-        let entry = self
-            .redo_stack
-            .pop_back()
-            .ok_or(UndoError::NothingToRedo)?;
+        let entry = self.redo_stack.pop_back().ok_or(UndoError::NothingToRedo)?;
         let forward_actions = entry.forward_actions.clone();
         let original_batch_id = entry.batch_id.clone();
         let expected_revision = entry.receipt.new_revision.clone();
@@ -369,7 +370,10 @@ impl UndoRedoStack {
                     forward_actions: entry.forward_actions,
                     inverse_actions: entry.inverse_actions,
                 });
-                Ok(UndoOutcome::Applied { receipt, was_undo: false })
+                Ok(UndoOutcome::Applied {
+                    receipt,
+                    was_undo: false,
+                })
             }
             ApplyOutcome::Failed { failures, .. } => {
                 self.redo_stack.push_back(entry);
@@ -377,19 +381,28 @@ impl UndoRedoStack {
                     .first()
                     .map(|f| f.message.clone())
                     .unwrap_or_else(|| "unknown failure".to_string());
-                Ok(UndoOutcome::Failed { reason, was_undo: false })
+                Ok(UndoOutcome::Failed {
+                    reason,
+                    was_undo: false,
+                })
             }
         }
     }
 
     /// Return the receipts currently on the undo stack, oldest first.
     pub fn undo_receipts(&self) -> Vec<Receipt> {
-        self.undo_stack.iter().map(|entry| entry.receipt.clone()).collect()
+        self.undo_stack
+            .iter()
+            .map(|entry| entry.receipt.clone())
+            .collect()
     }
 
     /// Return the receipts currently on the redo stack, oldest first.
     pub fn redo_receipts(&self) -> Vec<Receipt> {
-        self.redo_stack.iter().map(|entry| entry.receipt.clone()).collect()
+        self.redo_stack
+            .iter()
+            .map(|entry| entry.receipt.clone())
+            .collect()
     }
 }
 
@@ -399,9 +412,7 @@ impl UndoRedoStack {
 pub fn is_directly_invertible(action: &Action) -> bool {
     matches!(
         action,
-        Action::Cut { .. }
-            | Action::Restore { .. }
-            | Action::Move { .. }
+        Action::Cut { .. } | Action::Restore { .. } | Action::Move { .. }
     )
 }
 
@@ -473,10 +484,7 @@ mod tests {
     }
 
     fn staged_with_clip5() -> StagedRevision {
-        let mut staged = StagedRevision::from_active(
-            &make_active("rev_0001"),
-            DEFAULT_DURATION_NS,
-        );
+        let mut staged = StagedRevision::from_active(&make_active("rev_0001"), DEFAULT_DURATION_NS);
         staged.register_target("clip:clip_5");
         staged
     }
@@ -724,13 +732,22 @@ mod tests {
         // the original action, so undo+redo is the round-trip back to the
         // original state.
         let undo_outcome = stack.undo(&pipeline, &mut staged).unwrap();
-        assert!(matches!(undo_outcome, UndoOutcome::Applied { was_undo: true, .. }));
+        assert!(matches!(
+            undo_outcome,
+            UndoOutcome::Applied { was_undo: true, .. }
+        ));
 
         // Redo replays the original forward batch (cut), confirming that
         // the inverse batch was the inverse of the original and that the
         // inverse-of-inverse returns to the original state.
         let redo_outcome = stack.redo(&pipeline, &mut staged).unwrap();
-        assert!(matches!(redo_outcome, UndoOutcome::Applied { was_undo: false, .. }));
+        assert!(matches!(
+            redo_outcome,
+            UndoOutcome::Applied {
+                was_undo: false,
+                ..
+            }
+        ));
     }
 
     #[test]
@@ -809,7 +826,10 @@ mod tests {
 
         // Undo applies the inverse batch.
         let undo_outcome = stack.undo(&pipeline, &mut staged).unwrap();
-        assert!(matches!(undo_outcome, UndoOutcome::Applied { was_undo: true, .. }));
+        assert!(matches!(
+            undo_outcome,
+            UndoOutcome::Applied { was_undo: true, .. }
+        ));
         // The active pointer must point to the new revision id, not the
         // original `rev_0001`.
         let recovery = pipeline.recover();

@@ -1,10 +1,10 @@
 use std::fs;
 use std::path::PathBuf;
 
+use video_state::migrate::{MigrationRunner, MigrationStep};
 use video_state::migrations::v2::{
     v1_to_v2_plan, FrozenStep, FROM_VERSION, FROZEN_STEPS, TO_VERSION,
 };
-use video_state::migrate::{MigrationRunner, MigrationStep};
 
 fn fixtures_root() -> PathBuf {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

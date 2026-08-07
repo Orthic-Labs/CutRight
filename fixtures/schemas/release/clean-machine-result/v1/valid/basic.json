@@ -1,44 +1,15 @@
 {
-  "schema_version": "v2",
-  "target": "host",
-  "ran_at": "2026-08-07T00:00:00+00:00",
-  "platform": {
-    "system": "Darwin",
-    "release": "26.5.2",
-    "machine": "arm64",
-    "python": "3.9.0"
-  },
-  "external_runtime_dependencies": 0,
-  "network_attempts": 0,
-  "ci": "forbidden",
-  "publish": false,
-  "upload_status": "not_performed",
-  "overall_passed": true,
+  "schema_version": "v2", "target": "host", "ran_at": "2026-08-07T00:00:00+00:00",
+  "platform": {"system": "Darwin", "release": "26.5.2", "machine": "arm64", "python": "3.9.0"},
+  "preconditions": {"fresh_os_user": true, "isolated_runner": true, "runtime_path": "", "blocked_network": {"enforced": true, "mechanism": "sandbox-exec", "policy": "deny network", "network_attempt_total": 0}},
+  "external_runtime_dependencies": 0, "network_attempts": 0, "ci": "forbidden", "publish": false, "upload_status": "not_performed", "overall_passed": true, "blocked_by": null,
   "checks": [
-    {
-      "check": "no_external_tool_on_path",
-      "passed": true,
-      "evidence": {"absent": ["python", "python3", "node", "npm", "ffmpeg", "ollama", "heardright", "coderight"]}
-    },
-    {
-      "check": "network_deny",
-      "passed": true,
-      "evidence": {"hosts": [{"host": "download.cutright.local", "resolved": false, "policy_blocked": true}]}
-    },
-    {
-      "check": "offline_bundle_markers",
-      "passed": true,
-      "evidence": {"markers": [{"marker": "app", "present": true}]}
-    },
-    {
-      "check": "all_four_samples_present",
-      "passed": true,
-      "evidence": {"samples": []}
-    },
-    {
-      "check": "four_lanes_accepted",
-      "passed": true,
-      "evidence": {"claimed_lanes": ["creator", "creative", "speech", "vision"]}
-    }
+    {"check": "sanitized_runtime_path", "passed": true, "evidence": {}}, {"check": "blocked_network_policy", "passed": true, "evidence": {}}, {"check": "exact_bundle_hashes", "passed": true, "evidence": {}}, {"check": "bundled_application", "passed": true, "evidence": {}}, {"check": "bundled_packs", "passed": true, "evidence": {}}, {"check": "bundled_four_samples", "passed": true, "evidence": {}}, {"check": "four_sample_lifecycles", "passed": true, "evidence": {}}
+  ],
+  "sample_results": [
+    {"sample": "recorded-talking-head", "lane": "creator", "outcome": "ready_review", "reason": "", "command": ["app"], "exit_code": 0, "network_attempt_total": 0, "pack_ids": ["v2-capability-core"], "lifecycle": {"correction_undo": true, "restart_resume": true, "repair_rollback": true, "uninstall_preservation": true}},
+    {"sample": "repurpose-podcast", "lane": "speech", "outcome": "ready_review", "reason": "", "command": ["app"], "exit_code": 0, "network_attempt_total": 0, "pack_ids": ["v2-capability-core"], "lifecycle": {"correction_undo": true, "restart_resume": true, "repair_rollback": true, "uninstall_preservation": true}},
+    {"sample": "procedural-explainer", "lane": "creative", "outcome": "ready_review", "reason": "", "command": ["app"], "exit_code": 0, "network_attempt_total": 0, "pack_ids": ["v2-capability-core"], "lifecycle": {"correction_undo": true, "restart_resume": true, "repair_rollback": true, "uninstall_preservation": true}},
+    {"sample": "anchored-product", "lane": "vision", "outcome": "ready_review", "reason": "", "command": ["app"], "exit_code": 0, "network_attempt_total": 0, "pack_ids": ["v2-capability-core"], "lifecycle": {"correction_undo": true, "restart_resume": true, "repair_rollback": true, "uninstall_preservation": true}}
   ]
 }

@@ -1,9 +1,7 @@
 // Integration tests for confidence + critic (B4-020).
 
 use video_editorial::narrative::confidence::{estimate, Ambiguity, ConfidenceInputs, ReviewMode};
-use video_editorial::narrative::critic::{
-    run_critic, CriticVerdict, ProposalView, SampleView,
-};
+use video_editorial::narrative::critic::{run_critic, CriticVerdict, ProposalView, SampleView};
 use video_editorial::narrative::truthfulness::{ChronologyStatus, OrderLog};
 
 #[test]
@@ -35,8 +33,14 @@ fn second_critic_disagreement_escalates() {
         evidence_count: 1,
         has_unknown_candidates: false,
         samples: vec![
-            SampleView { sample_id: "s1".into(), matches_evidence: true },
-            SampleView { sample_id: "s2".into(), matches_evidence: false },
+            SampleView {
+                sample_id: "s1".into(),
+                matches_evidence: true,
+            },
+            SampleView {
+                sample_id: "s2".into(),
+                matches_evidence: false,
+            },
         ],
     };
     let r1 = run_critic(&v, false);

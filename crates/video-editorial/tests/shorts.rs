@@ -6,9 +6,18 @@ use video_editorial::narrative::shorts::{
 
 fn beats() -> Vec<ShortBeatRef> {
     vec![
-        ShortBeatRef { beat_id: "b1".into(), evidence_ref: "ev1".into() },
-        ShortBeatRef { beat_id: "b2".into(), evidence_ref: "ev2".into() },
-        ShortBeatRef { beat_id: "b3".into(), evidence_ref: "ev3".into() },
+        ShortBeatRef {
+            beat_id: "b1".into(),
+            evidence_ref: "ev1".into(),
+        },
+        ShortBeatRef {
+            beat_id: "b2".into(),
+            evidence_ref: "ev2".into(),
+        },
+        ShortBeatRef {
+            beat_id: "b3".into(),
+            evidence_ref: "ev3".into(),
+        },
     ]
 }
 

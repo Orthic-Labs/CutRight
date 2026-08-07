@@ -4,11 +4,9 @@
 
 export type Mode = "sources" | "compare" | "finals" | "qa" | "settings";
 
-// The three parked register variants (redesign spec Phase 2) — base/accent/
-// density/type token themes over one shared component structure, applied
-// via `data-register` on the document root. R1 is the default until Adrian
-// picks one; the QA-only RegisterSwitch (visible behind `?qa=1`) exists so
-// all three can be screenshotted from one running instance.
+// Graphite is the locked product register. Tungsten and Pewter remain
+// QA-only comparison themes over the same component structure, selected by
+// `data-register` only so regression captures can exercise all token sets.
 export type Register = "cutting-room" | "bench" | "screening-room";
 export const REGISTER_ORDER: Register[] = [
   "cutting-room",
@@ -16,9 +14,9 @@ export const REGISTER_ORDER: Register[] = [
   "screening-room",
 ];
 export const REGISTER_LABEL: Record<Register, string> = {
-  "cutting-room": "R1 · Cutting Room",
-  bench: "R2 · Bench",
-  "screening-room": "R3 · Screening Room",
+  "cutting-room": "Graphite · Locked",
+  bench: "Tungsten · QA",
+  "screening-room": "Pewter · QA",
 };
 
 // Single source of truth for mode order/labels so the mode tabs, the

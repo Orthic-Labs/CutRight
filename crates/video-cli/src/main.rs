@@ -5,10 +5,10 @@ mod doctor;
 
 use clap::Parser;
 use cli::{
-    AnalyzeCommand, BenchCommand, Cli, CloudCommand, Command, EditCommand, EvidenceCommand,
-    ExportCommand, FinishCommand, PackageCommand, PreferencesCommand, ProjectCommand,
-    ReceiptsCommand, ReframeCommand, RenderCommand, ReviewCommand, ShortsCommand, SlotCommand,
-    TranscriptCommand,
+    AnalyzeCommand, BenchCommand, CleanMachineSampleArgs, Cli, CloudCommand, Command, EditCommand,
+    EvidenceCommand, ExportCommand, FinishCommand, PackageCommand, PreferencesCommand,
+    ProjectCommand, ReceiptsCommand, ReframeCommand, RenderCommand, ReviewCommand, ShortsCommand,
+    SlotCommand, TranscriptCommand,
 };
 use doctor::DoctorOutcome;
 use serde_json::{json, Value};
@@ -125,6 +125,13 @@ fn main() -> ExitCode {
                 ExitCode::from(EXIT_RECEIPTS_FAIL)
             }
         }
+        Ok(Outcome::CleanMachine(value, passed)) => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&value).expect("JSON serialization cannot fail")
+            );
+            ExitCode::from(if passed { EXIT_OK } else { EXIT_ERROR })
+        }
         Err(error) => {
             println!(
                 "{}",
@@ -148,6 +155,7 @@ enum Outcome {
     NotImplemented(Value),
     Doctor(Value, DoctorOutcome),
     Receipts(Value, bool),
+    CleanMachine(Value, bool),
 }
 
 fn run(cli: Cli) -> Result<Outcome, String> {
@@ -157,6 +165,7 @@ fn run(cli: Cli) -> Result<Outcome, String> {
                 doctor::run(args.profile, args.strict, args.write_receipt.as_deref());
             Ok(Outcome::Doctor(report, outcome))
         }
+        Command::CleanMachineSample(args) => clean_machine_sample(args),
         Command::Project {
             command: ProjectCommand::Init { folder },
         } => video_project::init_project(&folder, cli.dry_run)
@@ -411,10 +420,46 @@ fn command_name(command: &Command) -> String {
         Command::Preferences { .. } => "preferences recommend",
         Command::Cloud { .. } => "cloud",
         Command::Capabilities { .. } => "capabilities list",
+        Command::CleanMachineSample(_) => "clean-machine-sample",
         Command::Apply { .. } => "apply",
         Command::Doctor(_) | Command::Project { .. } => "unknown",
     }
     .to_string()
+}
+
+fn clean_machine_sample(args: CleanMachineSampleArgs) -> Result<Outcome, String> {
+    let pack_ids = if args.pack_ids.is_empty() {
+        std::env::var("CUTRIGHT_PACK_IDS")
+            .ok()
+            .map(|ids| {
+                ids.split(',')
+                    .filter(|id| !id.is_empty())
+                    .map(str::to_owned)
+                    .collect()
+            })
+            .unwrap_or_default()
+    } else {
+        args.pack_ids
+    };
+    let network_denied = args.network_deny
+        || matches!(
+            std::env::var("CUTRIGHT_NETWORK_POLICY").as_deref(),
+            Ok("deny")
+        );
+    let report = video_project::clean_machine_sample(
+        &args.project,
+        args.sample.as_deref(),
+        args.lane.as_deref(),
+        pack_ids,
+        network_denied,
+        &args.lifecycle,
+    )
+    .map_err(|error| error.to_string())?;
+    let passed = report.all_requested_supported_and_passed();
+    Ok(Outcome::CleanMachine(
+        serde_json::to_value(report).map_err(|error| error.to_string())?,
+        passed,
+    ))
 }
 
 fn not_implemented(command: String, dry_run: bool) -> Value {

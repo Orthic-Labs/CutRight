@@ -169,7 +169,10 @@ mod tests {
         });
         let r = run_critic(&v, true);
         assert_eq!(r.verdict, CriticVerdict::Block);
-        assert!(r.findings.iter().any(|f| f.finding_id == "second-disagreement"));
+        assert!(r
+            .findings
+            .iter()
+            .any(|f| f.finding_id == "second-disagreement"));
     }
 
     #[test]

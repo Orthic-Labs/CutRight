@@ -11,21 +11,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "result", rename_all = "snake_case")]
 pub enum RepairOutcome {
-    Ok {
-        pack_id: String,
-        payload: String,
-    },
-    PayloadMissing {
-        pack_id: String,
-        payload: String,
-    },
-    SignatureMismatch {
-        pack_id: String,
-        payload: String,
-    },
-    LockMissing {
-        pack_id: String,
-    },
+    Ok { pack_id: String, payload: String },
+    PayloadMissing { pack_id: String, payload: String },
+    SignatureMismatch { pack_id: String, payload: String },
+    LockMissing { pack_id: String },
 }
 
 /// Repair a pack from a verified offline payload. The function is

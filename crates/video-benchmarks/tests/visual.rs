@@ -4,9 +4,9 @@
 use video_benchmarks::collision::{box_overlap_ratio, detect_collisions, Box2D};
 use video_benchmarks::crop::{crop_acceleration, crop_jerk, CropSample};
 use video_benchmarks::visual::{
-    evaluate_visual, label_retention, non_target_similarity, subject_retention,
-    FrameSample, LabelRetentionEvaluator, OcrLabel, SubjectRef, SubjectRetentionEvaluator,
-    NonTargetFrameSimilarityEvaluator,
+    evaluate_visual, label_retention, non_target_similarity, subject_retention, FrameSample,
+    LabelRetentionEvaluator, NonTargetFrameSimilarityEvaluator, OcrLabel, SubjectRef,
+    SubjectRetentionEvaluator,
 };
 use video_benchmarks::{BenchmarkEvaluator, EvalContext};
 
@@ -142,15 +142,39 @@ fn crop_jerk_short_input_safe() {
 
 #[test]
 fn collision_overlap_ratio_full() {
-    let a = Box2D { t_ms: 0, x: 0.0, y: 0.0, w: 0.5, h: 0.5 };
-    let b = Box2D { t_ms: 0, x: 0.0, y: 0.0, w: 0.5, h: 0.5 };
+    let a = Box2D {
+        t_ms: 0,
+        x: 0.0,
+        y: 0.0,
+        w: 0.5,
+        h: 0.5,
+    };
+    let b = Box2D {
+        t_ms: 0,
+        x: 0.0,
+        y: 0.0,
+        w: 0.5,
+        h: 0.5,
+    };
     assert!((box_overlap_ratio(&a, &b) - 1.0).abs() < 1e-5);
 }
 
 #[test]
 fn collision_detect_threshold() {
-    let overlay = vec![Box2D { t_ms: 0, x: 0.0, y: 0.0, w: 0.5, h: 0.5 }];
-    let subject = vec![Box2D { t_ms: 0, x: 0.4, y: 0.4, w: 0.5, h: 0.5 }];
+    let overlay = vec![Box2D {
+        t_ms: 0,
+        x: 0.0,
+        y: 0.0,
+        w: 0.5,
+        h: 0.5,
+    }];
+    let subject = vec![Box2D {
+        t_ms: 0,
+        x: 0.4,
+        y: 0.4,
+        w: 0.5,
+        h: 0.5,
+    }];
     // Boxes overlap by 0.1x0.1 inside a 0.5x0.5 region; the per-box
     // overlap ratio is 0.04. Threshold 0.01 is satisfied.
     let events = detect_collisions("cap", &overlay, "face", &subject, 0.01);

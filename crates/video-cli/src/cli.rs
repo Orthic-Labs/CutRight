@@ -103,6 +103,8 @@ pub enum Command {
         #[command(subcommand)]
         command: CapabilitiesCommand,
     },
+    /// Run one bundled project through locally available lifecycle checks.
+    CleanMachineSample(CleanMachineSampleArgs),
     /// Drive the single Book 2 ActionExecutor with a
     /// `cutright.action_batch/v1` from stdin/file. The CLI never
     /// duplicates executor logic; it only marshals JSON (B2-023).
@@ -110,6 +112,22 @@ pub enum Command {
         #[command(flatten)]
         args: ApplyArgs,
     },
+}
+
+#[derive(Debug, Args)]
+pub struct CleanMachineSampleArgs {
+    /// Bundled project descriptor (`project.json`). It is copied before any check writes.
+    pub project: PathBuf,
+    #[arg(long)]
+    pub sample: Option<String>,
+    #[arg(long)]
+    pub lane: Option<String>,
+    #[arg(long = "pack-id", value_delimiter = ',')]
+    pub pack_ids: Vec<String>,
+    #[arg(long)]
+    pub network_deny: bool,
+    #[arg(long, value_delimiter = ',')]
+    pub lifecycle: Vec<String>,
 }
 
 #[derive(Debug, Subcommand)]

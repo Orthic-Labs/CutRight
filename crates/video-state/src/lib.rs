@@ -22,5 +22,5 @@ pub use migrate::{
     MigrationError, MigrationOutcome, MigrationPlan, MigrationRunner, MigrationStep,
     MigrationStepReceipt, MigrationVerifyReport,
 };
-pub use migrations::v2::{v1_to_v2_plan, FrozenStep, FROZEN_STEPS, FROM_VERSION, TO_VERSION};
+pub use migrations::v2::{v1_to_v2_plan, FrozenStep, FROM_VERSION, FROZEN_STEPS, TO_VERSION};
 pub use revision_store::{Revision, RevisionError, RevisionId, RevisionStore, StagedState};

@@ -69,7 +69,9 @@ pub fn approve_profile(
         overrides: BTreeMap::new(),
     };
     if let Some(top) = &recommendation.top_reason {
-        values.overrides.insert("top_reason".to_string(), top.clone());
+        values
+            .overrides
+            .insert("top_reason".to_string(), top.clone());
     }
     for (k, v) in &recommendation.weights {
         values.overrides.insert(k.clone(), format!("{:.6}", v));

@@ -55,9 +55,15 @@ fn winner_margin_computed() {
 
 #[test]
 fn hard_fault_catalogue_complete() {
-    assert!(disqualifies(&HardFault::ClippedWord { word_id: "w".into() }));
-    assert!(disqualifies(&HardFault::SourceCorruption { detail: "x".into() }));
+    assert!(disqualifies(&HardFault::ClippedWord {
+        word_id: "w".into()
+    }));
+    assert!(disqualifies(&HardFault::SourceCorruption {
+        detail: "x".into()
+    }));
     assert!(disqualifies(&HardFault::UnusableExposure { luma: 0.0 }));
     assert!(disqualifies(&HardFault::UnusableAudio { snr_db: -20.0 }));
-    assert!(disqualifies(&HardFault::IdentityViolation { subject_id: "s".into() }));
+    assert!(disqualifies(&HardFault::IdentityViolation {
+        subject_id: "s".into()
+    }));
 }

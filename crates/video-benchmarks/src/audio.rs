@@ -104,10 +104,7 @@ mod tests {
 
     #[test]
     fn unmarked_discontinuity_is_detected() {
-        let samples = vec![
-            sample("speech", -23.0, -2.0),
-            sample("speech", -10.0, -2.0),
-        ];
+        let samples = vec![sample("speech", -23.0, -2.0), sample("speech", -10.0, -2.0)];
         let result = evaluate_audio(&samples);
         assert_eq!(result.discontinuity_count, 1);
     }

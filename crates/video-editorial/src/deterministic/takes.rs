@@ -70,7 +70,11 @@ pub fn token_overlap(a: &[String], b: &[String]) -> f32 {
     }
     let inter = sa.intersection(&sb).count() as f32;
     let union = sa.union(&sb).count() as f32;
-    if union == 0.0 { 0.0 } else { inter / union }
+    if union == 0.0 {
+        0.0
+    } else {
+        inter / union
+    }
 }
 
 /// Detect contradiction: opposite negation state, conflicting numbers
@@ -120,7 +124,9 @@ pub fn cluster_takes(takes: &[Take], policy: &ClusterPolicy) -> Vec<TakeCluster>
     }
     fn find<'a>(parent: &BTreeMap<&'a str, &'a str>, mut x: &'a str) -> &'a str {
         while let Some(&p) = parent.get(x) {
-            if p == x { return x; }
+            if p == x {
+                return x;
+            }
             x = p;
         }
         x

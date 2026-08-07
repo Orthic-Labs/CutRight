@@ -94,7 +94,8 @@ pub enum SkillRuntimeError {
     BudgetExceeded { max_wall_ms: u64, used: u64 },
 }
 
-pub type SkillHandler = dyn Fn(&SkillRequest) -> Result<SkillResult, SkillRuntimeError> + Send + Sync;
+pub type SkillHandler =
+    dyn Fn(&SkillRequest) -> Result<SkillResult, SkillRuntimeError> + Send + Sync;
 
 /// The product-local runtime. Handlers are registered by `skill_family` and
 /// invoked synchronously. There is no IO, no network, no shell.
@@ -131,17 +132,22 @@ impl SkillRuntime {
         self.handlers.contains_key(&family)
     }
 
-    pub fn execute(&self, req: &SkillRequest) -> Result<(SkillResult, SkillTrace), SkillRuntimeError> {
+    pub fn execute(
+        &self,
+        req: &SkillRequest,
+    ) -> Result<(SkillResult, SkillTrace), SkillRuntimeError> {
         if req.version != RUNTIME_VERSION {
             return Err(SkillRuntimeError::SchemaVersion {
                 request: req.version.clone(),
                 runtime: RUNTIME_VERSION.to_string(),
             });
         }
-        let handler = self
-            .handlers
-            .get(&req.skill_family)
-            .ok_or(SkillRuntimeError::HandlerNotRegistered(req.skill_id.clone()))?;
+        let handler =
+            self.handlers
+                .get(&req.skill_family)
+                .ok_or(SkillRuntimeError::HandlerNotRegistered(
+                    req.skill_id.clone(),
+                ))?;
         let started_at = "1970-01-01T00:00:00Z".to_string();
         let result = handler(req)?;
         let finished_at = "1970-01-01T00:00:00Z".to_string();

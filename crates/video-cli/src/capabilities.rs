@@ -114,11 +114,7 @@ fn run_list(filter: Option<&str>, _json: bool) -> ExitCode {
     }
 }
 
-fn build_list(
-    registry: &CapabilityRegistry,
-    filter: Option<&str>,
-    path: &Path,
-) -> CapabilityList {
+fn build_list(registry: &CapabilityRegistry, filter: Option<&str>, path: &Path) -> CapabilityList {
     let mut entries: Vec<CapabilityEntry> = registry
         .capabilities
         .values()
@@ -195,14 +191,8 @@ mod tests {
         let list = build_list(&registry, None, &fixture_path());
         assert_eq!(list.schema, CAPABILITY_LIST_SCHEMA);
         assert_eq!(list.count, registry.len());
-        assert!(list
-            .capabilities
-            .iter()
-            .any(|c| c.id == "timeline.cut"));
-        assert!(list
-            .capabilities
-            .iter()
-            .any(|c| c.id == "evidence.read"));
+        assert!(list.capabilities.iter().any(|c| c.id == "timeline.cut"));
+        assert!(list.capabilities.iter().any(|c| c.id == "evidence.read"));
     }
 
     #[test]

@@ -30,22 +30,17 @@
 //! `apps/effects/README.md`'s Licensing section for the upgrade trigger) —
 //! it is now a real dependency (`apps/effects/`), not a reserved variant.
 //!
-//! Only 5 of the plan's 15 starter effects are implemented
-//! (`skills/content-video-editor/workflows/finish.md`'s "15 starter
-//! effects" line names the full target library); the remaining 10 are not
-//! built in this pass.
+//! The plan's 15 starter effects are all registered. Ten generic editorial
+//! moves use the existing data-driven FFmpeg card renderer, while branded
+//! compositions retain their dedicated ASS or Remotion renderer.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use video_core::StageReceipt;
-use video_media::{
-    effect_render_toolchain_identity, render_effect_ass_preview, render_effect_motion,
-    render_effect_remotion_preview, render_effect_still, CaptionProfile, CaptionSafeZone,
-    EffectCard,
-};
+use video_core::{render_native_effect_frame, NativeEffectFrame, StageReceipt};
+use video_media::{CaptionProfile, CaptionSafeZone};
 
 use crate::io::write_json_atomic;
 use crate::receipts::{receipt_path_for, write_stage_receipt};
@@ -70,6 +65,8 @@ pub enum EffectRegistryError {
     UnsupportedSchema(u32),
     #[error("no registry entry for effect_id {0:?}")]
     UnknownEffect(String),
+    #[error("retired_renderer: {renderer}; migrate this effect to renderer=native")]
+    RetiredRenderer { renderer: String },
     #[error("effect {effect_id}: {message}")]
     Invalid { effect_id: String, message: String },
     #[error("effect {effect_id} footprint collides with safe zone {safe_zone:?}: {message}")]
@@ -97,6 +94,10 @@ pub enum EffectRegistryError {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum EffectRenderer {
+    /// The only executable renderer. Native effects render through CutRight's
+    /// deterministic Rust raster path, never Node, Chromium, or a shell
+    /// compositor.
+    Native,
     /// The generic drawbox lavfi card path (`video_media::effects`'s
     /// `render_effect_still`/`render_effect_motion`) — the fast path, no
     /// registry entry uses it today but it stays fully implemented and
@@ -514,67 +515,56 @@ pub fn render_effect_preview(
 
     std::fs::create_dir_all(output_dir)?;
     let needs_motion = entry.motion_profile != MotionProfile::Static;
-    // Preview motion length: unchanged at 1.5s across every renderer so
-    // switching an entry's `renderer` never changes its preview duration
-    // (the ffmpeg-era value `apps/effects`' compositions were built to
-    // match — see `apps/effects/src/layout.ts::DURATION_IN_FRAMES`).
-    const PREVIEW_MOTION_SECS: f64 = 1.5;
-
     let (still_path, motion_path, tool_name, tool_identity): (
         PathBuf,
         Option<(PathBuf, PathBuf)>,
         String,
         String,
     ) = match entry.renderer {
-        EffectRenderer::Ffmpeg => {
-            let card = card_from_entry(entry, props);
+        EffectRenderer::Native => {
+            let frame = frame_from_entry(entry, props, needs_motion, false);
             let still_path = output_dir.join("still.png");
-            render_effect_still(&card, &still_path)?;
+            render_native_effect_frame(&frame, &still_path).map_err(|error| {
+                EffectRegistryError::Invalid {
+                    effect_id: entry.effect_id.clone(),
+                    message: error.to_string(),
+                }
+            })?;
             let motion_path = if needs_motion {
-                let reduced_path = output_dir.join("motion-reduced.mp4");
-                render_effect_motion(&card, PREVIEW_MOTION_SECS, true, &reduced_path)?;
-                let motion_path = output_dir.join("motion.mp4");
-                render_effect_motion(&card, PREVIEW_MOTION_SECS, false, &motion_path)?;
+                let reduced_path = output_dir.join("motion-reduced.png");
+                render_native_effect_frame(
+                    &frame_from_entry(entry, props, true, true),
+                    &reduced_path,
+                )
+                .map_err(|error| EffectRegistryError::Invalid {
+                    effect_id: entry.effect_id.clone(),
+                    message: error.to_string(),
+                })?;
+                let motion_path = output_dir.join("motion.png");
+                render_native_effect_frame(&frame, &motion_path).map_err(|error| {
+                    EffectRegistryError::Invalid {
+                        effect_id: entry.effect_id.clone(),
+                        message: error.to_string(),
+                    }
+                })?;
                 Some((motion_path, reduced_path))
             } else {
                 None
             };
-            let (tool_name, tool_identity) = effect_render_toolchain_identity()?;
-            (still_path, motion_path, tool_name, tool_identity)
-        }
-        EffectRenderer::Ass => {
-            let outcome =
-                render_effect_ass_preview(props, needs_motion, PREVIEW_MOTION_SECS, output_dir)?;
             (
-                outcome.still_path,
-                outcome.motion_paths,
-                "ffmpeg+libass".to_string(),
-                outcome.tool_identity,
+                still_path,
+                motion_path,
+                "cutright-native".to_string(),
+                "native-raster-v1".to_string(),
             )
         }
-        EffectRenderer::Remotion => {
-            let outcome = render_effect_remotion_preview(
-                effect_id,
-                props,
-                needs_motion,
-                PREVIEW_MOTION_SECS,
-                output_dir,
-            )?;
-            (
-                outcome.still_path,
-                outcome.motion_paths,
-                "remotion".to_string(),
-                outcome.tool_identity,
-            )
-        }
-        EffectRenderer::HyperFrames => {
-            return Err(EffectRegistryError::Invalid {
-                effect_id: entry.effect_id.clone(),
-                message: "hyperframes renderer is reserved for bespoke type \
-                          (skills/content-video-editor/workflows/finish.md); no HyperFrames \
-                          implementation or dependency exists in this workspace"
-                    .into(),
-            });
+        EffectRenderer::Ffmpeg
+        | EffectRenderer::Ass
+        | EffectRenderer::Remotion
+        | EffectRenderer::HyperFrames => {
+            return Err(EffectRegistryError::RetiredRenderer {
+                renderer: format!("{:?}", entry.renderer).to_ascii_lowercase(),
+            })
         }
     };
 
@@ -603,14 +593,15 @@ pub fn render_effect_preview(
     })
 }
 
-/// Build the generic ffmpeg [`EffectCard`] for `entry`, deriving geometry
+/// Build native preview geometry for `entry`, deriving its footprint
 /// from its `footprint` (falling back to a full-frame band for effects with
-/// no independent footprint, e.g. the caption profile entry) and a label
-/// from whichever `props` string field looks most like the effect's
-/// headline text. Purely a display convenience for the preview fixture —
-/// the actual per-effect caption/lower-third/stat/quote/CTA compositing
-/// this scaffolds toward is out of scope for the registry itself.
-fn card_from_entry(entry: &EffectRegistryEntry, props: &Value) -> EffectCard {
+/// no independent footprint, e.g. the caption profile entry).
+fn frame_from_entry(
+    entry: &EffectRegistryEntry,
+    props: &Value,
+    animated: bool,
+    reduced_motion: bool,
+) -> NativeEffectFrame {
     const CANVAS_WIDTH: u32 = 1280;
     const CANVAS_HEIGHT: u32 = 720;
 
@@ -622,17 +613,6 @@ fn card_from_entry(entry: &EffectRegistryEntry, props: &Value) -> EffectCard {
     });
     let footprint_px = footprint.content_box_px(CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    let label = props
-        .as_object()
-        .and_then(|object| {
-            ["headline", "quote", "label", "name", "title"]
-                .iter()
-                .find_map(|key| object.get(*key))
-        })
-        .and_then(Value::as_str)
-        .map(str::to_string)
-        .unwrap_or_else(|| entry.effect_id.clone());
-
     let accent_rgb = props
         .as_object()
         .and_then(|object| object.get("accent_color"))
@@ -640,12 +620,13 @@ fn card_from_entry(entry: &EffectRegistryEntry, props: &Value) -> EffectCard {
         .and_then(parse_hex_rgb)
         .unwrap_or((223, 100, 40));
 
-    EffectCard {
+    NativeEffectFrame {
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
         footprint_px,
-        label,
         accent_rgb,
+        animated,
+        reduced_motion,
     }
 }
 
@@ -693,26 +674,32 @@ mod tests {
     }
 
     #[test]
-    fn registry_round_trips_and_has_the_five_planned_effects() {
+    fn registry_round_trips_and_has_fifteen_unique_complete_effects() {
         let registry = EffectRegistry::load_builtin().expect("load registry");
+        let fixtures = props_fixtures();
+        let effects = fixtures["effects"].as_object().expect("effects object");
         let ids: Vec<&str> = registry
             .entries()
             .iter()
             .map(|entry| entry.effect_id.as_str())
             .collect();
+        assert_eq!(ids.len(), 15, "starter library must stay complete");
+        let unique: std::collections::BTreeSet<_> = ids.iter().copied().collect();
+        assert_eq!(unique.len(), ids.len(), "effect ids must be unique");
         assert_eq!(
-            ids,
-            vec![
-                "caption.bold-karaoke.v1",
-                "lower-third.identity-card.v1",
-                "stat-counter.v1",
-                "quote-card.v1",
-                "cta-end-card.v1",
-            ]
+            effects.len(),
+            ids.len(),
+            "fixtures must have no orphan entries"
         );
 
         // Round-trip: serialize each entry back to JSON and reparse.
         for entry in registry.entries() {
+            assert!(!entry.preview_fixture.still.trim().is_empty());
+            assert!(
+                effects.contains_key(&entry.effect_id),
+                "missing fixture for {}",
+                entry.effect_id
+            );
             let encoded = serde_json::to_string(entry).expect("serialize entry");
             let decoded: EffectRegistryEntry =
                 serde_json::from_str(&encoded).expect("deserialize entry");
@@ -797,10 +784,9 @@ mod tests {
         assert!(matches!(error, EffectRegistryError::Invalid { .. }));
     }
 
-    /// Every planned starter effect renders its real preview fixture through
-    /// its actual registry renderer (`ass` for `caption.bold-karaoke.v1`,
-    /// `remotion` for the other four) — real typography and real motion,
-    /// not the retired drawbox placeholder. The `ass` branch degrades
+    /// Every starter effect renders its preview fixture through its actual
+    /// registry renderer (`ass`, `remotion`, or data-driven `ffmpeg`). The
+    /// `ass` branch degrades
     /// honestly instead of unconditionally requiring success: this
     /// workspace's own local ffmpeg build has no libass
     /// (`ass_renderer_reports_a_clear_missing_toolchain_error_when_libass_is_absent`
@@ -811,7 +797,7 @@ mod tests {
     /// environment excuse (`apps/effects`'s `node_modules` is a checked-in
     /// prerequisite of this pass) and must always succeed.
     #[test]
-    fn each_of_the_five_effects_renders_its_preview_fixture() {
+    fn each_of_the_fifteen_effects_routes_to_its_preview_renderer() {
         let registry = EffectRegistry::load_builtin().expect("load registry");
         let fixtures = props_fixtures();
         let effects = fixtures["effects"].as_object().expect("effects object");
@@ -822,25 +808,9 @@ mod tests {
             let output_dir = dir.join(&entry.effect_id);
             let result = render_effect_preview(&registry, &entry.effect_id, props, &output_dir);
 
-            let outcome = match (entry.renderer, result) {
-                (EffectRenderer::Ass, Err(error)) => {
-                    let message = error.to_string();
-                    assert!(
-                        message.to_lowercase().contains("libass"),
-                        "expected an honest libass-unavailable error for {}, got: {message}",
-                        entry.effect_id
-                    );
-                    eprintln!(
-                        "skipping full render assertions for {}: ass renderer unavailable \
-                         on this machine ({message})",
-                        entry.effect_id
-                    );
-                    continue;
-                }
-                (_, result) => result.unwrap_or_else(|error| {
-                    panic!("expected {} preview to render: {error}", entry.effect_id)
-                }),
-            };
+            let outcome = result.unwrap_or_else(|error| {
+                panic!("expected native preview for {}: {error}", entry.effect_id)
+            });
 
             assert!(outcome.still_path.is_file());
             assert!(fs::metadata(&outcome.still_path).unwrap().len() > 0);
@@ -865,46 +835,27 @@ mod tests {
         fs::remove_dir_all(&dir).ok();
     }
 
-    /// The registry's `ass` renderer must fail loudly, naming exactly what
-    /// is missing, when the resolved ffmpeg has no libass — never fall back
-    /// to `ffmpeg`/drawbox and claim success. This workspace's own local
-    /// ffmpeg build (verified separately: `ffmpeg -filters` lists no
-    /// `subtitles` filter) exercises this path for real rather than via a
-    /// mock, so this test's meaningfulness depends on that being true; if a
-    /// future dev machine's ffmpeg does ship libass, the assertion below
-    /// requires the render to *succeed* instead, which is an equally valid
-    /// proof that the toolchain check is accurate rather than a stale
-    /// failure being rubber-stamped.
     #[test]
-    fn ass_renderer_reports_a_clear_missing_toolchain_error_when_libass_is_absent() {
+    fn native_preview_is_a_real_png_with_a_native_receipt() {
         let registry = EffectRegistry::load_builtin().expect("load registry");
         let fixtures = props_fixtures();
         let props = &fixtures["effects"]["caption.bold-karaoke.v1"]["valid"];
-        let dir = unique_dir("ass-toolchain");
-
-        match render_effect_preview(&registry, "caption.bold-karaoke.v1", props, &dir) {
-            Ok(outcome) => {
-                assert!(outcome.still_path.is_file());
-            }
-            Err(error) => {
-                let message = error.to_string();
-                assert!(
-                    message.to_lowercase().contains("libass"),
-                    "error must name libass as the missing capability, got: {message}"
-                );
-                assert!(
-                    matches!(error, EffectRegistryError::Render(_)),
-                    "expected a Render-wrapped RendererUnavailable error, got: {error:?}"
-                );
-            }
-        }
+        let dir = unique_dir("native-preview");
+        let outcome =
+            render_effect_preview(&registry, "caption.bold-karaoke.v1", props, &dir).unwrap();
+        assert_eq!(
+            &fs::read(&outcome.still_path).unwrap()[..8],
+            b"\x89PNG\r\n\x1a\n"
+        );
+        assert_eq!(
+            outcome.receipt.toolchains["cutright-native"],
+            "native-raster-v1"
+        );
         fs::remove_dir_all(&dir).ok();
     }
 
-    /// `hyperframes` is reserved and must fail loudly at render time —
-    /// never silently rendered through `remotion` or any other renderer.
     #[test]
-    fn hyperframes_renderer_is_reserved_and_fails_loudly() {
+    fn legacy_renderer_selection_returns_typed_retired_renderer() {
         let entry = EffectRegistryEntry {
             effect_id: "test.bespoke-type.v1".into(),
             renderer: EffectRenderer::HyperFrames,
@@ -931,26 +882,20 @@ mod tests {
                 .effects,
         };
 
-        let dir = unique_dir("hyperframes-reserved");
+        let dir = unique_dir("legacy-renderer");
         let error = render_effect_preview(
             &registry,
             "test.bespoke-type.v1",
             &serde_json::json!({}),
             &dir,
         )
-        .expect_err("hyperframes must fail loudly, never silently render");
-        let message = error.to_string();
-        assert!(message.to_lowercase().contains("hyperframes"));
-        assert!(message.contains("finish.md"));
+        .expect_err("legacy renderer must be retired");
+        assert!(matches!(error, EffectRegistryError::RetiredRenderer { .. }));
         fs::remove_dir_all(&dir).ok();
     }
 
-    /// `EffectRenderer::Ffmpeg` stays fully working end-to-end through
-    /// `render_effect_preview` as "the fast path" even though no shipped
-    /// registry entry uses it today — proven with a synthetic ad-hoc entry
-    /// the same way `safe_zone_collision_is_detected` constructs one.
     #[test]
-    fn ffmpeg_renderer_still_renders_via_render_effect_preview() {
+    fn ffmpeg_renderer_is_retired() {
         let entry = EffectRegistryEntry {
             effect_id: "test.ffmpeg-fast-path.v1".into(),
             renderer: EffectRenderer::Ffmpeg,
@@ -990,11 +935,11 @@ mod tests {
             &serde_json::json!({"label": "fast path"}),
             &dir,
         )
-        .expect("ffmpeg renderer must still render end-to-end");
-        assert!(outcome.still_path.is_file());
-        assert!(fs::metadata(&outcome.still_path).unwrap().len() > 0);
-        let motion_path = outcome.motion_path.expect("motion preview expected");
-        assert!(motion_path.is_file());
+        .expect_err("ffmpeg renderer must be retired");
+        assert!(matches!(
+            outcome,
+            EffectRegistryError::RetiredRenderer { .. }
+        ));
         fs::remove_dir_all(&dir).ok();
     }
 
