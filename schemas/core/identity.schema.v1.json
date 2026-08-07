@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/core/identity.schema.v1.json",
+  "title": "CutRight v2 identity (stable IDs)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id_kind", "value"],
+  "properties": {
+    "schema": {"const": "cutright.identity/v1"},
+    "id_kind": {
+      "enum": [
+        "project", "timeline", "track", "clip", "word",
+        "evidence_node", "action_batch", "job", "asset"
+      ]
+    },
+    "value": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9_-]+$"}
+  }
+}

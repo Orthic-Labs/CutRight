@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/core/revision.schema.v1.json",
+  "title": "CutRight v2 revision (immutable, parent-linked)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "revision_id",
+    "parents",
+    "created_at_ns",
+    "compatibility_fp"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cutright.revision/v1"
+    },
+    "revision_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "parents": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]+$"
+      },
+      "maxItems": 2
+    },
+    "created_at_ns": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "active_pointer": {
+      "type": "string"
+    },
+    "compatibility_fp": {
+      "type": "string",
+      "minLength": 16,
+      "pattern": "^[0-9a-f]+$"
+    }
+  }
+}
