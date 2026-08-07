@@ -15,9 +15,14 @@
 #![warn(missing_docs)]
 
 pub mod action;
+pub mod validation;
 
 pub use action::{
     Action, AudioParams, CaptionParams, ColourCorrectionParams, ColourLutParams, CutParams,
     ExportRenderParams, GraphicParams, MoveParams, ParamError, RetimeParams, RestoreParams,
     SettingParams, TakeSwapParams, TargetRef, TargetRefError, ACTION_KINDS,
+};
+pub use validation::{
+    validate_batch, DefaultValidator, ValidationContext, ValidationError, ValidationFailure,
+    Validator,
 };
