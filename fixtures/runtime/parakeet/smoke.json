@@ -1,0 +1,18 @@
+{
+  "fixture": "parakeet-timed-words-smoke",
+  "kind": "asr",
+  "audio": {
+    "path": "fixtures/runtime/parakeet/silence-1s.wav",
+    "sample_rate": 16000,
+    "channels": 1,
+    "duration_ms": 1000
+  },
+  "expected_timed_words": [],
+  "tolerance": {
+    "wer_max": 0.20,
+    "timing_coverage_min": 0.95,
+    "cold_start_ms_max": 2000,
+    "peak_memory_bytes_max": 1073741824
+  },
+  "fixture_hash": "unresolved"
+}

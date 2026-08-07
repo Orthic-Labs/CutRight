@@ -1,0 +1,56 @@
+{
+  "schema": "cutright.pack_manifest/v1",
+  "pack_id": "speech",
+  "version": "0.1.0",
+  "model_kind": "parakeet",
+  "target": {
+    "platform": "host",
+    "arch": "auto",
+    "abi": "auto"
+  },
+  "files": [],
+  "requirements": {
+    "min_storage_bytes": 0,
+    "min_memory_bytes": 536870912,
+    "thread_cap": 4
+  },
+  "capabilities": [
+    "asr.transcribe-timed-words",
+    "asr.decoder",
+    "asr.joiner",
+    "asr.tokenizer",
+    "asr.vocabulary"
+  ],
+  "compatibility": {
+    "min_runtime_api": 1,
+    "max_runtime_api": 1
+  },
+  "source": {
+    "upstream": "parakeet",
+    "commit": "unresolved",
+    "tag": "unresolved",
+    "fetched_at_ns": 0,
+    "fetched_by": "scripts/runtime/build-parakeet-pack.py - unfetched"
+  },
+  "assets": {
+    "encoder": {"sha256": "unresolved", "license": "unresolved"},
+    "decoder": {"sha256": "unresolved", "license": "unresolved"},
+    "joiner":  {"sha256": "unresolved", "license": "unresolved"},
+    "tokenizer": {"sha256": "unresolved", "license": "unresolved"},
+    "vocabulary": {"sha256": "unresolved", "license": "unresolved"}
+  },
+  "measurements": {
+    "wer": 0.0,
+    "timing_coverage": 0.0,
+    "throughput_xrt": 0.0,
+    "cold_start_ms": 0,
+    "peak_memory_bytes": 0
+  },
+  "manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "signature": {
+    "schema": "cutright.pack_signature/v1",
+    "algorithm": "blake3+ed25519",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signed_by": "unbuilt"
+  }
+}
