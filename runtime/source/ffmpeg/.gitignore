@@ -1,0 +1,4 @@
+runtime/source/ffmpeg/<target>/<arch>/bin/ffmpeg
+runtime/source/ffmpeg/<target>/<arch>/bin/ffprobe
+runtime/source/ffmpeg/<target>/<arch>/lib/
+runtime/source/ffmpeg/<target>/<arch>/include/

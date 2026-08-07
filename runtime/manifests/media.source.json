@@ -1,0 +1,53 @@
+{
+  "schema": "cutright.pack_manifest/v1",
+  "pack_id": "media",
+  "version": "8.1.0",
+  "target": {
+    "platform": "host",
+    "arch": "auto",
+    "abi": "auto"
+  },
+  "files": [],
+  "requirements": {
+    "min_storage_bytes": 104857600,
+    "min_memory_bytes": 134217728,
+    "thread_cap": 16
+  },
+  "capabilities": [
+    "ffprobe-json",
+    "h264-decode",
+    "h264-encode",
+    "aac-decode",
+    "aac-encode",
+    "libass-or-native-caption-path",
+    "zscale-or-qualified-hdr-path",
+    "mp4-mux",
+    "mp4-demux",
+    "mpegts-mux",
+    "mpegts-demux"
+  ],
+  "compatibility": {
+    "min_runtime_api": 1,
+    "max_runtime_api": 1
+  },
+  "source": {
+    "upstream": "ffmpeg",
+    "commit": "9047fa1b084f76b1b4d065af2d743df1b40dfb56",
+    "tag": "n8.1",
+    "fetched_at_ns": 0,
+    "fetched_by": "scripts/runtime/build-ffmpeg.py - unfetched"
+  },
+  "measurements": {
+    "ffprobe_smoke_pass": false,
+    "h264_decode_pass": false,
+    "aac_decode_pass": false,
+    "build_size_bytes": 0
+  },
+  "manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "signature": {
+    "schema": "cutright.pack_signature/v1",
+    "algorithm": "blake3+ed25519",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signed_by": "unbuilt"
+  }
+}
