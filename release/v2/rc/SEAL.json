@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "path": "BUILD.json",
+      "sha256": "61f109a3ae12a31799ad119784bb06c97ce6409d7cacd4770919484922bc4cbe",
+      "signature": ""
+    },
+    {
+      "path": "RC-MANIFEST.json",
+      "sha256": "323ff780114630a2a711949a9674fc00fb55ed4f885eef0bee2a2f5b799520b7",
+      "signature": ""
+    },
+    {
+      "path": "checksums.txt",
+      "sha256": "849ce0d96aef5af728dfe3f03f85177fa98ba4c1fb6654384be000e4a4fb254f",
+      "signature": ""
+    }
+  ],
+  "schema_version": "v2",
+  "seal_target": "/Volumes/D/claude/cutright/release/v2/rc"
+}

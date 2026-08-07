@@ -1,0 +1,66 @@
+{
+  "schema_version": "v2",
+  "release_candidate_id": "v2-rc-2026-08-07",
+  "release_candidate_status": "local_release_candidate",
+  "publish_status": "not_requested",
+  "upload_status": "not_performed",
+  "tag": "none",
+  "external_services_contacted": [],
+  "targets": [
+    {
+      "target": "macOS-arm64",
+      "status": "local_only",
+      "signed": false,
+      "seal": "release/v2/rc/SEAL.json"
+    },
+    {
+      "target": "macOS-x86_64",
+      "status": "local_only",
+      "signed": false,
+      "seal": "release/v2/rc/SEAL.json"
+    }
+  ],
+  "packs": [
+    {
+      "name": "v2-capability-core",
+      "status": "unsigned",
+      "location": "release/v2/rc/packs/v2-capability-core/"
+    },
+    {
+      "name": "v2-skill-runtime",
+      "status": "unsigned",
+      "location": "release/v2/rc/packs/v2-skill-runtime/"
+    }
+  ],
+  "source": {
+    "manifest": "release/v2/source/source-manifest.json",
+    "corresponding_source_bundle": "release/v2/rc/corresponding-source/"
+  },
+  "samples": [
+    "release/v2/rc/samples/recorded-talking-head/",
+    "release/v2/rc/samples/repurpose-podcast/",
+    "release/v2/rc/samples/procedural-explainer/",
+    "release/v2/rc/samples/anchored-product/"
+  ],
+  "tests": {
+    "four_lane_results": "benchmarks/runs/v2-release-candidate/four-lane-results.json",
+    "studio_acceptance": "release/v2/acceptance/v2-rc-acceptance.json"
+  },
+  "audits": {
+    "release_audit": "release/v2/audit/audit.json",
+    "sbom": "release/v2/SBOM.spdx.json",
+    "provenance": "release/v2/provenance.json",
+    "disclosure": "docs/release/V2-DISCLOSURE.md"
+  },
+  "sealed_artifacts": [
+    "release/v2/rc/BUILD.json",
+    "release/v2/rc/RC-MANIFEST.json",
+    "release/v2/rc/checksums.txt",
+    "release/v2/rc/SEAL.json"
+  ],
+  "build_metadata": "release/v2/rc/BUILD.json",
+  "build_command": "python3 scripts/release/v2-build.py --self-test --profile release --target host --out release/v2/rc",
+  "seal_command": "python3 scripts/release/v2-seal.py seal --manifest release/v2/rc/SEAL.json release/v2/rc",
+  "verify_command": "python3 scripts/release/v2-seal.py verify release/v2/rc",
+  "verified": true
+}
