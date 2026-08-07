@@ -1,0 +1,31 @@
+{
+  "items": [
+    {
+      "path": "checksums/SHA256SUMS.template",
+      "sha256": "b04d5aff949b864b61d1350c70d0a89e40d36fa6b7fc0adfbc02580a020073c1",
+      "signature": ""
+    },
+    {
+      "path": "corresponding-source/README.md",
+      "sha256": "b94d428311b90f59c2e5854787ae3e457fe3fc9f3cf8b9f6b10110e3b81e2f12",
+      "signature": ""
+    },
+    {
+      "path": "licences/README.md",
+      "sha256": "a5f6e720b98f461e3597b90a5651c9cda8009846e178bea5ee43c7a3804b776f",
+      "signature": ""
+    },
+    {
+      "path": "samples/README.md",
+      "sha256": "4266af72adfba9e0390121ace5519c96a0f3cf284bd83589fb21c1ca98a13d70",
+      "signature": ""
+    },
+    {
+      "path": "signatures/README.md",
+      "sha256": "723f29caf997b4828ead1777d11c9805a1472cf1fd96e36db8f9de70869240c9",
+      "signature": ""
+    }
+  ],
+  "schema_version": "v2",
+  "seal_target": "/Volumes/D/claude/cutright/release/v2/staging"
+}

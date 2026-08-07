@@ -137,6 +137,17 @@ def main(argv: list[str]) -> int:
     # fixture; everything else is forwarded to subcommands.
     if argv and argv[0] in ("--self-test", "self-test"):
         return cmd_self_test(_EmptyArgs())
+    # Top-level --verify <bundle> shortcut for the acceptance harness.
+    if argv and argv[0] == "--verify" and len(argv) >= 2:
+        args = _EmptyArgs()
+        args.bundle = argv[1]
+        args.seal = None
+        return cmd_verify(args)
+    if argv and argv[0] == "--checksums" and len(argv) >= 4 and argv[1] == "--out":
+        args = _EmptyArgs()
+        args.bundle = argv[3]
+        args.out = argv[2]
+        return cmd_checksums(args)
     parser = argparse.ArgumentParser(description="v2 seal / verify")
     parser.add_argument("--self-test", action="store_true")
     subs = parser.add_subparsers(dest="cmd", required=False)
