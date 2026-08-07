@@ -1,0 +1,30 @@
+---
+qualification: qwen3.5-4b
+mode: no_promote
+source_revision: 851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a
+license: apache-2.0
+---
+# Qwen3.5-4B Qualification Candidate
+
+This is a *qualification* record only. The model is NOT promoted to
+release. The active pack lock is unchanged until a separate transition
+decision updates the pack matrix.
+
+## Fixtures
+
+- director fixtures (3)
+- critic fixtures (6)
+- target runtime tests
+- memory and latency measurements
+- deterministic structured-output checks
+
+## Comparison
+
+Results are compared against the selected Qwen3/Qwen3-VL packs using
+blind result IDs. The script aborts if any required target fails.
+
+## Acceptance
+
+- The task cannot modify active release pack manifests.
+- Results include failures and unsupported runtime features.
+- No automatic promotion occurs.
