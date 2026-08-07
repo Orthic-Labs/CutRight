@@ -9,6 +9,7 @@
 pub mod decision;
 pub mod distributions;
 pub mod learn;
+pub mod profile;
 
 pub use decision::{DecisionRecord, DecisionTarget, DecisionAction, DecisionReason, DecisionAxis,
                     FormatKey, UserOrigin, SessionOrigin, ReviewMode, append_record,
@@ -17,11 +18,9 @@ pub use distributions::{AxisDistribution, DistributionSample};
 pub use learn::{PreferenceEstimate, InsufficientReason, ScopedEstimate, Recommendation,
                   EstimateScope, compute_preference, compute_recommendation,
                   estimate_is_supported};
-
-pub mod profile {
-    //! Stub for B7-009.
-    pub struct FormatProfile;
-}
+pub use profile::{FormatProfile, FormatProfileValues, ProfileCompatibility, ProfileVersion,
+                   ProfileApprovedBy, ProfileCompatibilityMismatch, approve_profile,
+                   apply_profile, profile_compatibility_mismatch};
 
 pub mod autonomy {
     //! Stub for B7-010.

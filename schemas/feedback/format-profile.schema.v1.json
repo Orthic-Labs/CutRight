@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.local/schemas/feedback/format-profile.schema.v1.json",
+  "title": "CutRight v2 Format Profile",
+  "description": "Applied format profile. Versions are immutable; changes create a new version.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "format",
+    "version",
+    "compatibility",
+    "values",
+    "source_recommendation_hash",
+    "approved_by",
+    "approved_at"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "v1"},
+    "profile_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "format": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_type", "platform", "variant"],
+      "properties": {
+        "content_type": {"type": "string"},
+        "platform": {"type": "string"},
+        "variant": {"type": "string"}
+      }
+    },
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pack_set_id", "pack_set_fingerprint", "benchmark_profile", "skill_version", "render_version"],
+      "properties": {
+        "pack_set_id": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+        "pack_set_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "benchmark_profile": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+        "skill_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "render_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+      }
+    },
+    "values": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inherited_defaults", "overrides"],
+      "properties": {
+        "inherited_defaults": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        },
+        "overrides": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        }
+      }
+    },
+    "source_recommendation_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source_decision_ids": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    },
+    "approved_by": {
+      "type": "string",
+      "enum": ["user_reviewed", "user_rejected", "user_replaced", "user_noted", "system"]
+    },
+    "approved_at": {"type": "string", "format": "date-time"}
+  }
+}
