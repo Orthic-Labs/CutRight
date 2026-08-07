@@ -694,6 +694,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "video-feedback"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "video-media"
 version = "0.1.0"
 dependencies = [
