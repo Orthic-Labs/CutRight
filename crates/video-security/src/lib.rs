@@ -7,5 +7,6 @@
 //! routines that the harness asks before granting a worker any access.
 
 pub mod media_limits;
+pub mod privacy;
 pub mod sandbox;
 pub mod trust;
