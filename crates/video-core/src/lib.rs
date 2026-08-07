@@ -3,6 +3,7 @@ pub mod bakeoff;
 pub mod benchmark_policy;
 pub mod brand_service;
 pub mod content_store;
+pub mod creative_critic;
 pub mod creative_plan;
 pub mod creative_skill_resolver;
 pub mod creative_skill_runtime;
@@ -26,6 +27,7 @@ pub mod writing_service;
 pub use asset_validation::{AssetValidationError, AssetValidationService, RightsRecord, ValidatedAssetReview};
 pub use bakeoff::{BakeOff, BakeOffAcceptance, BakeOffError, BakeOffService, Variant};
 pub use brand_service::{BrandCard, BrandIdentityService, BrandService, BrandServiceError, BrandSystem};
+pub use creative_critic::{AxisScore, CreativeCritic, CriticError, CriticEvaluation, DeterministicVisualQa, Verdict};
 pub use creative_plan::{Beat, CreativePlan, CreativePlanner, EditorialPlan, PlanningError, Shot, Style};
 pub use creative_skill_resolver::{CreativeSkillResolver, ResolutionPlan, ResolverError};
 pub use creative_skill_runtime::{
