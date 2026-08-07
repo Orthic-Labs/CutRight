@@ -1,0 +1,30 @@
+{
+  "schema": "cutright.studio.timeline_view/v1",
+  "timeline_id": "tl_001",
+  "revision": "rev_001",
+  "duration": {
+    "rational": { "num": 90000, "den": 1 },
+    "timebase": { "num": 30000, "den": 1001 }
+  },
+  "tracks": [
+    {
+      "track_id": "tr_video_001",
+      "kind": "video",
+      "clips": [
+        {
+          "clip_id": "clip_001",
+          "source_id": "src_001",
+          "timeline_start": { "num": 0, "den": 1 },
+          "duration": { "num": 4800, "den": 1 },
+          "source_in": { "num": 0, "den": 1 },
+          "source_out": { "num": 4800, "den": 1 },
+          "volume": 1.0
+        }
+      ]
+    }
+  ],
+  "selection": {
+    "clip_ids": ["clip_001"],
+    "playhead": { "num": 1200, "den": 1 }
+  }
+}

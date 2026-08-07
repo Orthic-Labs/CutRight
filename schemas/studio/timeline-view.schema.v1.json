@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "cutright.studio.timeline_view/v1",
+  "title": "StudioTimelineView",
+  "description": "Frozen Studio timeline view projection. Per-track, per-clip structure with stable IDs, rational-time positions expressed in source timebase for source in/out and project timebase for timeline placement. Conversion between timebases happens only in the kernel.",
+  "type": "object",
+  "required": ["schema", "timeline_id", "revision", "tracks", "duration"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "cutright.studio.timeline_view/v1"
+    },
+    "timeline_id": { "type": "string" },
+    "revision": { "type": "string" },
+    "duration": {
+      "type": "object",
+      "required": ["rational", "timebase"],
+      "additionalProperties": false,
+      "properties": {
+        "rational": { "$ref": "#/definitions/rational_time" },
+        "timebase": { "$ref": "#/definitions/timebase" }
+      }
+    },
+    "tracks": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/track" }
+    },
+    "selection": {
+      "type": "object",
+      "description": "UI state slice; never serialised into canonical project JSON.",
+      "additionalProperties": false,
+      "properties": {
+        "clip_ids": { "type": "array", "items": { "type": "string" } },
+        "playhead": { "$ref": "#/definitions/rational_time" }
+      }
+    }
+  },
+  "definitions": {
+    "timebase": {
+      "type": "object",
+      "required": ["num", "den"],
+      "additionalProperties": false,
+      "properties": {
+        "num": { "type": "integer", "minimum": 1 },
+        "den": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "rational_time": {
+      "type": "object",
+      "required": ["num", "den"],
+      "additionalProperties": false,
+      "properties": {
+        "num": { "type": "integer", "minimum": 0 },
+        "den": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "track": {
+      "type": "object",
+      "required": ["track_id", "kind", "clips"],
+      "additionalProperties": false,
+      "properties": {
+        "track_id": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": ["video", "audio", "overlay", "caption", "music", "sfx"]
+        },
+        "linked_track_id": { "type": "string" },
+        "clips": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/clip" }
+        }
+      }
+    },
+    "clip": {
+      "type": "object",
+      "required": [
+        "clip_id",
+        "source_id",
+        "timeline_start",
+        "source_in",
+        "source_out",
+        "duration"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "clip_id": { "type": "string" },
+        "source_id": { "type": "string" },
+        "media_revision": { "type": "string" },
+        "timeline_start": {
+          "description": "Position in the project timebase (RationalTime).",
+          "$ref": "#/definitions/rational_time"
+        },
+        "duration": {
+          "description": "Duration in the project timebase.",
+          "$ref": "#/definitions/rational_time"
+        },
+        "source_in": {
+          "description": "Position in the source timebase.",
+          "$ref": "#/definitions/rational_time"
+        },
+        "source_out": {
+          "description": "Position in the source timebase.",
+          "$ref": "#/definitions/rational_time"
+        },
+        "volume": { "type": "number", "minimum": 0, "maximum": 2 },
+        "fade_in": { "$ref": "#/definitions/rational_time" },
+        "fade_out": { "$ref": "#/definitions/rational_time" },
+        "crop_anchor": {
+          "type": "object",
+          "required": ["x", "y"],
+          "additionalProperties": false,
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" }
+          }
+        },
+        "effect_ids": { "type": "array", "items": { "type": "string" } },
+        "caption_ids": { "type": "array", "items": { "type": "string" } },
+        "overlay_ids": { "type": "array", "items": { "type": "string" } },
+        "keyframes": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/keyframe" }
+        }
+      }
+    },
+    "keyframe": {
+      "type": "object",
+      "required": ["kf_id", "at", "props"],
+      "additionalProperties": false,
+      "properties": {
+        "kf_id": { "type": "string" },
+        "at": { "$ref": "#/definitions/rational_time" },
+        "props": { "type": "object", "additionalProperties": true }
+      }
+    }
+  }
+}
