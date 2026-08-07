@@ -839,10 +839,12 @@ dependencies = [
  "predicates",
  "serde",
  "serde_json",
+ "tempfile",
  "video-capabilities",
  "video-core",
  "video-project",
  "video-providers",
+ "video-sessions",
 ]
 
 [[package]]

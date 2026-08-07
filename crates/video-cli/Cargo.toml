@@ -20,7 +20,9 @@ video-capabilities = { path = "../video-capabilities" }
 video-core = { path = "../video-core" }
 video-project = { path = "../video-project" }
 video-providers = { path = "../video-providers" }
+video-sessions = { path = "../video-sessions" }
 
 [dev-dependencies]
 assert_cmd = "2.0"
 predicates = "3.1"
+tempfile = "3.23"

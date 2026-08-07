@@ -447,3 +447,76 @@ fn capabilities_list_with_id_filter_returns_a_single_entry() {
     assert_eq!(value["capabilities"][0]["id"], "timeline.cut");
     assert_eq!(value["capabilities"][0]["kind"], "mutation");
 }
+
+// ---------------------------------------------------------------------
+// B2-023 tests — `videoctl apply` surface.
+// ---------------------------------------------------------------------
+
+#[test]
+fn apply_dry_run_reports_executor_report_and_exits_zero() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    // We point at an empty project dir; the executor will surface a
+    // failed receipt, but the wire shape must be the same.
+    let batch = serde_json::json!({
+        "schema": "cutright.action_batch/v1",
+        "batch_id": "cli_apply_dry",
+        "expected_revision": "rev_root",
+        "dry_run": true,
+        "actions": [
+            {
+                "capability_id": "timeline.read",
+                "target": "timeline:main",
+                "params": {},
+                "session_binding_id": "s1"
+            }
+        ]
+    })
+    .to_string();
+    let output = videoctl()
+        .args(["apply", "--project", dir.path().to_str().unwrap()])
+        .write_stdin(batch)
+        .output()
+        .expect("videoctl apply runs");
+    // The apply surface emits the executor report JSON.
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("cutright.executor_report/v1"),
+        "stdout missing executor_report schema: {stdout}"
+    );
+    let value: serde_json::Value = serde_json::from_str(&stdout)
+        .unwrap_or_else(|e| panic!("stdout not valid JSON: {e}\nstdout: {stdout}"));
+    assert_eq!(value["schema"], "cutright.executor_report/v1");
+    assert_eq!(value["batch_id"], "cli_apply_dry");
+}
+
+#[test]
+fn apply_rejects_invalid_action_batch_json() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let output = videoctl()
+        .args(["apply", "--project", dir.path().to_str().unwrap()])
+        .write_stdin("{ not valid json")
+        .output()
+        .expect("videoctl apply runs");
+    assert!(!output.status.success(), "invalid JSON must not exit zero");
+    assert_eq!(output.status.code(), Some(4), "exit 4 = invalid input");
+}
+
+#[test]
+fn apply_rejects_wrong_schema_envelope() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let batch = serde_json::json!({
+        "schema": "cutright.wrong/v9",
+        "batch_id": "cli_apply_wrong",
+        "expected_revision": "rev_root",
+        "dry_run": true,
+        "actions": []
+    })
+    .to_string();
+    let output = videoctl()
+        .args(["apply", "--project", dir.path().to_str().unwrap()])
+        .write_stdin(batch)
+        .output()
+        .expect("videoctl apply runs");
+    assert!(!output.status.success());
+    assert_eq!(output.status.code(), Some(4));
+}

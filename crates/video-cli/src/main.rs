@@ -1,3 +1,4 @@
+mod apply;
 mod capabilities;
 mod cli;
 mod doctor;
@@ -81,6 +82,12 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS => ExitCode::from(EXIT_OK),
             _ => ExitCode::from(EXIT_ERROR),
         };
+    }
+    // The apply command also writes its own single JSON document (the
+    // executor report) and exits with its own table of codes. Bypass the
+    // generic run() path so the output stays byte-stable.
+    if let Command::Apply { args } = &cli.command {
+        return apply::run(args);
     }
     match run(cli) {
         Ok(Outcome::Value(value)) => {
@@ -404,6 +411,7 @@ fn command_name(command: &Command) -> String {
         Command::Preferences { .. } => "preferences recommend",
         Command::Cloud { .. } => "cloud",
         Command::Capabilities { .. } => "capabilities list",
+        Command::Apply { .. } => "apply",
         Command::Doctor(_) | Command::Project { .. } => "unknown",
     }
     .to_string()

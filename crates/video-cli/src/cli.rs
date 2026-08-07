@@ -103,6 +103,13 @@ pub enum Command {
         #[command(subcommand)]
         command: CapabilitiesCommand,
     },
+    /// Drive the single Book 2 ActionExecutor with a
+    /// `cutright.action_batch/v1` from stdin/file. The CLI never
+    /// duplicates executor logic; it only marshals JSON (B2-023).
+    Apply {
+        #[command(flatten)]
+        args: ApplyArgs,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -358,4 +365,28 @@ pub enum CapabilitiesCommand {
         #[arg(long, default_value_t = true)]
         json: bool,
     },
+}
+
+/// Args for `videoctl apply` (CR-V2-B2-023). The command reads a
+/// `cutright.action_batch/v1` envelope from stdin (default) or from a file
+/// and forwards it to [`video_project::ActionExecutor`]. The executor
+/// owns every byte of validation, dry-run, and atomic apply logic; this
+/// struct only carries transport flags.
+#[derive(Debug, Args, Clone)]
+pub struct ApplyArgs {
+    /// Path to the action_batch JSON file. When absent, the command reads
+    /// from stdin.
+    #[arg(long, short = 'f')]
+    pub file: Option<std::path::PathBuf>,
+    /// Force reading from stdin even when a tty is detected.
+    #[arg(long)]
+    pub from_stdin: bool,
+    /// Project directory the executor writes into. Defaults to the
+    /// `CUTRIGHT_PROJECT_DIR` environment variable.
+    #[arg(long, short = 'p')]
+    pub project: Option<std::path::PathBuf>,
+    /// Capability registry path. Defaults to
+    /// `docs/dispatch/v2/source/capability-registry.json` in the repo.
+    #[arg(long)]
+    pub registry: Option<std::path::PathBuf>,
 }
