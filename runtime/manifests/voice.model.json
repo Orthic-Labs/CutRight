@@ -1,0 +1,47 @@
+{
+  "schema": "cutright.pack_manifest/v1",
+  "pack_id": "voice",
+  "version": "1.0.0",
+  "model_kind": "kokoro-82m",
+  "runtime": "native-onnx",
+  "dependency_python": false,
+  "dependency_espeak": false,
+  "target": {
+    "platform": "host",
+    "arch": "auto",
+    "abi": "auto"
+  },
+  "files": [
+    {"role": "model", "sha256": "496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4", "license": "apache-2.0"},
+    {"role": "tokenizer", "sha256": "unresolved", "license": "unresolved"},
+    {"role": "phonemizer_data", "sha256": "unresolved", "license": "unresolved"},
+    {"role": "voice", "name": "unresolved", "sha256": "unresolved", "license": "unresolved"}
+  ],
+  "requirements": {
+    "min_storage_bytes": 134217728,
+    "min_memory_bytes": 536870912,
+    "thread_cap": 4
+  },
+  "capabilities": [
+    "voice.synth-text",
+    "voice.deterministic",
+    "voice.bounded-clip",
+    "voice.native-only"
+  ],
+  "compatibility": {
+    "min_runtime_api": 1,
+    "max_runtime_api": 1
+  },
+  "model": {
+    "kind": "onnx",
+    "sha256": "496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4",
+    "license": "apache-2.0"
+  },
+  "manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "signature": {
+    "schema": "cutright.pack_signature/v1",
+    "algorithm": "blake3+ed25519",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signed_by": "unbuilt"
+  }
+}

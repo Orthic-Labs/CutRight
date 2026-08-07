@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<voice-tts-suite>
+  <fixture id="pronunciation">
+    <text>Hello, world. The quick brown fox jumps over the lazy dog.</text>
+    <expected-clipping>none</expected-clipping>
+    <expected-silence-min-ms>50</expected-silence-min-ms>
+  </fixture>
+  <fixture id="determinism">
+    <text>The same text twice.</text>
+    <iterations>5</iterations>
+    <tolerance>deterministic</tolerance>
+  </fixture>
+  <fixture id="duration">
+    <text>A short utterance.</text>
+    <expected-duration-min-ms>400</expected-duration-min-ms>
+    <expected-duration-max-ms>2500</expected-duration-max-ms>
+  </fixture>
+  <fixture id="clipping">
+    <text>Excited! Loud! Noisy! Excited! Loud! Noisy!</text>
+    <expected-clipping>bounded</expected-clipping>
+  </fixture>
+  <fixture id="silence">
+    <text>Pause ... here ... please.</text>
+    <expected-silence-min-ms>200</expected-silence-min-ms>
+  </fixture>
+  <fixture id="cross-platform">
+    <text>The cross-platform waveform check.</text>
+    <targets>host,macos-arm64,linux-x86_64,windows-x86_64</targets>
+    <tolerance>waveform-stable</tolerance>
+  </fixture>
+</voice-tts-suite>

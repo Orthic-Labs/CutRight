@@ -1,0 +1,40 @@
+---
+pack: voice
+model: kokoro-82m
+version: 1.0.0
+licence: apache-2.0
+runtime: native-onnx
+model_sha256: 496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4
+---
+
+# Kokoro-82M Source Manifest
+
+## Source
+
+- Upstream: `github.com/hexgrad/kokoro`
+- Pinned version: v1.0
+- Pinned model hash: `496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4`
+- Licence: Apache-2.0
+
+## Runtime
+
+The selected runtime is native ONNX (no Python, no espeak system
+dependency). The build script bundles all required phonemizer data.
+
+## Voice files
+
+Each voice file is audited individually; the build refuses to copy a
+voice whose licence is unresolved.
+
+## Files
+
+```text
+voice_pack.files = [model, tokenizer_or_config, phonemizer_data, audited_voice_files]
+assert all(file.license_resolved for file in voice_pack.files)
+```
+
+## Acceptance
+
+- The exact model hash matches.
+- No unresolved voice is copied.
+- TTS works with network blocked and empty PATH.
