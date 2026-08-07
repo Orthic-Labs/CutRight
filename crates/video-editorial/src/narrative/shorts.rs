@@ -32,7 +32,7 @@ pub struct ShortCandidate {
     pub exclusion_reason: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ShortInputs<'a> {
     pub beats: &'a [ShortBeatRef],
     pub hook_strength: f32,
@@ -183,7 +183,8 @@ mod tests {
         let mut i2 = inputs(1.0);
         i2.recorded = false;
         let c2 = build_candidate("b", "t", "h", i2);
-        let r = rank(&[c2, c1]);
+        let arr: [ShortCandidate; 2] = [c2, c1];
+        let r = rank(&arr);
         assert_eq!(r[0].candidate_id, "a");
         assert_eq!(r[1].candidate_id, "b");
     }
