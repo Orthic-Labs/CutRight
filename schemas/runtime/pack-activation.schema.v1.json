@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/runtime/pack-activation.schema.v1.json",
+  "title": "CutRight v2 pack activation record (v1)",
+  "description": "Persistent record of every pack activation. The activation record is content-addressed; the active_pointer file points at the hash of the latest activation record. Release builds may never repair by internet download or system package manager.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "activation_id",
+    "pack_id",
+    "version",
+    "manifest_hash",
+    "signature_digest",
+    "previous_activation",
+    "activated_at_ns",
+    "stages"
+  ],
+  "properties": {
+    "schema": {"const": "cutright.pack_activation/v1"},
+    "activation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "pack_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]+$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "manifest_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "signature_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "previous_activation": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "description": "The activation_id of the previous record for this pack. The previous pack is retained for rollback."
+    },
+    "activated_at_ns": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "activated_by": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "enum": ["staged", "verified", "written", "pointer_swapped"],
+        "description": "Activation stages: staged -> verified -> written -> pointer_swapped. Rollback is a separate stage."
+      }
+    },
+    "dev_override": {
+      "type": "boolean",
+      "description": "True iff the activation was performed under a compile-time enabled development-only override. Such overrides MUST be disabled in release builds."
+    }
+  }
+}

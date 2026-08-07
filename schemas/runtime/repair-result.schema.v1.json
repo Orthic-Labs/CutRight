@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/runtime/repair-result.schema.v1.json",
+  "title": "CutRight v2 pack repair result (v1)",
+  "description": "Result of a pack repair attempt. Repairs are exclusively local: from the installer payload, from a retained previous version, or from a file-level patch. Internet download and system package managers are FORBIDDEN in release builds.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "repair_id",
+    "pack_id",
+    "source",
+    "result",
+    "repaired_at_ns"
+  ],
+  "properties": {
+    "schema": {"const": "cutright.pack_repair_result/v1"},
+    "repair_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "pack_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]+$"
+    },
+    "source": {
+      "enum": [
+        "installer_payload",
+        "retained_previous",
+        "local_patch",
+        "developer_override"
+      ],
+      "description": "Where the repair bytes came from. RELEASE BUILDS reject every source except `installer_payload`, `retained_previous`, and `local_patch`."
+    },
+    "result": {
+      "enum": ["repaired", "rejected", "escalated"]
+    },
+    "files_repaired": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "blake3"],
+        "properties": {
+          "path": {"type": "string", "pattern": "^[A-Za-z0-9_./-]+$"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "blake3": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "files_rejected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "reason"],
+        "properties": {
+          "path": {"type": "string", "pattern": "^[A-Za-z0-9_./-]+$"},
+          "reason": {"type": "string", "maxLength": 1024}
+        }
+      }
+    },
+    "repaired_at_ns": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "repaired_by": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "manifest_hash_after": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}
