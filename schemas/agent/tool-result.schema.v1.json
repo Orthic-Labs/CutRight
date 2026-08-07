@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "cutright.agent.tool_result/v1",
+  "title": "AgentToolResult",
+  "description": "Result of one tool call inside an embedded agent session. Read tools return bounded evidence references. Write tools return an ActionResult envelope from the shared executor; the session refuses any write whose envelope is missing or malformed.",
+  "type": "object",
+  "required": ["schema", "result_id", "tool_id", "schema_hash", "outcome"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "cutright.agent.tool_result/v1"
+    },
+    "result_id": { "type": "string" },
+    "tool_id": { "type": "string" },
+    "schema_hash": { "type": "string" },
+    "outcome": {
+      "type": "string",
+      "enum": ["ok", "read_only", "action_committed", "blocked", "failed"]
+    },
+    "read_payload": {
+      "type": "object",
+      "description": "Bounded evidence references returned by a read tool. Counts and IDs only; no large blobs.",
+      "additionalProperties": false,
+      "properties": {
+        "evidence_refs": { "type": "array", "items": { "type": "string" } },
+        "count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "action_result_ref": {
+      "type": "string",
+      "description": "Reference to the persisted ActionResult. Required when outcome is action_committed."
+    },
+    "blocked_reason": {
+      "type": "string",
+      "description": "Reason the executor rejected the call (when outcome is blocked)."
+    },
+    "error": {
+      "type": "object",
+      "description": "Structured error for the failed outcome.",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    },
+    "created_at": { "type": "string" }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "cutright.agent.turn/v1",
+  "title": "AgentTurn",
+  "description": "One bounded turn in an embedded agent session. Carries the user or system message, bounded evidence references, plan references, tool call outputs and final outcome. Hidden chain-of-thought is never recorded here; the planner's scratchpad is ephemeral and lives only in the running session memory.",
+  "type": "object",
+  "required": ["schema", "session_id", "turn_index", "role", "content", "evidence_refs"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "cutright.agent.turn/v1"
+    },
+    "session_id": { "type": "string" },
+    "turn_index": { "type": "integer", "minimum": 0 },
+    "role": {
+      "type": "string",
+      "enum": ["user", "system", "assistant", "tool"]
+    },
+    "content": {
+      "type": "string",
+      "description": "Outcome-first, concise message. Internal chain-of-thought is never stored here."
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Stable evidence IDs the turn inspected. Required so the conversation is auditable."
+    },
+    "plan_ref": {
+      "type": "string",
+      "description": "Optional reference to an AgentPlan that this turn advances."
+    },
+    "tool_calls": {
+      "type": "array",
+      "description": "Tool calls the assistant issued in this turn. Each call has a schema_hash from the capability registry; calls without a matching hash are rejected.",
+      "items": { "$ref": "#/definitions/tool_call" }
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["ok", "needs_review", "blocked", "abandoned"]
+    },
+    "created_at": { "type": "string" }
+  },
+  "definitions": {
+    "tool_call": {
+      "type": "object",
+      "required": ["tool_id", "schema_hash", "args", "result_ref"],
+      "additionalProperties": false,
+      "properties": {
+        "tool_id": { "type": "string" },
+        "schema_hash": { "type": "string" },
+        "args": { "type": "object", "additionalProperties": true },
+        "result_ref": { "type": "string" }
+      }
+    }
+  }
+}

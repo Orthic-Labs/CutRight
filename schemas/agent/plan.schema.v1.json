@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "cutright.agent.plan/v1",
+  "title": "AgentPlan",
+  "description": "Director-authored plan for a bounded embedded-agent task. The plan is schema-bound and reviewed before any tool call executes. Multi-stage production and generation tasks require an explicit user approval gate before tools run.",
+  "type": "object",
+  "required": ["schema", "plan_id", "goal", "format", "evidence_queries", "proposed_tools", "expected_actions", "review_points", "resource_budget"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "cutright.agent.plan/v1"
+    },
+    "plan_id": { "type": "string" },
+    "goal": {
+      "type": "string",
+      "description": "Outcome-first statement. The plan fails if the goal cannot be met within the resource budget."
+    },
+    "format": {
+      "type": "object",
+      "description": "Delivery format (preset, aspect, caption style, ...). Mirrors the ProductionRunSpec.",
+      "additionalProperties": true
+    },
+    "evidence_queries": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/evidence_query" },
+      "description": "Bounded queries the planner intends to run. The session refuses queries outside this list."
+    },
+    "proposed_tools": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/tool_ref" },
+      "description": "Tool registry references. Each entry's schema_hash must match the running capability registry."
+    },
+    "expected_actions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/action_summary" },
+      "description": "Schematic summaries of actions the plan will submit; each maps to a registered action verb."
+    },
+    "review_points": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Stages where the user must approve before the next stage runs."
+    },
+    "resource_budget": {
+      "type": "object",
+      "required": ["max_turns", "max_tool_calls", "max_wallclock_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "max_turns": { "type": "integer", "minimum": 1 },
+        "max_tool_calls": { "type": "integer", "minimum": 1 },
+        "max_wallclock_ms": { "type": "integer", "minimum": 1000 }
+      }
+    },
+    "requires_user_approval": {
+      "type": "boolean",
+      "description": "True for multi-stage production and generation. False only for reversible corrective edits already covered by the current review policy."
+    }
+  },
+  "definitions": {
+    "evidence_query": {
+      "type": "object",
+      "required": ["query_id", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "query_id": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": ["transcript_window", "beat_window", "take_list", "frame_window", "asset_list", "evidence_node", "qa_window"]
+        },
+        "target": { "type": "object", "additionalProperties": true },
+        "limit": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "tool_ref": {
+      "type": "object",
+      "required": ["tool_id", "schema_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "tool_id": { "type": "string" },
+        "schema_hash": { "type": "string" }
+      }
+    },
+    "action_summary": {
+      "type": "object",
+      "required": ["verb", "target_kind"],
+      "additionalProperties": false,
+      "properties": {
+        "verb": { "type": "string" },
+        "target_kind": { "type": "string" },
+        "rationale": { "type": "string" }
+      }
+    }
+  }
+}
