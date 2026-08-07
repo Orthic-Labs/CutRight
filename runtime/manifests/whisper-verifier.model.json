@@ -1,0 +1,53 @@
+{
+  "schema": "cutright.pack_manifest/v1",
+  "pack_id": "speech-quality",
+  "version": "1.9.2",
+  "model_kind": "whisper-verifier",
+  "role": "verifier",
+  "target": {
+    "platform": "host",
+    "arch": "auto",
+    "abi": "auto"
+  },
+  "files": [],
+  "requirements": {
+    "min_storage_bytes": 419430400,
+    "min_memory_bytes": 1073741824,
+    "thread_cap": 8
+  },
+  "capabilities": [
+    "verifier.transcript-coverage",
+    "verifier.boundary-delta",
+    "verifier.coverage-report",
+    "verifier.evidence-only"
+  ],
+  "compatibility": {
+    "min_runtime_api": 1,
+    "max_runtime_api": 1
+  },
+  "source": {
+    "upstream": "whisper.cpp",
+    "commit": "306c88f4d1286aec1bf96e544632897886af5501",
+    "tag": "v1.9.2",
+    "fetched_at_ns": 0,
+    "fetched_by": "scripts/runtime/build-whisper-pack.py - unfetched"
+  },
+  "model": {
+    "kind": "ggml",
+    "sha256": "unresolved",
+    "blake3": "unresolved",
+    "license": "unresolved",
+    "languages": ["multilingual"]
+  },
+  "contract": {
+    "type": "VerificationResult",
+    "fields": ["coverage: f32", "unmatched_content_rate: f32", "boundary_deltas: Distribution", "decision: VerificationDecision"]
+  },
+  "manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "signature": {
+    "schema": "cutright.pack_signature/v1",
+    "algorithm": "blake3+ed25519",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signed_by": "unbuilt"
+  }
+}

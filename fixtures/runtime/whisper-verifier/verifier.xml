@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<whisper-verifier-suite>
+  <fixture id="agreement-clean">
+    <audio path="fixtures/runtime/whisper-verifier/clean-timed.json" sample_rate="16000" channels="1" duration_ms="1000"/>
+    <canonical-transcript>tests/runtime/whisper-verifier/clean.txt</canonical-transcript>
+    <expected-coverage>1.0</expected-coverage>
+    <expected-decision>Agree</expected-decision>
+  </fixture>
+  <fixture id="boundary-disagreement">
+    <audio path="fixtures/runtime/whisper-verifier/boundary-disagreement.json" sample_rate="16000" channels="1" duration_ms="5000"/>
+    <canonical-transcript>tests/runtime/whisper-verifier/boundary.txt</canonical-transcript>
+    <expected-coverage>0.7</expected-coverage>
+    <expected-decision>Disagree</expected-decision>
+  </fixture>
+  <fixture id="multi-language">
+    <audio path="fixtures/runtime/whisper-verifier/multi-timed.json" sample_rate="16000" channels="1" duration_ms="3000"/>
+    <canonical-transcript>tests/runtime/whisper-verifier/multi.txt</canonical-transcript>
+    <expected-coverage>0.9</expected-coverage>
+    <expected-decision>Agree</expected-decision>
+  </fixture>
+</whisper-verifier-suite>
+
