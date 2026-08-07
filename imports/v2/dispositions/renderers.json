@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "ledger_scope": "Renderer shipping classifications. This file supplements the frozen root ledger imports/v2/dispositions.json; the root ledger remains authoritative for source corpus dispositions.",
+  "corpus_date": "2026-08-06",
+  "policy": "Remotion and HyperFrames are evidence sources for behavior observation only. No Remotion or HyperFrames binary, package, lockfile, or runtime may ever enter a CutRight runtime pack or a shipping release. Visual requirements currently delivered by them are preserved verbatim as native golden comparisons in fixtures/native-renderer/manifest.json and docs/architecture/NATIVE-RENDERER-MIGRATION.md.",
+  "entries": [
+    {
+      "renderer": "remotion",
+      "source_id": "workspace-capabilities",
+      "corpus_paths": ["tools/remotion/**"],
+      "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+      "shipping_disposition": "provenance_only",
+      "behavior_disposition": "clean_room_behavior",
+      "licence_rows": [
+        {
+          "asset_class": "third_party_render_stack",
+          "licence": "not_redistributed",
+          "statement": "The remotion, @remotion/bundler, @remotion/cli, @remotion/renderer, react and react-dom npm packages were observed in the pinned workspace tools/remotion closure. CutRight never vendors, compiles, bundles, or ships any of them, so their upstream licence terms never attach to a CutRight artifact. Only observed behavior (composition structure, timing intent) may inform clean-room native effects."
+        },
+        {
+          "asset_class": "workspace_project_files",
+          "licence": "user_owned_with_third_party_notices",
+          "statement": "The workspace's tools/remotion project files (package.json, package-lock.json, remotion.config.ts, render-outro.mjs, src/, tsconfig.json) are user-owned. They remain outside the CutRight repository; no source bytes are copied."
+        }
+      ],
+      "forbidden_in_runtime_packs": {
+        "npm_packages": [
+          "@remotion/bundler",
+          "@remotion/cli",
+          "@remotion/renderer",
+          "react",
+          "react-dom",
+          "remotion"
+        ],
+        "binaries": ["node", "npm", "npx"],
+        "browser_engines": ["chromium", "chrome-headless-shell"],
+        "statement": "Release guards must reject any runtime pack that contains one of these packages or binaries. The forbidden list is consumed by tools/v2-evals/check_renderer_migration_manifest.py and by the future pack-release gate."
+      },
+      "release_blocking": true,
+      "notes": "The remotion renderer value in schemas/effect-registry.schema.json stays until every remotion-rendered registry effect has a passing native golden comparison; deletion criteria are frozen in docs/architecture/NATIVE-RENDERER-MIGRATION.md."
+    },
+    {
+      "renderer": "hyperframes",
+      "source_id": "workspace-capabilities",
+      "corpus_paths": ["tools/hyperframes/**"],
+      "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+      "shipping_disposition": "provenance_only",
+      "behavior_disposition": "clean_room_behavior",
+      "licence_rows": [
+        {
+          "asset_class": "workspace_project_files",
+          "licence": "user_owned_with_third_party_notices",
+          "statement": "The workspace's tools/hyperframes project files (hyperframes.json, index.html, meta.json, package.json, AGENTS.md, CLAUDE.md) are user-owned. They remain outside the CutRight repository; no source bytes are copied."
+        },
+        {
+          "asset_class": "hyperframes_runtime",
+          "licence": "not_redistributed",
+          "statement": "Any runtime that consumes the hyperframes.json document format or is distributed under the HyperFrames name is never vendored or shipped by CutRight. No HyperFrames npm dependency was observed in the pinned project (its package.json declares none), so no package name is listed; the ban is on the runtime itself and its document-format tooling."
+        }
+      ],
+      "forbidden_in_runtime_packs": {
+        "npm_packages": [],
+        "runtime_identifiers": ["hyperframes"],
+        "binaries": ["node", "npm", "npx"],
+        "browser_engines": ["chromium", "chrome-headless-shell"],
+        "statement": "Release guards must reject any runtime pack containing a HyperFrames runtime, CLI, or document-format renderer, and the shared Node/browser runtimes listed for remotion."
+      },
+      "release_blocking": true,
+      "notes": "No registry effect currently uses the hyperframes renderer value; the enum entry in schemas/effect-registry.schema.json is scheduled for deletion under the same criteria as remotion."
+    }
+  ],
+  "shared_release_guard": {
+    "forbidden_runtime_binaries": ["node", "npm", "npx", "chromium", "chrome-headless-shell"],
+    "forbidden_render_stacks": ["remotion", "hyperframes"],
+    "deletion_criteria_document": "docs/architecture/NATIVE-RENDERER-MIGRATION.md",
+    "statement": "A shipping release contains no Node, Chromium, Remotion, or HyperFrames runtime. The guard checks package/binary names, not file contents heuristics."
+  }
+}

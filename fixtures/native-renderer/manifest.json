@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "description": "Frozen native-renderer migration contract. Each row names one visual-effect family, its legacy rendering path (if any), the native effect that replaces it, and the golden fixture that proves the visual requirement survives the technology change. Validated by tools/v2-evals/check_renderer_migration_manifest.py.",
+  "shipping_runtime_required": "cutright-native",
+  "forbidden_runtime_reference": "imports/v2/dispositions/renderers.json",
+  "effect_registry_reference": "schemas/effects/registry.json",
+  "rows": [
+    {
+      "family": "lower-third",
+      "legacy": "remotion:lower-third.identity-card.v1",
+      "registry_effect": "lower-third.identity-card.v1",
+      "native_effect_id": "lower-third.identity-card.v2",
+      "golden_fixture": "fixtures/native-renderer/lower-third",
+      "shipping_runtime": "cutright-native",
+      "reduced_motion": "static-fallback"
+    },
+    {
+      "family": "stat-counter",
+      "legacy": "remotion:StatCounter",
+      "registry_effect": "stat-counter.v1",
+      "native_effect_id": "stat.counter.v2",
+      "golden_fixture": "fixtures/native-renderer/stat-counter",
+      "shipping_runtime": "cutright-native",
+      "reduced_motion": "static-fallback"
+    },
+    {
+      "family": "quote-card",
+      "legacy": "remotion:quote-card.v1",
+      "registry_effect": "quote-card.v1",
+      "native_effect_id": "quote-card.v2",
+      "golden_fixture": "fixtures/native-renderer/quote-card",
+      "shipping_runtime": "cutright-native",
+      "reduced_motion": "static-fallback"
+    },
+    {
+      "family": "cta-card",
+      "legacy": "remotion:cta-end-card.v1",
+      "registry_effect": "cta-end-card.v1",
+      "native_effect_id": "cta-end-card.v2",
+      "golden_fixture": "fixtures/native-renderer/cta-card",
+      "shipping_runtime": "cutright-native",
+      "reduced_motion": "static-fallback"
+    },
+    {
+      "family": "captions",
+      "legacy": "ass:caption.bold-karaoke.v1",
+      "registry_effect": "caption.bold-karaoke.v1",
+      "native_effect_id": "caption.bold-karaoke.v2",
+      "golden_fixture": "fixtures/native-renderer/captions",
+      "shipping_runtime": "cutright-native",
+      "reduced_motion": "static-fallback"
+    },
+    {
+      "family": "hook-pullback",
+      "legacy": "none:pre-v2",
+      "registry_effect": null,
+      "native_effect_id": "hook.pullback.v1",
+      "golden_fixture": "fixtures/native-renderer/hook-pullback",
+      "shipping_runtime": "cutright-native",
+      "reduced_motion": "static-fallback"
+    },
+    {
+      "family": "punch-wave",
+      "legacy": "none:pre-v2",
+      "registry_effect": null,
+      "native_effect_id": "punch.wave.v1",
+      "golden_fixture": "fixtures/native-renderer/punch-wave",
+      "shipping_runtime": "cutright-native",
+      "reduced_motion": "static-fallback"
+    },
+    {
+      "family": "text-reveals",
+      "legacy": "none:pre-v2",
+      "registry_effect": null,
+      "native_effect_id": "text.reveal.v1",
+      "golden_fixture": "fixtures/native-renderer/text-reveals",
+      "shipping_runtime": "cutright-native",
+      "reduced_motion": "static-fallback"
+    },
+    {
+      "family": "audio-sync",
+      "legacy": "none:pre-v2",
+      "registry_effect": null,
+      "native_effect_id": "audio.sync.v1",
+      "golden_fixture": "fixtures/native-renderer/audio-sync",
+      "shipping_runtime": "cutright-native",
+      "reduced_motion": "not-meaningful"
+    }
+  ]
+}
