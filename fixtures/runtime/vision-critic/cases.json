@@ -1,0 +1,73 @@
+{
+  "schema": "cutright.critic.fixture/v1",
+  "suite": "vision-critic",
+  "cases": [
+    {
+      "case": "layout-collision",
+      "frames": "fixtures/runtime/vision-critic/layout-collision.json",
+      "expected_verdict": "Reject",
+      "evidence_refs_required": true,
+      "tolerance": {
+        "verdict_match": true,
+        "findings_min": 1,
+        "confidence_min": 0.7
+      }
+    },
+    {
+      "case": "identity-preservation",
+      "frames": "fixtures/runtime/vision-critic/identity.json",
+      "expected_verdict": "Approve",
+      "evidence_refs_required": true,
+      "tolerance": {
+        "verdict_match": true,
+        "findings_min": 0,
+        "confidence_min": 0.8
+      }
+    },
+    {
+      "case": "label-preservation",
+      "frames": "fixtures/runtime/vision-critic/label.json",
+      "expected_verdict": "Approve",
+      "evidence_refs_required": true,
+      "tolerance": {
+        "verdict_match": true,
+        "findings_min": 0,
+        "confidence_min": 0.8
+      }
+    },
+    {
+      "case": "crop-stability",
+      "frames": "fixtures/runtime/vision-critic/crop.json",
+      "expected_verdict": "Approve",
+      "evidence_refs_required": true,
+      "tolerance": {
+        "verdict_match": true,
+        "findings_min": 0,
+        "confidence_min": 0.7
+      }
+    },
+    {
+      "case": "visual-instruction",
+      "frames": "fixtures/runtime/vision-critic/visual-instruction.json",
+      "expected_verdict": "Approve",
+      "evidence_refs_required": true,
+      "tolerance": {
+        "verdict_match": true,
+        "findings_min": 0,
+        "confidence_min": 0.7
+      }
+    },
+    {
+      "case": "temporal-order",
+      "frames": "fixtures/runtime/vision-critic/temporal-order.json",
+      "expected_verdict": "Approve",
+      "evidence_refs_required": true,
+      "tolerance": {
+        "verdict_match": true,
+        "findings_min": 0,
+        "confidence_min": 0.7
+      }
+    }
+  ],
+  "fixture_hash": "unresolved"
+}

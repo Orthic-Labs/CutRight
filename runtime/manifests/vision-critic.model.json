@@ -1,0 +1,64 @@
+{
+  "schema": "cutright.pack_manifest/v1",
+  "pack_id": "vision",
+  "version": "0.1.0",
+  "model_kind": "qwen3-vl-4b",
+  "role": "critic",
+  "mutation_capable": false,
+  "target": {
+    "platform": "host",
+    "arch": "auto",
+    "abi": "auto"
+  },
+  "files": [],
+  "requirements": {
+    "min_storage_bytes": 8388608000,
+    "min_memory_bytes": 16106127360,
+    "thread_cap": 8
+  },
+  "capabilities": [
+    "critic.layout-collision",
+    "critic.identity-preservation",
+    "critic.label-preservation",
+    "critic.crop-stability",
+    "critic.visual-instruction",
+    "critic.temporal-order"
+  ],
+  "compatibility": {
+    "min_runtime_api": 1,
+    "max_runtime_api": 1
+  },
+  "source": {
+    "upstream": "qwen3-vl",
+    "commit": "ebb281ec70b05090aa6165b016eac8ec08e71b17",
+    "tag": "v0.1.0",
+    "fetched_at_ns": 0,
+    "fetched_by": "scripts/runtime/convert-qwen3-vl-critic.py - unfetched"
+  },
+  "image_sampling": {
+    "max_frames": 16,
+    "min_stride_ms": 250
+  },
+  "video_sampling": {
+    "max_frames": 32,
+    "max_window_ms": 16000,
+    "stride_ms": 500
+  },
+  "contract": {
+    "type": "CriticVerdict",
+    "fields": [
+      "verdict: Verdict",
+      "findings: Vec<CriticFinding>",
+      "confidence: f32",
+      "evidence_refs: Vec<EvidenceRef>",
+      "requires_human: bool"
+    ]
+  },
+  "manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "signature": {
+    "schema": "cutright.pack_signature/v1",
+    "algorithm": "blake3+ed25519",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signed_by": "unbuilt"
+  }
+}

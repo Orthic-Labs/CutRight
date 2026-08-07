@@ -1,0 +1,31 @@
+{
+  "schema": "cutright.model_source/v1",
+  "model": "qwen3-vl-4b",
+  "pack_id": "vision",
+  "role": "critic",
+  "version": "0.1.0",
+  "upstream": {
+    "name": "qwen3-vl",
+    "commit": "ebb281ec70b05090aa6165b016eac8ec08e71b17",
+    "license": "apache-2.0"
+  },
+  "process_separate_from_director": true,
+  "image_sampling": {
+    "max_frames": 16,
+    "min_stride_ms": 250
+  },
+  "video_sampling": {
+    "max_frames": 32,
+    "max_window_ms": 16000,
+    "stride_ms": 500
+  },
+  "evaluation_suite": [
+    "layout-collision",
+    "identity-preservation",
+    "label-preservation",
+    "crop-stability",
+    "visual-instruction",
+    "temporal-order"
+  ],
+  "manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+}
