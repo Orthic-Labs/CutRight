@@ -18,6 +18,8 @@
 #![warn(missing_docs)]
 
 pub mod codegen;
+pub mod docs;
+pub mod drift;
 pub mod error;
 pub mod permission;
 pub mod registry;

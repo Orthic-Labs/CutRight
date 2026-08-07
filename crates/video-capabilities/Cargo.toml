@@ -31,3 +31,11 @@ tempfile = "3.23"
 name = "video-capabilities-codegen"
 path = "src/bin/codegen.rs"
 required-features = []
+
+[[bin]]
+name = "video-capabilities-drift"
+path = "src/bin/drift.rs"
+
+[[bin]]
+name = "video-capabilities-docs"
+path = "src/bin/docs_bin.rs"
