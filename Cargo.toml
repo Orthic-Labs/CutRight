@@ -16,6 +16,8 @@ members = [
   "crates/video-state",
   "crates/video-sessions",
   "crates/video-feedback",
+  "crates/video-agent",
+  "crates/video-editorial",
 ]
 
 [workspace.package]
