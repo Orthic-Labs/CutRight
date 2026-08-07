@@ -1,0 +1,53 @@
+{
+  "schema": "cutright.skill_result/v1",
+  "skill_result_id": "res-2026-08-07-001",
+  "skill_request_id": "req-2026-08-07-001",
+  "skill_id": "designer.layout",
+  "skill_revision": 1,
+  "status": "ok",
+  "artefacts": [
+    {
+      "kind": "skill_plan",
+      "id": "plan-001",
+      "hash": "2222222222222222222222222222222222222222222222222222222222222222",
+      "schema_id": "https://cutright.dev/schemas/skills/skill-plan.schema.v1.json",
+      "summary": "Six-shot beat plan for the hook segment."
+    },
+    {
+      "kind": "asset_request",
+      "id": "ar-001",
+      "hash": "3333333333333333333333333333333333333333333333333333333333333333",
+      "schema_id": "https://cutright.dev/schemas/creative/asset-request.schema.v2.json",
+      "summary": "Procedural lower-third graphic for shot 1."
+    }
+  ],
+  "input_hash": "4444444444444444444444444444444444444444444444444444444444444444",
+  "evidence_hashes": [
+    { "evidence_id": "frame-0001", "hash": "5555555555555555555555555555555555555555555555555555555555555555" },
+    { "evidence_id": "transcript-0001", "hash": "6666666666666666666666666666666666666666666666666666666666666666" }
+  ],
+  "output_hashes": {
+    "plan_hash": "2222222222222222222222222222222222222222222222222222222222222222",
+    "delivery_hash": "3333333333333333333333333333333333333333333333333333333333333333"
+  },
+  "trace_id": "trace-2026-08-07-001",
+  "evidence_refs": [
+    { "evidence_id": "frame-0001", "kind": "frame" },
+    { "evidence_id": "transcript-0001", "kind": "transcript_segment" }
+  ],
+  "model_versions": [
+    {
+      "model_id": "model.layout.local",
+      "model_revision": 1,
+      "runtime_pack_id": "runtime.creative.pack.v3",
+      "runtime_pack_revision": 3
+    }
+  ],
+  "resource_use": {
+    "wallclock_ms": 12340,
+    "memory_mb_peak": 412,
+    "tokens_in": 8421,
+    "tokens_out": 1102,
+    "model_calls": 3
+  }
+}

@@ -1,0 +1,199 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/skills/skill-result.schema.v1.json",
+  "title": "CutRight v2 embedded skill result",
+  "description": "Typed artefact output of an embedded creative skill. Every artefact cites input/evidence and output hashes. Raw hidden reasoning is never a required artefact.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "skill_result_id",
+    "skill_request_id",
+    "skill_id",
+    "skill_revision",
+    "status",
+    "artefacts",
+    "input_hash",
+    "evidence_hashes",
+    "output_hashes",
+    "trace_id"
+  ],
+  "properties": {
+    "schema": { "const": "cutright.skill_result/v1" },
+    "skill_result_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "skill_request_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "skill_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.]{2,127}$"
+    },
+    "skill_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "ok_degraded",
+        "needs_review",
+        "aborted",
+        "permission_denied",
+        "capability_missing",
+        "unsupported",
+        "budget_exceeded"
+      ]
+    },
+    "artefacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "id", "hash", "schema_id"],
+        "properties": {
+          "kind": {
+            "enum": [
+              "skill_plan",
+              "asset_request",
+              "asset_delivery",
+              "asset_review",
+              "creative_verdict",
+              "finish_plan",
+              "copy_document",
+              "review_finding"
+            ]
+          },
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+          "hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "blake3 hash of the canonical encoded artefact payload."
+          },
+          "schema_id": {
+            "type": "string",
+            "pattern": "^https://cutright\\.dev/schemas/.+\\.schema\\.(v[0-9]+|v[0-9]+\\.[0-9]+)\\.json$"
+          },
+          "summary": { "type": "string", "maxLength": 4096 }
+        }
+      }
+    },
+    "input_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "blake3 hash of the canonical encoded request payload."
+    },
+    "evidence_hashes": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "hash"],
+        "properties": {
+          "evidence_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+          "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "output_hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_hash", "delivery_hash"],
+      "properties": {
+        "plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "delivery_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "trace_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$",
+      "description": "Cross-reference to the corresponding skill trace record."
+    },
+    "degradation_reason": {
+      "type": "string",
+      "maxLength": 4096,
+      "description": "Required when status != 'ok'."
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "kind"],
+        "properties": {
+          "evidence_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+          "kind": {
+            "enum": [
+              "transcript_segment",
+              "frame",
+              "audio_segment",
+              "face_track",
+              "logo_track",
+              "label_track",
+              "saliency_map",
+              "document",
+              "brand_card",
+              "style_direction"
+            ]
+          }
+        }
+      }
+    },
+    "model_versions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["model_id", "model_revision", "runtime_pack_id", "runtime_pack_revision"],
+        "properties": {
+          "model_id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{2,127}$" },
+          "model_revision": { "type": "integer", "minimum": 1 },
+          "runtime_pack_id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{2,127}$" },
+          "runtime_pack_revision": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "resource_use": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wallclock_ms", "memory_mb_peak", "tokens_in", "tokens_out"],
+      "properties": {
+        "wallclock_ms": { "type": "integer", "minimum": 0 },
+        "memory_mb_peak": { "type": "integer", "minimum": 0 },
+        "tokens_in": { "type": "integer", "minimum": 0 },
+        "tokens_out": { "type": "integer", "minimum": 0 },
+        "model_calls": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": { "not": { "const": "ok" } }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["degradation_reason"]
+      }
+    }
+  ],
+  "not": {
+    "required": ["raw_reasoning", "hidden_chain_of_thought"],
+    "properties": {
+      "artefacts": {
+        "type": "array",
+        "contains": {
+          "properties": { "kind": { "const": "raw_reasoning" } },
+          "required": ["kind"]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/skills/skill-trace.schema.v1.json",
+  "title": "CutRight v2 embedded skill trace",
+  "description": "Canonical trace emitted alongside a skill result. Records skill/model/runtime pack versions, bounded retrieved evidence and per-step events. Raw hidden reasoning is not stored.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "trace_id",
+    "skill_id",
+    "skill_revision",
+    "skill_request_id",
+    "started_at",
+    "ended_at",
+    "skill_pack_id",
+    "skill_pack_revision",
+    "model_versions",
+    "events",
+    "evidence_budget"
+  ],
+  "properties": {
+    "schema": { "const": "cutright.skill_trace/v1" },
+    "trace_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "skill_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.]{2,127}$"
+    },
+    "skill_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "skill_request_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "skill_pack_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]{2,127}$",
+      "description": "Signed creative pack ID from which the skill bytecode was loaded."
+    },
+    "skill_pack_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "model_versions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["model_id", "model_revision", "runtime_pack_id", "runtime_pack_revision"],
+        "properties": {
+          "model_id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{2,127}$" },
+          "model_revision": { "type": "integer", "minimum": 1 },
+          "runtime_pack_id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{2,127}$" },
+          "runtime_pack_revision": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["seq", "at", "phase", "label"],
+        "properties": {
+          "seq": { "type": "integer", "minimum": 0 },
+          "at": { "type": "string", "format": "date-time" },
+          "phase": {
+            "enum": [
+              "resolve",
+              "permission_check",
+              "capability_check",
+              "evidence_fetch",
+              "plan",
+              "execute",
+              "render_sample",
+              "validate",
+              "deliver",
+              "review",
+              "abort",
+              "complete"
+            ]
+          },
+          "label": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "data": { "type": "object" },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["evidence_id", "kind"],
+              "properties": {
+                "evidence_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+                "kind": {
+                  "enum": [
+                    "transcript_segment",
+                    "frame",
+                    "audio_segment",
+                    "face_track",
+                    "logo_track",
+                    "label_track",
+                    "saliency_map",
+                    "document",
+                    "brand_card",
+                    "style_direction"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "evidence_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_items", "max_bytes", "used_items", "used_bytes"],
+      "properties": {
+        "max_items": { "type": "integer", "minimum": 0 },
+        "max_bytes": { "type": "integer", "minimum": 0 },
+        "used_items": { "type": "integer", "minimum": 0 },
+        "used_bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z][a-z0-9_.]{2,127}$" },
+          "message": { "type": "string", "minLength": 1, "maxLength": 4096 },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["evidence_id", "kind"],
+              "properties": {
+                "evidence_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+                "kind": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "not": {
+    "required": ["raw_reasoning", "hidden_chain_of_thought"]
+  }
+}

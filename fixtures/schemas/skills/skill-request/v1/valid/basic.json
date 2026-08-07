@@ -1,0 +1,36 @@
+{
+  "schema": "cutright.skill_request/v1",
+  "skill_request_id": "req-2026-08-07-001",
+  "skill_id": "designer.layout",
+  "skill_revision": 1,
+  "revision": {
+    "project_id": "proj-faceless-revival-001",
+    "revision_id": "rev-editorial-0042",
+    "editorial_revision_hash": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "permissions": ["evidence_read", "asset_plan"],
+  "capabilities": {
+    "model": "model.layout.local",
+    "runtime": "runtime.creative.pack.v3",
+    "fallback": "deterministic"
+  },
+  "resource_budget": {
+    "wallclock_ms": 30000,
+    "memory_mb": 1024,
+    "tokens_in": 16000,
+    "tokens_out": 4000,
+    "model_calls": 4
+  },
+  "inputs": {
+    "brief": "Compose a 6-shot beat plan for the hook segment.",
+    "evidence_refs": [
+      { "evidence_id": "frame-0001", "kind": "frame" },
+      { "evidence_id": "transcript-0001", "kind": "transcript_segment" }
+    ],
+    "context": { "aspect": "9:16", "duration_ms": 18000 }
+  },
+  "output_targets": ["skill_plan", "asset_request"],
+  "deterministic": true,
+  "seed": 42,
+  "degradation_policy": "deterministic_fallback"
+}

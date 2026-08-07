@@ -1,0 +1,38 @@
+{
+  "schema": "cutright.skill_trace/v1",
+  "trace_id": "trace-2026-08-07-001",
+  "skill_id": "designer.layout",
+  "skill_revision": 1,
+  "skill_request_id": "req-2026-08-07-001",
+  "skill_pack_id": "creative.pack.designer.v3",
+  "skill_pack_revision": 3,
+  "started_at": "2026-08-07T10:00:00Z",
+  "ended_at": "2026-08-07T10:00:12Z",
+  "model_versions": [
+    {
+      "model_id": "model.layout.local",
+      "model_revision": 1,
+      "runtime_pack_id": "runtime.creative.pack.v3",
+      "runtime_pack_revision": 3
+    }
+  ],
+  "events": [
+    { "seq": 0, "at": "2026-08-07T10:00:00Z", "phase": "resolve", "label": "resolve skill" },
+    { "seq": 1, "at": "2026-08-07T10:00:00Z", "phase": "permission_check", "label": "permission_check ok" },
+    { "seq": 2, "at": "2026-08-07T10:00:01Z", "phase": "capability_check", "label": "capability_check ok" },
+    { "seq": 3, "at": "2026-08-07T10:00:02Z", "phase": "evidence_fetch", "label": "fetch evidence",
+      "evidence_refs": [
+        { "evidence_id": "frame-0001", "kind": "frame" },
+        { "evidence_id": "transcript-0001", "kind": "transcript_segment" }
+      ]
+    },
+    { "seq": 4, "at": "2026-08-07T10:00:08Z", "phase": "plan", "label": "compose plan" },
+    { "seq": 5, "at": "2026-08-07T10:00:11Z", "phase": "complete", "label": "ok" }
+  ],
+  "evidence_budget": {
+    "max_items": 32,
+    "max_bytes": 16777216,
+    "used_items": 2,
+    "used_bytes": 4096
+  }
+}
