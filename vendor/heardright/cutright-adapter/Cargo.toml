@@ -1,0 +1,21 @@
+// CutRight adapter Cargo manifest stub.
+//
+// This stub is the placeholder that the B3-022 merge step will
+// integrate into the workspace alongside the vendored HeardRight crates.
+// It MUST NOT include any feature that reaches a global app-discovery
+// path, a user model directory, or a network resource.
+
+[package]
+name = "cutright-heardright-adapter"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+heardright-core = { path = "../core" }
+heardright-engine = { path = "../engine" }
+heardright-platform = { path = "../platform" }
+
+[features]
+default = []

@@ -1,0 +1,15 @@
+/.gradle/
+/build/
+/target/
+*.class
+*.factory
+*.iml
+*.lock
+*.next
+*.seed
+*.so
+*.so.*
+*.so.dylib
+*.dylib
+*.dll
+*.exe

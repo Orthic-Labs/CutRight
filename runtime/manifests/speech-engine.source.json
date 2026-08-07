@@ -1,0 +1,44 @@
+{
+  "schema": "cutright.pack_manifest/v1",
+  "pack_id": "speech",
+  "version": "0.1.0",
+  "target": {
+    "platform": "host",
+    "arch": "auto",
+    "abi": "auto"
+  },
+  "files": [],
+  "requirements": {
+    "min_storage_bytes": 0,
+    "min_memory_bytes": 268435456,
+    "thread_cap": 8
+  },
+  "capabilities": [
+    "speech.transcribe",
+    "speech.vad",
+    "speech.engine-dispatch"
+  ],
+  "compatibility": {
+    "min_runtime_api": 1,
+    "max_runtime_api": 1
+  },
+  "source": {
+    "upstream": "vendored",
+    "commit": "unresolved",
+    "tag": "unresolved",
+    "fetched_at_ns": 0,
+    "fetched_by": "scripts/runtime/build-heardright-adapter.py - unfetched"
+  },
+  "measurements": {
+    "transcribe_wer": 0.0,
+    "vad_latency_p95_ms": 0,
+    "engine_dispatch_pass": false
+  },
+  "manifest_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "signature": {
+    "schema": "cutright.pack_signature/v1",
+    "algorithm": "blake3+ed25519",
+    "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "signed_by": "unbuilt"
+  }
+}
