@@ -10,6 +10,7 @@ pub mod decision;
 pub mod distributions;
 pub mod learn;
 pub mod profile;
+pub mod autonomy;
 
 pub use decision::{DecisionRecord, DecisionTarget, DecisionAction, DecisionReason, DecisionAxis,
                     FormatKey, UserOrigin, SessionOrigin, ReviewMode, append_record,
@@ -21,8 +22,7 @@ pub use learn::{PreferenceEstimate, InsufficientReason, ScopedEstimate, Recommen
 pub use profile::{FormatProfile, FormatProfileValues, ProfileCompatibility, ProfileVersion,
                    ProfileApprovedBy, ProfileCompatibilityMismatch, approve_profile,
                    apply_profile, profile_compatibility_mismatch};
-
-pub mod autonomy {
-    //! Stub for B7-010.
-    pub struct AutonomyState;
-}
+pub use autonomy::{AutonomyState, AutonomyMode, AutonomyMetrics, AutonomyTransition,
+                     AutonomyTransitionReason, AutonomyAdvancementPredicate,
+                     AutonomyDemotionPredicate, initial_state, advance, demote, transitions,
+                     has_regression_trigger};
