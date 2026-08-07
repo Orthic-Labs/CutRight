@@ -3,10 +3,12 @@ resolver = "2"
 members = [
   "crates/video-core",
   "crates/video-actions",
+  "crates/video-benchmarks",
   "crates/video-capabilities",
   "crates/video-media",
   "crates/video-providers",
   "crates/video-project",
+  "crates/video-jobs",
   "crates/video-cli",
   "crates/video-state",
   "crates/video-sessions",

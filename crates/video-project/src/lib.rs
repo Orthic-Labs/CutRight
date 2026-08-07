@@ -3,6 +3,7 @@ mod receipts;
 pub use receipts::{verify_receipts, ReceiptCheck, ReceiptVerificationReport};
 
 mod analysis;
+pub mod autonomous_run;
 mod audio_profile;
 mod benchmark;
 mod candidates;
