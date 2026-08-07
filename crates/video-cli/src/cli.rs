@@ -97,6 +97,12 @@ pub enum Command {
         #[command(subcommand)]
         command: CloudCommand,
     },
+    /// Inspect the canonical capability registry owned by Lane P-B
+    /// (CR-V2-B2-014). Read-only; never mutates a project.
+    Capabilities {
+        #[command(subcommand)]
+        command: CapabilitiesCommand,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -338,4 +344,18 @@ pub enum CloudCommand {
     /// Tombstones retention records and deletes their files; never touches
     /// the spend ledger.
     Delete(PathCommand),
+}
+
+#[derive(Debug, Subcommand)]
+pub enum CapabilitiesCommand {
+    /// List every capability declared by the canonical registry. Default
+    /// output is a single JSON document matching `cutright.capability_list/v1`.
+    List {
+        /// Optional capability-id filter (exact match).
+        #[arg(long)]
+        id: Option<String>,
+        /// Emit machine-readable JSON only (default; included for symmetry).
+        #[arg(long, default_value_t = true)]
+        json: bool,
+    },
 }

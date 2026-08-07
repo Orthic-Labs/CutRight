@@ -1,0 +1,13 @@
+{
+  "$schema": "https://rust-lang.github.io/rust-analyzer/json-schema/rust-analyzer.json",
+  "_comment": "Lane P-B exclusion list (CR-V2-B2-014). The Rust files generated from the canonical capability registry (`crates/video-capabilities/src/generated.rs`) and the TypeScript binding tree (`bindings/`) are NEVER edited by hand; rust-analyzer is asked to skip them so its diagnostics stay focused on hand-written code.",
+  "files": {
+    "exclude": [
+      "crates/video-capabilities/src/generated.rs",
+      "bindings/**"
+    ]
+  },
+  "cargo": {
+    "allTargets": false
+  }
+}

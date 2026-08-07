@@ -1,3 +1,4 @@
+mod capabilities;
 mod cli;
 mod doctor;
 
@@ -71,6 +72,16 @@ fn main() -> ExitCode {
             return ExitCode::from(EXIT_INVALID);
         }
     };
+
+    // The capabilities command writes its own single JSON document to stdout
+    // and MUST NOT be wrapped in a second "event"/"status" envelope. Handle
+    // it before the generic run() path so the output stays byte-stable.
+    if let Command::Capabilities { command } = &cli.command {
+        return match capabilities::run(command) {
+            ExitCode::SUCCESS => ExitCode::from(EXIT_OK),
+            _ => ExitCode::from(EXIT_ERROR),
+        };
+    }
     match run(cli) {
         Ok(Outcome::Value(value)) => {
             println!(
@@ -392,6 +403,7 @@ fn command_name(command: &Command) -> String {
         Command::Receipts { .. } => "receipts verify",
         Command::Preferences { .. } => "preferences recommend",
         Command::Cloud { .. } => "cloud",
+        Command::Capabilities { .. } => "capabilities list",
         Command::Doctor(_) | Command::Project { .. } => "unknown",
     }
     .to_string()

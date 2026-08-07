@@ -14,7 +14,9 @@ path = "src/main.rs"
 blake3.workspace = true
 chrono.workspace = true
 clap.workspace = true
+serde.workspace = true
 serde_json.workspace = true
+video-capabilities = { path = "../video-capabilities" }
 video-core = { path = "../video-core" }
 video-project = { path = "../video-project" }
 video-providers = { path = "../video-providers" }

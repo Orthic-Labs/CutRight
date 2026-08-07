@@ -398,3 +398,52 @@ fn doctor_heardright_reports_the_missing_runtime_pack_degraded_state() {
         );
     }
 }
+
+#[test]
+fn capabilities_list_reports_canonical_registry() {
+    let output = videoctl()
+        .args(["capabilities", "list"])
+        .output()
+        .expect("videoctl capabilities list runs");
+    assert!(
+        output.status.success(),
+        "videoctl capabilities list exited non-zero: {:?}\nstderr: {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr),
+    );
+    let value = parse_stdout_json(&output);
+    assert_eq!(value["schema"], "cutright.capability_list/v1");
+    assert_eq!(value["registry_id"], "cutright-v2-canonical");
+    let capabilities = value["capabilities"]
+        .as_array()
+        .expect("capabilities is an array");
+    let ids: Vec<&str> = capabilities
+        .iter()
+        .map(|c| c["id"].as_str().unwrap_or(""))
+        .collect();
+    for expected in [
+        "asset.plan",
+        "evidence.read",
+        "export.publish",
+        "pack.manage",
+        "render.dispatch",
+        "settings.write",
+        "timeline.cut",
+        "timeline.read",
+    ] {
+        assert!(ids.contains(&expected), "missing capability {expected}: {ids:?}");
+    }
+}
+
+#[test]
+fn capabilities_list_with_id_filter_returns_a_single_entry() {
+    let output = videoctl()
+        .args(["capabilities", "list", "--id", "timeline.cut"])
+        .output()
+        .expect("videoctl capabilities list --id runs");
+    assert!(output.status.success());
+    let value = parse_stdout_json(&output);
+    assert_eq!(value["count"], 1);
+    assert_eq!(value["capabilities"][0]["id"], "timeline.cut");
+    assert_eq!(value["capabilities"][0]["kind"], "mutation");
+}

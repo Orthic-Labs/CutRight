@@ -669,6 +669,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "video-benchmarks"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "video-capabilities"
 version = "0.1.0"
 dependencies = [
@@ -705,6 +714,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "video-jobs"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "video-core",
+]
+
+[[package]]
 name = "video-media"
 version = "0.1.0"
 dependencies = [
@@ -727,6 +746,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "video-core",
+ "video-jobs",
  "video-media",
  "video-providers",
 ]
@@ -777,7 +797,9 @@ dependencies = [
  "chrono",
  "clap",
  "predicates",
+ "serde",
  "serde_json",
+ "video-capabilities",
  "video-core",
  "video-project",
  "video-providers",

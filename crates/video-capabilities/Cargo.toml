@@ -26,3 +26,8 @@ video-core = { path = "../video-core" }
 
 [dev-dependencies]
 tempfile = "3.23"
+
+[[bin]]
+name = "video-capabilities-codegen"
+path = "src/bin/codegen.rs"
+required-features = []

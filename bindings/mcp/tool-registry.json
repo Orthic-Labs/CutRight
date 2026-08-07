@@ -1,0 +1,226 @@
+{
+  "generator": "cutright.capability_codegen/v1",
+  "registry_id": "cutright-v2-canonical",
+  "schema": "cutright.mcp_tool_registry/v1",
+  "tools": {
+    "asset.plan": {
+      "capability_id": "asset.plan",
+      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "intent": {
+            "type": "string"
+          },
+          "revision_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision_id",
+          "intent"
+        ],
+        "type": "object"
+      },
+      "kind": "mutation",
+      "owner_component": "video-actions",
+      "permission_set": "pset.asset_plan",
+      "schema": "cutright.mcp_tool/v1"
+    },
+    "evidence.read": {
+      "capability_id": "evidence.read",
+      "description": "Read capability generated from the canonical registry (CR-V2-B2-014).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "max_items": {
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "revision_id": {
+            "type": "string"
+          },
+          "window": {
+            "additionalProperties": false,
+            "properties": {
+              "end_ns": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "start_ns": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "revision_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "owner_component": "video-state",
+      "permission_set": "pset.evidence_read_only",
+      "schema": "cutright.mcp_tool/v1"
+    },
+    "export.publish": {
+      "capability_id": "export.publish",
+      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "revision_id": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision_id",
+          "target"
+        ],
+        "type": "object"
+      },
+      "kind": "mutation",
+      "owner_component": "video-jobs",
+      "permission_set": "pset.render_jobs",
+      "schema": "cutright.mcp_tool/v1"
+    },
+    "pack.manage": {
+      "capability_id": "pack.manage",
+      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "op": {
+            "enum": [
+              "install",
+              "activate",
+              "repair",
+              "rollback",
+              "offline"
+            ]
+          },
+          "pack_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "op"
+        ],
+        "type": "object"
+      },
+      "kind": "mutation",
+      "owner_component": "video-runtime",
+      "permission_set": "pset.pack_manager",
+      "schema": "cutright.mcp_tool/v1"
+    },
+    "render.dispatch": {
+      "capability_id": "render.dispatch",
+      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "preset_id": {
+            "type": "string"
+          },
+          "revision_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision_id",
+          "preset_id"
+        ],
+        "type": "object"
+      },
+      "kind": "mutation",
+      "owner_component": "video-jobs",
+      "permission_set": "pset.render_jobs",
+      "schema": "cutright.mcp_tool/v1"
+    },
+    "settings.write": {
+      "capability_id": "settings.write",
+      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "type": "object"
+      },
+      "kind": "mutation",
+      "owner_component": "video-project",
+      "permission_set": "pset.pack_manager",
+      "schema": "cutright.mcp_tool/v1"
+    },
+    "timeline.cut": {
+      "capability_id": "timeline.cut",
+      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "ranges": {
+            "type": "array"
+          },
+          "revision_id": {
+            "type": "string"
+          },
+          "targets": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "revision_id",
+          "targets"
+        ],
+        "type": "object"
+      },
+      "kind": "mutation",
+      "owner_component": "video-actions",
+      "permission_set": "pset.editorial_engine",
+      "schema": "cutright.mcp_tool/v1"
+    },
+    "timeline.read": {
+      "capability_id": "timeline.read",
+      "description": "Read capability generated from the canonical registry (CR-V2-B2-014).",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "revision_id": {
+            "type": "string"
+          },
+          "track_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "owner_component": "video-state",
+      "permission_set": "pset.evidence_read_only",
+      "schema": "cutright.mcp_tool/v1"
+    }
+  }
+}
