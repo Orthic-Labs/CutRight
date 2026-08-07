@@ -170,10 +170,9 @@ impl JobDag {
     pub fn topological_order(&self) -> Result<Vec<StageId>, DagError> {
         let mut in_degree: BTreeMap<StageId, usize> = BTreeMap::new();
         for stage in self.stages.values() {
-            in_degree.entry(stage.id.clone()).or_insert(0);
-            for dep in &stage.dependencies {
-                *in_degree.entry(dep.clone()).or_insert(0) += 1;
-            }
+            // In-degree here is the number of dependencies this stage still
+            // needs to wait on; it reaches 0 once every `dep` has run.
+            in_degree.insert(stage.id.clone(), stage.dependencies.len());
         }
         let mut queue: BTreeSet<StageId> = self
             .stages
