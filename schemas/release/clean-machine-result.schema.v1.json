@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.local/schemas/release/clean-machine-result.schema.v1.json",
+  "title": "CutRight v2 clean-machine result",
+  "description": "Result emitted by scripts/qa/v2-clean-machine/run.py on a fresh, blocked-network target.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "target",
+    "ran_at",
+    "platform",
+    "external_runtime_dependencies",
+    "network_attempts",
+    "ci",
+    "publish",
+    "upload_status",
+    "overall_passed",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {"const": "v2"},
+    "target": {"type": "string"},
+    "ran_at": {"type": "string", "format": "date-time"},
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "release", "machine", "python"],
+      "properties": {
+        "system": {"type": "string"},
+        "release": {"type": "string"},
+        "machine": {"type": "string"},
+        "python": {"type": "string"}
+      }
+    },
+    "external_runtime_dependencies": {"type": "integer", "minimum": 0},
+    "network_attempts": {"type": "integer", "minimum": 0},
+    "ci": {"type": "string", "enum": ["forbidden", "absent", "permitted"]},
+    "publish": {"type": "boolean"},
+    "upload_status": {"type": "string"},
+    "overall_passed": {"type": "boolean"},
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check", "passed", "evidence"],
+        "properties": {
+          "check": {"type": "string"},
+          "passed": {"type": "boolean"},
+          "evidence": {"type": "object"}
+        }
+      }
+    }
+  }
+}

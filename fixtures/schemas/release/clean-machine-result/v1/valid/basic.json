@@ -1,0 +1,44 @@
+{
+  "schema_version": "v2",
+  "target": "host",
+  "ran_at": "2026-08-07T00:00:00+00:00",
+  "platform": {
+    "system": "Darwin",
+    "release": "26.5.2",
+    "machine": "arm64",
+    "python": "3.9.0"
+  },
+  "external_runtime_dependencies": 0,
+  "network_attempts": 0,
+  "ci": "forbidden",
+  "publish": false,
+  "upload_status": "not_performed",
+  "overall_passed": true,
+  "checks": [
+    {
+      "check": "no_external_tool_on_path",
+      "passed": true,
+      "evidence": {"absent": ["python", "python3", "node", "npm", "ffmpeg", "ollama", "heardright", "coderight"]}
+    },
+    {
+      "check": "network_deny",
+      "passed": true,
+      "evidence": {"hosts": [{"host": "download.cutright.local", "resolved": false, "policy_blocked": true}]}
+    },
+    {
+      "check": "offline_bundle_markers",
+      "passed": true,
+      "evidence": {"markers": [{"marker": "app", "present": true}]}
+    },
+    {
+      "check": "all_four_samples_present",
+      "passed": true,
+      "evidence": {"samples": []}
+    },
+    {
+      "check": "four_lanes_accepted",
+      "passed": true,
+      "evidence": {"claimed_lanes": ["creator", "creative", "speech", "vision"]}
+    }
+  ]
+}
