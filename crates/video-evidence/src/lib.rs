@@ -12,6 +12,8 @@
 
 pub mod graph;
 pub mod index;
+pub mod query;
+pub mod retrieve;
 pub mod scene;
 pub mod shot;
 pub mod store;
@@ -22,6 +24,11 @@ pub use graph::{
     EdgeKind, EvidenceEdge, EvidenceGraph, EvidenceKind, EvidenceNode, GraphError,
     ProducerIdentity,
 };
+pub use query::{
+    EvidenceQuery, EvidenceScope, NodeSummary, QueryError, QueryPlan, QueryPlanner,
+    RetrievalBudget, RetrievalResult,
+};
+pub use retrieve::{RetrievalCursor, RetrievalPage, RetrievalRecord, Retriever};
 pub use scene::{FrameSequence, FrameStat, SceneBoundary, SceneDetector, SceneRefinement};
 pub use shot::{MotionFrame, ShotBoundary, ShotDetectionError, ShotDetector, ShotKind, ShotRefinement};
 pub use store::{EvidenceStore, IndexSnapshot, ObjectKind, StoredObject, StoreError};
