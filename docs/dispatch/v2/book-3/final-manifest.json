@@ -1,0 +1,33 @@
+{
+  "book": 3,
+  "commit": "<filled-at-commit-time>",
+  "command": "CR-V2-B3-027",
+  "network_attempts": 0,
+  "path_fallbacks": 0,
+  "ci": "forbidden",
+  "evidence": {
+    "final_gate": "docs/dispatch/v2/book-3/final-gate.md",
+    "gate_evidence": "docs/dispatch/v2/book-3/gate-evidence.md",
+    "merge_receipt": "docs/dispatch/v2/book-3/merge-receipt.md",
+    "clean_runtime": "docs/dispatch/v2/book-3/clean-runtime.md",
+    "focused_tests": "docs/dispatch/v2/book-3/focused-tests.md",
+    "runtime_boundary_script": "scripts/gates/v2-runtime-boundary.py",
+    "clean_runtime_script": "scripts/qa/v2-clean-runtime.sh",
+    "video_services": "crates/video-services/src/lib.rs",
+    "video_jobs": "crates/video-jobs/src/lib.rs",
+    "video_runtime_doctor": "crates/video-runtime/src/doctor.rs",
+    "video_runtime_repair": "crates/video-runtime/src/repair.rs",
+    "pack_resolver": "crates/video-media/src/toolchain.rs"
+  },
+  "exit_codes": {
+    "v2-runtime-boundary.py --check": 0,
+    "validate-v2-ledger.py --scope book-3": 0,
+    "v2-clean-runtime.sh": 0,
+    "gate.sh --with-qa": 0
+  },
+  "pack_locks": {
+    "media": "<hash>",
+    "speech": "<hash>",
+    "tracker": "<hash>"
+  }
+}
