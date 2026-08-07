@@ -1,0 +1,22 @@
+# Video evidence crate (CR-V2-B3-017).
+#
+# This crate is owned by Book 3 lane C. The merge step (CR-V2-B3-022)
+# lifts it into the workspace membership. Until then, the file is
+# dormant inside the source tree.
+
+[workspace]
+
+[package]
+name = "video-evidence"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT"
+
+[dependencies]
+serde = "1.0"
+serde_json = "1.0"
+thiserror = "2.0"
+
+[dev-dependencies]
+tempfile = "3.10"
