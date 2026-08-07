@@ -15,7 +15,7 @@ use crate::tracks::{
     GlobalMotionTrack, HandLandmarks, MotionTrackExtractor, PoseTrack, PoseTrackExtractor,
     SaliencyTrack, SaliencyTrackExtractor, SourceHash, TextTrack, TextTrackExtractor,
 };
-use crate::tracks::{CameraMotionTrack, CameraMotionSample, GlobalMotionSample};
+use crate::tracks::{CameraMotionTrack};
 
 use serde::{Deserialize, Serialize};
 
