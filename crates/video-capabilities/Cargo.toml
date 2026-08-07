@@ -1,0 +1,28 @@
+[package]
+name = "video-capabilities"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Lane P-B (CR-V2-B2-012..016): shared capability registry model, loader,
+# validator, code-generator and drift detector. Per V2-CRATE-DAG.md this
+# crate sits between video-core (lower) and the video-project orchestrator
+# (higher). It MUST NOT depend on video-state, video-actions, video-project,
+# video-cli, or apps/studio.
+#
+# Generated bindings (e.g. src/generated.rs) are produced by `codegen.rs`
+# and excluded from rust-analyzer workspace discovery via root .cargo/config.toml
+# exclude patterns — see the file header in codegen.rs for the rationale.
+
+[dependencies]
+blake3.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+video-core = { path = "../video-core" }
+
+[dev-dependencies]
+tempfile = "3.23"
