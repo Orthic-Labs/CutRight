@@ -65,8 +65,16 @@ fn bounded_reads_bypass_mutations() {
 // ---------------------------------------------------------------------------
 
 fn is_loopback(addr: &str) -> bool {
-    let host = addr.split(':').next().unwrap_or("");
-    if host == "::1" || host == "localhost" {
+    // Strip an optional `[ipv6]` host bracket; for IPv4 bare forms strip a `:port`.
+    let s = addr.trim();
+    let host: &str = if let Some(rest) = s.strip_prefix('[') {
+        rest.split(']').next().unwrap_or("")
+    } else if s.matches(':').count() == 1 {
+        s.split(':').next().unwrap_or(s)
+    } else {
+        s
+    };
+    if host == "::1" || host == "localhost" || host == "0:0:0:0:0:0:0:1" {
         return true;
     }
     if host.starts_with("127.") {
