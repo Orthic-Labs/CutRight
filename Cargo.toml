@@ -9,6 +9,7 @@ members = [
   "crates/video-providers",
   "crates/video-project",
   "crates/video-jobs",
+  "crates/video-security",
   "crates/video-cli",
   "crates/video-state",
   "crates/video-sessions",
