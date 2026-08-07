@@ -1,10 +1,18 @@
 pub mod benchmark_policy;
 pub mod content_store;
+pub mod creative_skill_resolver;
+pub mod creative_skill_runtime;
 pub mod models;
 pub mod process_runner;
 pub mod providers;
 pub mod receipt;
 pub mod timestamp;
+
+pub use creative_skill_resolver::{CreativeSkillResolver, ResolutionPlan, ResolverError};
+pub use creative_skill_runtime::{
+    Budget, SkillFamily, SkillRequest, SkillResult, SkillRuntime, SkillRuntimeError, SkillTrace,
+    RUNTIME_VERSION as CREATIVE_SKILL_RUNTIME_VERSION,
+};
 
 pub use benchmark_policy::BenchmarkPolicy;
 pub use content_store::{materialize_worker, ContentStoreError};
