@@ -5,9 +5,15 @@
 //! floors pass and there is no blocking escalation.
 
 pub mod autonomous;
+pub mod dag;
+pub mod runner;
+pub mod store;
 
 pub use autonomous::{
     evaluate_autonomous_digest, AutonomousBlockers, AutonomousCriticVerdict,
     AutonomousDeterministicQaVerdict, AutonomousDigest, AutonomousDigestStatus,
     AutonomousEscalation, AutonomousRunInputs, AutonomousRunOutcome,
 };
+pub use dag::{DagError, JobDag, ResourceBudget, StageSpec};
+pub use runner::{job_record_from_dag, run, CancellationToken, RunnerError, RunnerOutcome};
+pub use store::{AttemptOutcome, AttemptRecord, JobRecord, StageRecord, StageState, StoreError};
