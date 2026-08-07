@@ -1,0 +1,15 @@
+{
+  "schema_version": "v1",
+  "event_id": "0000000000000000000000000000000000000000000000000000000000000001",
+  "kind": "trust_change",
+  "trust_from": "imported_untrusted",
+  "trust_to": "generated_untrusted",
+  "subject": "project://1111111111111111111111111111111111111111111111111111111111111111",
+  "actor": "video-security",
+  "details": {
+    "reason": "validator_pass",
+    "sandbox_grant_id": "000000000000000000000000000000000000000000000000000000000000aaaa"
+  },
+  "project_pseudonymous_id": "1111111111111111111111111111111111111111111111111111111111111111",
+  "at": "2026-08-07T00:00:00Z"
+}

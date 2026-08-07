@@ -1,0 +1,57 @@
+{
+  "schema_version": "v1",
+  "policy_id": "cutright-release-v1",
+  "policy_name": "CutRight v2 Release Policy",
+  "enforce": {
+    "network_disabled": true,
+    "telemetry_disabled": true,
+    "signed_packs_only": true,
+    "path_traversal_blocked": true,
+    "process_sandbox_required": true,
+    "decompression_ratio_cap": 100,
+    "metadata_size_bytes_cap": 67108864,
+    "container_dimension_cap": 16384,
+    "stream_duration_seconds_cap": 86400,
+    "worker_resource_limits": {
+      "cpu_seconds": 1800,
+      "memory_bytes": 17179869184,
+      "output_bytes": 1099511627776,
+      "temp_bytes": 8589934592
+    },
+    "log_redaction": {
+      "raw_transcript": false,
+      "source_paths": false,
+      "api_keys": false,
+      "user_paths": false
+    },
+    "credentials": {
+      "env_overrides_allowed": false,
+      "print_or_inspect": false,
+      "core_must_not_require": true
+    },
+    "release_blocking_checks": [
+      "network_denial",
+      "secret_scan",
+      "pack_signature",
+      "tamper_scan",
+      "licence_ledger",
+      "corresponding_source",
+      "dependency_licences",
+      "forbidden_runtime",
+      "skill_closure",
+      "source_corpus_leakage"
+    ]
+  },
+  "forbidden_runtime": [
+    "ollama",
+    "node-browser-runtime",
+    "global-skill-dir",
+    "sibling-repo-path",
+    "bare-executable-path",
+    "cloud-fallback"
+  ],
+  "audit": {
+    "skip_converts_to_pass": false,
+    "unproven_scanners_block": true
+  }
+}

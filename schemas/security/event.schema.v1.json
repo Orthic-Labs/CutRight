@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.local/schemas/security/event.schema.v1.json",
+  "title": "CutRight v2 Security Audit Event",
+  "description": "Local-only audit event for security-relevant state changes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "kind",
+    "subject",
+    "actor",
+    "at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "trust_change",
+        "sandbox_deny",
+        "network_attempt",
+        "tamper_detected",
+        "recovery_apply",
+        "policy_violation",
+        "privacy_event",
+        "worker_deny"
+      ]
+    },
+    "trust_from": {
+      "type": "string",
+      "enum": [
+        "immutable_source",
+        "canonical_project",
+        "verified_pack",
+        "imported_untrusted",
+        "generated_untrusted",
+        "external_session"
+      ]
+    },
+    "trust_to": {
+      "type": "string",
+      "enum": [
+        "immutable_source",
+        "canonical_project",
+        "verified_pack",
+        "imported_untrusted",
+        "generated_untrusted",
+        "external_session"
+      ]
+    },
+    "subject": {
+      "type": "string",
+      "description": "URI of the subject: project://..., pack://..., decision://..., worker://..."
+    },
+    "actor": {
+      "type": "string",
+      "description": "Component emitting the event: video-security, video-project, video-runtime, video-recovery."
+    },
+    "details": {
+      "type": "object",
+      "description": "Event-specific details. Never includes raw transcript, source paths, or API keys.",
+      "additionalProperties": true
+    },
+    "project_pseudonymous_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
