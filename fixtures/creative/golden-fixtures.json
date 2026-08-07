@@ -1,0 +1,43 @@
+{
+  "version": "v2",
+  "four_lane": {
+    "brand": {
+      "brand_card_id": "bc_1",
+      "score_axis": "brand_alignment",
+      "expected_score_min": 0.6,
+      "frozen_evidence_refs": ["brand_card:bc_1"]
+    },
+    "designer": {
+      "creative_plan_id": "cp_1",
+      "score_axis": "visual_composition",
+      "expected_score_min": 0.6,
+      "frozen_evidence_refs": ["style_direction:sd_1"]
+    },
+    "writing": {
+      "copy_atom_id": "ca_1",
+      "score_axis": "typography_legibility",
+      "expected_score_min": 0.6,
+      "frozen_evidence_refs": ["evidence:ev_1"]
+    },
+    "native_renderer": {
+      "render_graph_id": "rg_1",
+      "score_axis": "determinism",
+      "expected_score_min": 1.0,
+      "frozen_evidence_refs": ["render_graph:rg_1"]
+    }
+  },
+  "migration_comparisons": {
+    "compositor": {
+      "old_path": "remotion",
+      "new_path": "native_compositor",
+      "frozen_kind": "source",
+      "expected_step_count": 2
+    },
+    "transition": {
+      "old_path": "hyperframes",
+      "new_path": "native_motion",
+      "frozen_kind": "transition",
+      "expected_step_count": 1
+    }
+  }
+}
