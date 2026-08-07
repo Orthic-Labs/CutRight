@@ -1,0 +1,172 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/jobs/stage.schema.v1.json",
+  "title": "CutRight v2 job stage (v1)",
+  "description": "A single, durable step inside a job. Stages form a DAG; dependencies are explicit. Each stage has a fingerprint, declared inputs/outputs, attempts, optional checkpoints, and a structured terminal status.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "stage_id",
+    "capability",
+    "fingerprint",
+    "depends_on",
+    "inputs",
+    "outputs",
+    "status",
+    "attempts"
+  ],
+  "properties": {
+    "schema": {"const": "cutright.job_stage/v1"},
+    "stage_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "capability": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]+$"
+    },
+    "capability_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "pack_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]+$",
+      "description": "Pack id that supplied the capability."
+    },
+    "fingerprint": {"$ref": "fingerprint.schema.v1.json"},
+    "depends_on": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+      "description": "Stage ids that must reach a terminal status before this stage runs."
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "binding"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]+$"},
+          "binding": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind"],
+            "properties": {
+              "kind": {
+                "enum": ["source", "asset", "evidence_node", "stage_output", "literal", "preference"]
+              },
+              "ref": {"type": "string"},
+              "fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "mime": {"type": "string", "pattern": "^[a-z]+/[a-z0-9.+-]+$"}
+            }
+          }
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]+$"},
+          "kind": {
+            "enum": ["evidence_node", "asset", "receipt", "report"]
+          },
+          "fingerprint": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Populated when the stage reaches a terminal status."
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "memory_mb": {"type": "integer", "minimum": 0},
+        "disk_mb": {"type": "integer", "minimum": 0},
+        "cpu_cores": {"type": "integer", "minimum": 1},
+        "needs_gpu": {"type": "boolean"},
+        "wall_clock_ms": {"type": "integer", "minimum": 0}
+      }
+    },
+    "retry_class": {
+      "enum": ["none", "transient", "idempotent", "user"],
+      "description": "Retry class for failures. `idempotent` stages are safe to replay; `transient` retries once on transient errors; `user` requires an explicit user action."
+    },
+    "max_attempts": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 16
+    },
+    "attempts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["attempt_id", "started_at_ns", "status"],
+        "properties": {
+          "attempt_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+          "started_at_ns": {"type": "integer", "minimum": 1},
+          "completed_at_ns": {"type": "integer", "minimum": 1},
+          "status": {
+            "enum": ["running", "succeeded", "failed", "cancelled", "needs_review"]
+          },
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message"],
+            "properties": {
+              "code": {"type": "string", "pattern": "^[a-z][a-z0-9_.]+$"},
+              "message": {"type": "string", "maxLength": 2048},
+              "retryable": {"type": "boolean"}
+            }
+          },
+          "stdout_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "stderr_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "status": {
+      "enum": ["pending", "ready", "running", "succeeded", "needs_review", "failed", "cancelled"]
+    },
+    "cancellation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requested_at_ns": {"type": "integer", "minimum": 1},
+        "actor_id": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"},
+        "reason": {"type": "string", "maxLength": 1024}
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+        "state_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "BLAKE3 hash of the bounded checkpoint state blob."
+        },
+        "state_size_bytes": {"type": "integer", "minimum": 0},
+        "created_at_ns": {"type": "integer", "minimum": 1}
+      }
+    },
+    "cache_hit": {
+      "type": "boolean",
+      "description": "True iff this stage reused a cached output; the cached output fingerprint must match the stage fingerprint."
+    }
+  }
+}
