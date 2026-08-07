@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/evidence/node.schema.v1.json",
+  "title": "CutRight v2 evidence node (v1)",
+  "description": "A single, addressable entry in the hierarchical evidence graph. Identity is content-derived; timestamps are rational nanoseconds; producer capability/version, parameter hash, and receipt are mandatory. Raw model prose is NEVER permitted as canonical node identity or timing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "kind",
+    "source_revision",
+    "producer",
+    "receipt",
+    "payload_hash"
+  ],
+  "properties": {
+    "schema": {"const": "cutright.evidence_node/v1"},
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "description": "Stable, content-derived node id (BLAKE3 of canonicalised node body)."
+    },
+    "kind": {
+      "enum": [
+        "source",
+        "scene",
+        "shot",
+        "visual_event",
+        "frame",
+        "face",
+        "subject",
+        "pose",
+        "gesture",
+        "text_region",
+        "motion_region",
+        "audio_stream",
+        "speaker_turn",
+        "utterance",
+        "word",
+        "speech_region",
+        "music_section",
+        "bar",
+        "beat",
+        "transient",
+        "editorial_beat",
+        "claim",
+        "asset"
+      ]
+    },
+    "source_revision": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "description": "Source revision id that materialised this node. For derived nodes, also see derived_from edges."
+    },
+    "range": {
+      "type": "object",
+      "description": "Inclusive-exclusive rational nanosecond range. Omitted for time-less semantic nodes (e.g. editorial_beat grouping).",
+      "additionalProperties": false,
+      "required": ["start_ns", "end_ns"],
+      "properties": {
+        "start_ns": {"type": "integer", "minimum": 0},
+        "end_ns": {"type": "integer", "minimum": 0}
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Producer-supplied confidence in [0, 1]. Required for machine-produced nodes; omitted only for analyst-authored editorial nodes."
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "version"],
+      "properties": {
+        "capability": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.-]+$",
+          "description": "Capability name (e.g. 'speech.parakeet.asr', 'visual.face.detect')."
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "parameters_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "BLAKE3 hash of the canonicalised producer parameters object."
+        },
+        "model_pack": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.-]+$",
+          "description": "Pack id that contributed the model."
+        }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receipt_id", "batch_id"],
+      "properties": {
+        "receipt_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+        "batch_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+        "status": {
+          "enum": ["applied", "dry_run", "failed"]
+        }
+      }
+    },
+    "payload_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "BLAKE3 hash of the canonicalised payload object (bounded)."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Bound the payload size to keep the graph cheap. Producer-defined bounded object."
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "value"],
+        "properties": {
+          "key": {"type": "string", "pattern": "^[a-z][a-z0-9_.:-]+$"},
+          "value": {"type": "string"}
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2048,
+      "description": "Producer's free-text note. NEVER used as canonical identity or timing."
+    },
+    "redacted": {
+      "type": "boolean",
+      "description": "True iff the payload was redacted for rights or sensitivity; the original payload is unavailable."
+    }
+  }
+}

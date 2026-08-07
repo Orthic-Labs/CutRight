@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/evidence/edge.schema.v1.json",
+  "title": "CutRight v2 evidence edge (v1)",
+  "description": "Typed, directed edge between two evidence nodes. Edge kinds are explicit; graph cycles are allowed only for the symmetric kinds marked `symmetric: true`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "kind",
+    "from",
+    "to",
+    "producer"
+  ],
+  "properties": {
+    "schema": {"const": "cutright.evidence_edge/v1"},
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "description": "Stable, content-derived edge id (BLAKE3 of canonicalised edge body)."
+    },
+    "kind": {
+      "enum": [
+        "contains",
+        "overlaps",
+        "supports",
+        "contradicts",
+        "derived_from",
+        "same_subject",
+        "same_take",
+        "spoken_by",
+        "visualises",
+        "synchronised_with",
+        "precedes",
+        "follows",
+        "references",
+        "anchors",
+        "replaces"
+      ]
+    },
+    "symmetric": {
+      "type": "boolean",
+      "description": "True iff this edge is symmetric. Only `same_subject`, `same_take`, `synchronised_with`, `overlaps` mark this true."
+    },
+    "from": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "description": "Source node id."
+    },
+    "to": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "description": "Target node id."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "version"],
+      "properties": {
+        "capability": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]+$"},
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "parameters_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "maxLength": 1024,
+      "description": "Producer's free-text rationale. NEVER used as canonical identity or timing."
+    }
+  }
+}
