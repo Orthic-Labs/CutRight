@@ -1,11 +1,11 @@
 {
   "schema_version": "v2-workspace",
-  "generated_at": "2026-08-07T15:57:59Z",
+  "generated_at": "2026-08-07T16:05:00Z",
   "status": "pass",
   "package_status": "pass",
   "package_reference": "CutRight-v2 standalone implementation dispatch (frozen 2026-08-06)",
-  "head": "636c9d4f70358b7e12b0ca8ec726afc1ea9a2984",
-  "head_short": "636c9d4f",
+  "head": "b97b1e57b82ba06ebc82520efc518213fd0cbb5f",
+  "head_short": "b97b1e5",
   "books": 7,
   "task_count": 189,
   "tasks_per_book": {
