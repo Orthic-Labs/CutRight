@@ -13,7 +13,12 @@
 #![warn(missing_docs)]
 
 pub mod log;
+pub mod migrate;
 pub mod revision_store;
 
 pub use log::{LogError, LogKind, LogRecord, LogVerifier, LogVerifierOutcome, LogVerifierReport};
+pub use migrate::{
+    MigrationError, MigrationOutcome, MigrationPlan, MigrationRunner, MigrationStep,
+    MigrationStepReceipt, MigrationVerifyReport,
+};
 pub use revision_store::{Revision, RevisionError, RevisionId, RevisionStore, StagedState};

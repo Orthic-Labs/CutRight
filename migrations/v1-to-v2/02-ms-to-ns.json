@@ -1,0 +1,16 @@
+{
+  "from": "v1",
+  "to": "v2",
+  "step": 2,
+  "name": "ms-to-ns",
+  "requires_backup": true,
+  "touched_fields": [
+    "records[*].start_ms",
+    "records[*].end_ms",
+    "tracks[*].start_ms",
+    "tracks[*].end_ms",
+    "clips[*].start_ms",
+    "clips[*].end_ms"
+  ],
+  "description": "Multiply millisecond u64 fields by 1_000_000 to nanoseconds and re-anchor to the closest rational project tick."
+}

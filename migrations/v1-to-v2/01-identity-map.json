@@ -1,0 +1,14 @@
+{
+  "from": "v1",
+  "to": "v2",
+  "step": 1,
+  "name": "identity-map",
+  "requires_backup": true,
+  "touched_fields": [
+    "records[*].id",
+    "sources[*].id",
+    "tracks[*].id",
+    "clips[*].id"
+  ],
+  "description": "Map v1 string IDs to v2 stable identifiers via migrations/v1-to-v2/identity-map.csv; rows that cannot prove preservation report unsupported_by_ledger_schema."
+}

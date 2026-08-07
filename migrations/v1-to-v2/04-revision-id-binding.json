@@ -1,0 +1,12 @@
+{
+  "from": "v1",
+  "to": "v2",
+  "step": 4,
+  "name": "revision-id-binding",
+  "requires_backup": true,
+  "touched_fields": [
+    "revisions[*].id",
+    "revisions[*].compatibility_fp"
+  ],
+  "description": "Bind every v1 project snapshot to a v2 revision_id (BLAKE3 of the staged state) and freeze the public-surface compatibility_fp."
+}

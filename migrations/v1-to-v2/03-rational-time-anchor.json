@@ -1,0 +1,13 @@
+{
+  "from": "v1",
+  "to": "v2",
+  "step": 3,
+  "name": "rational-time-anchor",
+  "requires_backup": false,
+  "touched_fields": [
+    "timeline.timebase",
+    "tracks[*].tick_anchor",
+    "clips[*].tick_anchor"
+  ],
+  "description": "Re-anchor timebase to rational ticks (24 000/s video, 48 000/s audio). Conversions are exact or surface a typed rounding error."
+}
