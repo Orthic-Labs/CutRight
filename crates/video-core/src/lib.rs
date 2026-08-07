@@ -8,6 +8,7 @@ pub mod creative_skill_resolver;
 pub mod creative_skill_runtime;
 pub mod designer_service;
 pub mod models;
+pub mod native_compositor;
 pub mod package_plan;
 pub mod process_runner;
 pub mod providers;
@@ -28,6 +29,7 @@ pub use creative_skill_runtime::{
 };
 pub use designer_service::{AssetRequest, AssetReview, DesignerError, DesignerService};
 pub use rollplan::{RollKind, RollPlan, RollPlanError, RollPlanner, ShotRoll};
+pub use native_compositor::{CompositeCommand, CompositorError, NativeCompositor, NodeKind, RenderGraph, RenderNode};
 pub use package_plan::{BrandKitRef, PackageAsset, PackageAssetError, PackagePlan, PackagePlanService, Thumbnail, TitleCard};
 pub use social_service::{PlatformConstraints, PlatformProfile, SocialError, SocialService};
 pub use writing_service::{CopyAtom, Package, WritingError, WritingService};
