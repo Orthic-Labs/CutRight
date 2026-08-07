@@ -12,3 +12,4 @@ pub mod narrative;
 pub mod plan;
 pub mod engine;
 pub mod variants;
+pub mod benchmark_binding;
