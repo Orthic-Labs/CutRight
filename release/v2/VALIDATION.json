@@ -4,8 +4,8 @@
   "status": "pass",
   "package_status": "pass",
   "package_reference": "CutRight-v2 standalone implementation dispatch (frozen 2026-08-06)",
-  "head": "5a7a8b70cdc22e10301234bfcf67230417d4ae2f",
-  "head_short": "5a7a8b7",
+  "head": "b44736d8b345331ad0db78c543c84dacb69864f1",
+  "head_short": "b44736d",
   "books": 7,
   "task_count": 189,
   "tasks_per_book": {
