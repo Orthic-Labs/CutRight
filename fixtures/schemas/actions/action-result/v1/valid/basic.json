@@ -1,0 +1,11 @@
+{
+  "schema": "cutright.action_result/v1",
+  "batch_id": "batch_0001",
+  "status": "applied",
+  "new_revision": "rev_0002",
+  "receipt_id": "rcpt_0001",
+  "applied_actions": [
+    "act_0"
+  ],
+  "failures": []
+}
