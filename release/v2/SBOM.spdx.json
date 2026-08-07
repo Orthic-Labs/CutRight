@@ -1,0 +1,69 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "creationInfo": {
+    "created": "2026-08-07T10:09:25.223333+00:00",
+    "creators": [
+      "Tool: scripts/release/v2-provenance.py"
+    ]
+  },
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://local.cutright.dev/spdx/v2-rc",
+  "files": [
+    {
+      "SPDXID": "SPDXRef-File-SEAL.json",
+      "checksum": {
+        "algorithm": "SHA256",
+        "checksumValue": "98b117ece49bd05afead20dcccba3bf98f59f74684b601fb9bdad73194792f09"
+      },
+      "fileName": "SEAL.json",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-checksums/SHA256SUMS.template",
+      "checksum": {
+        "algorithm": "SHA256",
+        "checksumValue": "b04d5aff949b864b61d1350c70d0a89e40d36fa6b7fc0adfbc02580a020073c1"
+      },
+      "fileName": "checksums/SHA256SUMS.template",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-corresponding-source/README.md",
+      "checksum": {
+        "algorithm": "SHA256",
+        "checksumValue": "b94d428311b90f59c2e5854787ae3e457fe3fc9f3cf8b9f6b10110e3b81e2f12"
+      },
+      "fileName": "corresponding-source/README.md",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-licences/README.md",
+      "checksum": {
+        "algorithm": "SHA256",
+        "checksumValue": "a5f6e720b98f461e3597b90a5651c9cda8009846e178bea5ee43c7a3804b776f"
+      },
+      "fileName": "licences/README.md",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-samples/README.md",
+      "checksum": {
+        "algorithm": "SHA256",
+        "checksumValue": "4266af72adfba9e0390121ace5519c96a0f3cf284bd83589fb21c1ca98a13d70"
+      },
+      "fileName": "samples/README.md",
+      "licenseConcluded": "NOASSERTION"
+    },
+    {
+      "SPDXID": "SPDXRef-File-signatures/README.md",
+      "checksum": {
+        "algorithm": "SHA256",
+        "checksumValue": "723f29caf997b4828ead1777d11c9805a1472cf1fd96e36db8f9de70869240c9"
+      },
+      "fileName": "signatures/README.md",
+      "licenseConcluded": "NOASSERTION"
+    }
+  ],
+  "name": "cutright-v2-release-candidate",
+  "spdxVersion": "SPDX-2.3"
+}
