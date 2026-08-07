@@ -9,3 +9,6 @@
 
 pub mod deterministic;
 pub mod narrative;
+pub mod plan;
+pub mod engine;
+pub mod variants;

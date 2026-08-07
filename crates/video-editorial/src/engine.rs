@@ -29,13 +29,21 @@ use crate::narrative::shorts::{ShortCandidate, ShortInputs};
 use crate::narrative::truthfulness::{evaluate_reorder, OrderLog, Reorder};
 use crate::plan::{EditorialPlan, EditorialPlanResult, PlanError};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EditorialEngineRequest {
     pub request_id: String,
     pub review_mode: ReviewMode,
     pub director_request: EditorialRequest,
     pub director_proposal: Option<EditorialProposal>,
     pub beat_inputs: Vec<ShortInputs<'static>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EditorialEngineOutcome {
+    pub plan: Option<EditorialPlan>,
+    pub error: Option<PlanError>,
+    pub retrieval_receipt: String,
+    pub version: u32,
 }
 
 pub struct EditorialEngine {
