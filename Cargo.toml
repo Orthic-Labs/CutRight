@@ -2,10 +2,13 @@
 resolver = "2"
 members = [
   "crates/video-core",
+  "crates/video-actions",
   "crates/video-media",
   "crates/video-providers",
   "crates/video-project",
   "crates/video-cli",
+  "crates/video-state",
+  "crates/video-sessions",
 ]
 
 [workspace.package]

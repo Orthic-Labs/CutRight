@@ -1,0 +1,23 @@
+[package]
+name = "video-actions"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Lane P-A: typed Action enum, validation, dry-run, atomic apply, undo.
+# Per V2-CRATE-DAG.md this crate sits between video-core (lower) and the
+# video-project orchestrator (higher). It MUST NOT depend on video-state,
+# video-capabilities, video-project, video-cli, or apps/studio.
+
+[dependencies]
+blake3.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+video-core = { path = "../video-core" }
+
+[dev-dependencies]
+tempfile = "3.23"
