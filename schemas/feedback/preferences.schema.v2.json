@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.local/schemas/feedback/preferences.schema.v2.json",
+  "title": "CutRight v2 Preference Estimate",
+  "description": "Evidence-backed preference distribution computed from hash-bound decisions. User-specific preference evidence remains separate from shared benchmark floors.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "preference_id",
+    "format_key",
+    "axis",
+    "distribution",
+    "confidence",
+    "sample_count",
+    "variance",
+    "evidence_decision_ids",
+    "compatibility_fingerprint",
+    "scope",
+    "supported"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "v2"
+    },
+    "preference_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "BLAKE3 hash of the canonical preference payload."
+    },
+    "format_key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_type", "platform", "variant"],
+      "properties": {
+        "content_type": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string"
+        },
+        "variant": {
+          "type": "string"
+        }
+      }
+    },
+    "axis": {
+      "type": "string",
+      "enum": [
+        "take",
+        "boundary",
+        "filler",
+        "pause",
+        "hook",
+        "cta",
+        "beat_order",
+        "crop",
+        "caption",
+        "graphic",
+        "motion",
+        "broll",
+        "sfx",
+        "music",
+        "color",
+        "audio",
+        "identity",
+        "final"
+      ]
+    },
+    "distribution": {
+      "type": "object",
+      "description": "Probability-like weights keyed by decision_reason. Sum is informational; do not assume it is normalised.",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0.0,
+        "maximum": 1.0
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "sample_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "variance": {
+      "type": "number",
+      "minimum": 0.0
+    },
+    "evidence_decision_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "description": "Decision records whose hashes prove the distribution. Empty only when supported=false."
+    },
+    "compatibility_fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Hash of the compatible pack set and benchmark profile. A change widens uncertainty or requires review."
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["user_specific", "shared_benchmark_floor"],
+      "description": "User-specific preference evidence must always be separate from shared benchmark floors."
+    },
+    "supported": {
+      "type": "boolean",
+      "description": "False when the axis is unsupported or the sample count is insufficient. Insufficient evidence never invents a preference."
+    },
+    "insufficient_reason": {
+      "type": "string",
+      "enum": [
+        "unsupported_axis",
+        "insufficient_samples",
+        "conflicting_decisions",
+        "incompatible_packs",
+        "stale_subjects_only"
+      ]
+    },
+    "recency_weighted": {
+      "type": "boolean"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

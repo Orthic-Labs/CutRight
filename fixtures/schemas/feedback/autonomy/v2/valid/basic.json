@@ -1,0 +1,32 @@
+{
+  "schema_version": "v2",
+  "autonomy_id": "0000000000000000000000000000000000000000000000000000000000000001",
+  "format_key": {
+    "content_type": "recorded_talking_head",
+    "platform": "tiktok",
+    "variant": "v1"
+  },
+  "mode": "reviewed",
+  "compatible_pack_set": ["creator-minimal"],
+  "benchmark_profile": "reviewed-v2",
+  "sample_count": 1,
+  "metrics": {
+    "benchmark_pass": true,
+    "user_approval_count": 0,
+    "regression_count": 0,
+    "critic_disagreement": 0,
+    "integrity_failures": 0,
+    "qa_failures": 0
+  },
+  "demoted": false,
+  "last_user_approval": null,
+  "transition_history": [
+    {
+      "from": "reviewed",
+      "to": "reviewed",
+      "reason": "first_seen",
+      "audit_id": "000000000000000000000000000000000000000000000000000000000000aaaa",
+      "at": "2026-08-07T00:00:00Z"
+    }
+  ]
+}

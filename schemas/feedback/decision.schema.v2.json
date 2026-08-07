@@ -1,0 +1,208 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.local/schemas/feedback/decision.schema.v2.json",
+  "title": "CutRight v2 Decision Record",
+  "description": "Hash-bound decision record for v2 evidence-based feedback. Bind decisions to project instance, revision, subject/action/asset/effect/final hashes, format, pack set, app version and user/session origin.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_id",
+    "prev_hash",
+    "record_hash",
+    "project_instance_id",
+    "project_revision",
+    "subject_hash",
+    "decision_target",
+    "decision_action",
+    "decision_reason",
+    "decision_axis",
+    "format_key",
+    "pack_set_id",
+    "pack_set_fingerprint",
+    "app_version",
+    "user_origin",
+    "session_origin",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "v2"
+    },
+    "decision_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "BLAKE3 hash of the canonical encoded record (excluding record_hash)."
+    },
+    "prev_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Hash of the previous decision record in the project's chain. Null hash (64 zeros) for the first record."
+    },
+    "record_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Self-integrity hash of the encoded record bytes."
+    },
+    "project_instance_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "project_revision": {
+      "type": "string",
+      "pattern": "^rev-[0-9a-f]{16}$"
+    },
+    "subject_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Hash of the subject this decision modifies. A stale or mismatched subject is retained but excluded from learning."
+    },
+    "decision_target": {
+      "type": "string",
+      "enum": ["segment", "beat", "take", "boundary", "caption", "graphic", "effect", "audio", "crop", "final"]
+    },
+    "decision_action": {
+      "type": "string",
+      "enum": ["approve", "reject", "replace", "trim", "extend", "reorder", "mute", "revoice", "restyle", "regenerate", "reframe", "rerender", "note"]
+    },
+    "decision_reason": {
+      "type": "string",
+      "enum": [
+        "take_choice",
+        "boundary_choice",
+        "filler_choice",
+        "pause_choice",
+        "hook_choice",
+        "cta_choice",
+        "beat_order",
+        "crop_choice",
+        "caption_choice",
+        "graphic_choice",
+        "effect_density",
+        "broll_choice",
+        "sfx_choice",
+        "music_choice",
+        "color_choice",
+        "audio_choice",
+        "identity_choice",
+        "final_verdict",
+        "unknown_reason"
+      ]
+    },
+    "decision_axis": {
+      "type": "string",
+      "enum": [
+        "take",
+        "boundary",
+        "filler",
+        "pause",
+        "hook",
+        "cta",
+        "beat_order",
+        "crop",
+        "caption",
+        "graphic",
+        "motion",
+        "broll",
+        "sfx",
+        "music",
+        "color",
+        "audio",
+        "identity",
+        "final",
+        "unsupported_axis"
+      ]
+    },
+    "delta": {
+      "type": "object",
+      "description": "Structured delta describing the change. Schema varies by decision_target.",
+      "additionalProperties": true
+    },
+    "format_key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_type", "platform", "variant"],
+      "properties": {
+        "content_type": {
+          "type": "string",
+          "enum": [
+            "recorded_talking_head",
+            "repurpose_podcast",
+            "procedural_explainer",
+            "anchored_product",
+            "unknown_content_type"
+          ]
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["tiktok", "reels", "shorts", "youtube", "linkedin", "unknown_platform"]
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["v1", "v2", "v3", "alt_a", "alt_b", "unknown_variant"]
+        }
+      }
+    },
+    "pack_set_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "pack_set_fingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "app_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "user_origin": {
+      "type": "string",
+      "enum": ["user_reviewed", "user_rejected", "user_replaced", "user_noted", "model_suggested", "system"]
+    },
+    "session_origin": {
+      "type": "string",
+      "enum": ["external_session", "studio_review", "studio_autonomous", "headless"]
+    },
+    "asset_hash": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "effect_id": {
+      "type": ["string", "null"]
+    },
+    "final_hash": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "review_mode": {
+      "type": "string",
+      "enum": ["reviewed", "review_light", "autonomous"]
+    },
+    "sample_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "stale_subject": {
+      "type": "boolean",
+      "description": "Marks the record as retained but excluded from learning because the subject hash is stale or mismatched."
+    },
+    "malformed": {
+      "type": "boolean",
+      "description": "True when the record could not be parsed cleanly. Malformed records are always retained."
+    },
+    "note": {
+      "type": ["string", "null"],
+      "description": "Optional user note. The presence of a note is never required."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

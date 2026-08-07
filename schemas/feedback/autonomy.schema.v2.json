@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.local/schemas/feedback/autonomy.schema.v2.json",
+  "title": "CutRight v2 Autonomy State",
+  "description": "Per-format autonomy state. New formats begin in reviewed mode and only advance after thresholds and explicit user approval; automatic demotion is immediate and evidence-bound.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "autonomy_id",
+    "format_key",
+    "mode",
+    "compatible_pack_set",
+    "benchmark_profile",
+    "sample_count",
+    "metrics",
+    "demoted",
+    "last_user_approval",
+    "transition_history"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "v2"
+    },
+    "autonomy_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "format_key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_type", "platform", "variant"],
+      "properties": {
+        "content_type": {"type": "string"},
+        "platform": {"type": "string"},
+        "variant": {"type": "string"}
+      }
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["reviewed", "review_light", "autonomous"],
+      "description": "New formats must begin as reviewed."
+    },
+    "compatible_pack_set": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]+$"
+      },
+      "minItems": 1
+    },
+    "benchmark_profile": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "sample_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["benchmark_pass", "user_approval_count", "regression_count", "critic_disagreement"],
+      "properties": {
+        "benchmark_pass": {"type": "boolean"},
+        "user_approval_count": {"type": "integer", "minimum": 0},
+        "regression_count": {"type": "integer", "minimum": 0},
+        "critic_disagreement": {"type": "integer", "minimum": 0},
+        "integrity_failures": {"type": "integer", "minimum": 0},
+        "qa_failures": {"type": "integer", "minimum": 0}
+      }
+    },
+    "demoted": {
+      "type": "boolean",
+      "description": "True when an automatic demotion trigger fired. The mode must drop to reviewed."
+    },
+    "last_user_approval": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Timestamp of the last explicit user approval. Required for advancement; null means reviewed-only."
+    },
+    "transition_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "reason", "audit_id", "at"],
+        "properties": {
+          "from": {"type": "string", "enum": ["reviewed", "review_light", "autonomous"]},
+          "to": {"type": "string", "enum": ["reviewed", "review_light", "autonomous"]},
+          "reason": {
+            "type": "string",
+            "enum": [
+              "thresholds_met_user_approval",
+              "rejected_final",
+              "unresolved_escalation",
+              "benchmark_regression",
+              "critic_disagreement",
+              "integrity_failure",
+              "incompatible_pack_change",
+              "first_seen"
+            ]
+          },
+          "audit_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "at": {"type": "string", "format": "date-time"}
+        }
+      }
+    }
+  }
+}
