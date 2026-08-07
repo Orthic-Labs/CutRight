@@ -15,7 +15,9 @@
 #![warn(missing_docs)]
 
 pub mod action;
+pub mod apply;
 pub mod diff;
+pub mod revision;
 pub mod validation;
 
 pub use action::{
@@ -23,7 +25,12 @@ pub use action::{
     ExportRenderParams, GraphicParams, MoveParams, ParamError, RetimeParams, RestoreParams,
     SettingParams, TakeSwapParams, TargetRef, TargetRefError, ACTION_KINDS,
 };
+pub use apply::{ApplyError, ApplyOutcome, DryRunOutcome, InjectPoint, RecoveryState, StagedApply};
 pub use diff::{dry_run, DiffEntry, DiffError, DiffRange, SemanticDiff, StableDiffKey, DRY_RUN_SCHEMA};
+pub use revision::{
+    FailureCode, Receipt, ReceiptFailure, ReceiptStatus, Revision, RevisionError, StagedRevision,
+    RECEIPT_SCHEMA, REVISION_SCHEMA,
+};
 pub use validation::{
     validate_batch, DefaultValidator, ValidationContext, ValidationError, ValidationFailure,
     Validator,
