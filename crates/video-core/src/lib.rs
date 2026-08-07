@@ -16,6 +16,7 @@ pub mod package_plan;
 pub mod process_runner;
 pub mod providers;
 pub mod receipt;
+pub mod render_graph_compiler;
 pub mod rollplan;
 pub mod social_service;
 pub mod timestamp;
@@ -31,6 +32,7 @@ pub use creative_skill_runtime::{
     RUNTIME_VERSION as CREATIVE_SKILL_RUNTIME_VERSION,
 };
 pub use designer_service::{AssetRequest, AssetReview, DesignerError, DesignerService};
+pub use render_graph_compiler::{CompiledPlan, CompiledStep, RenderGraphCompileError, RenderGraphCompiler};
 pub use rollplan::{RollKind, RollPlan, RollPlanError, RollPlanner, ShotRoll};
 pub use native_compositor::{CompositeCommand, CompositorError, NativeCompositor, NodeKind, RenderGraph, RenderNode};
 pub use native_audio::{AudioCue, AudioError, AudioFinish, AudioProfile, NativeAudioEngine};
