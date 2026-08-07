@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "cutright.studio.project_view/v1",
+  "title": "StudioProjectView",
+  "description": "Frozen per-mode Studio project read model. Assembled from canonical revision / evidence / job / decision data plus disposable index metadata. This object is a projection rebuilt on demand; it is never authoritative.",
+  "type": "object",
+  "required": ["schema", "project", "revision", "evidence", "jobs", "capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "cutright.studio.project_view/v1"
+    },
+    "project": {
+      "type": "object",
+      "required": ["project_id", "project_instance_id", "title", "lane", "active_revision", "updated_at"],
+      "additionalProperties": false,
+      "properties": {
+        "project_id": { "type": "string" },
+        "project_instance_id": { "type": "string" },
+        "title": { "type": "string" },
+        "lane": {
+          "type": "string",
+          "enum": ["recorded_footage", "repurpose", "explainer", "anchored_creative"]
+        },
+        "active_revision": { "type": "string" },
+        "updated_at": { "type": "string" }
+      }
+    },
+    "revision": {
+      "type": "object",
+      "required": ["revision", "digest"],
+      "additionalProperties": false,
+      "properties": {
+        "revision": { "type": "string" },
+        "parent_revision": { "type": ["string", "null"] },
+        "digest": {
+          "type": "object",
+          "required": ["ready", "needs_review", "failed", "running"],
+          "additionalProperties": false,
+          "properties": {
+            "ready": { "type": "integer", "minimum": 0 },
+            "needs_review": { "type": "integer", "minimum": 0 },
+            "failed": { "type": "integer", "minimum": 0 },
+            "running": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["sources", "transcript_present", "story_plan_present", "beat_count", "timeline_present"],
+      "additionalProperties": false,
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source_id", "path", "hash"],
+            "additionalProperties": false,
+            "properties": {
+              "source_id": { "type": "string" },
+              "path": { "type": "string" },
+              "hash": { "type": "string" },
+              "duration_ms": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "transcript_present": { "type": "boolean" },
+        "story_plan_present": { "type": "boolean" },
+        "beat_count": { "type": "integer", "minimum": 0 },
+        "timeline_present": { "type": "boolean" }
+      }
+    },
+    "jobs": {
+      "type": "object",
+      "required": ["active", "recent"],
+      "additionalProperties": false,
+      "properties": {
+        "active": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["job_id", "kind", "status"],
+            "additionalProperties": false,
+            "properties": {
+              "job_id": { "type": "string" },
+              "kind": { "type": "string" },
+              "status": { "type": "string" },
+              "started_at": { "type": "string" }
+            }
+          }
+        },
+        "recent": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["job_id", "kind", "status"],
+            "additionalProperties": false,
+            "properties": {
+              "job_id": { "type": "string" },
+              "kind": { "type": "string" },
+              "status": { "type": "string" },
+              "finished_at": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["available", "missing"],
+      "additionalProperties": false,
+      "properties": {
+        "available": { "type": "array", "items": { "type": "string" } },
+        "missing": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
