@@ -1,0 +1,67 @@
+{
+  "book": 5,
+  "commit": "<filled-at-commit-time>",
+  "command": "CR-V2-B5-027",
+  "network_attempts": 0,
+  "path_fallbacks": 0,
+  "ci": "forbidden",
+  "legacy_renderer_attempts": 0,
+  "critic_axes_passing": 10,
+  "evidence": {
+    "final_gate": "docs/dispatch/v2/book-5/final-gate.md",
+    "gate_evidence": "docs/dispatch/v2/book-5/gate-evidence.md",
+    "merge_receipt": "docs/dispatch/v2/book-5/merge-receipt.md",
+    "interface_freeze": "docs/dispatch/v2/book-5/interface-freeze.md",
+    "golden_fixtures": "fixtures/creative/golden-fixtures.json",
+    "video_core": "crates/video-core/src/lib.rs",
+    "video_sessions": "crates/video-sessions/src/lib.rs",
+    "video_editorial": "crates/video-editorial/src/lib.rs",
+    "legacy_renderer_script": "scripts/gates/v2-legacy-renderer.py",
+    "creative_critic_script": "scripts/gates/v2-creative-critic.py"
+  },
+  "schemas_v2": [
+    "schemas/creative/critic-evaluation.schema.v2.json",
+    "schemas/creative/lane-ownership.schema.v2.json",
+    "schemas/creative/pipeline-stage.schema.v2.json",
+    "schemas/creative/book5-lane-ownership.schema.v2.json",
+    "schemas/creative/bakeoff.schema.v2.json",
+    "schemas/creative/brand-card.schema.v2.json",
+    "schemas/creative/brand-system.schema.v2.json",
+    "schemas/creative/style-direction.schema.v2.json"
+  ],
+  "architecture_docs": [
+    "docs/architecture/V2-CRITIC-SEMANTICS.md",
+    "docs/architecture/V2-CREATIVE-OS-LANES.md",
+    "docs/architecture/V2-CREATIVE-PIPELINE-STAGES.md",
+    "docs/architecture/V2-BOOK5-NATIVE-RENDERER-LANES.md"
+  ],
+  "lanes": [
+    "brand",
+    "brand-identity",
+    "designer",
+    "writing",
+    "social",
+    "planning",
+    "asset-validation",
+    "native-renderer",
+    "native-typography",
+    "native-motion",
+    "native-audio",
+    "render-graph",
+    "creative-critic",
+    "job-plane"
+  ],
+  "exit_codes": {
+    "cargo check --workspace --all-targets --locked": 0,
+    "cargo test -p video-core --tests --locked": 0,
+    "v2-legacy-renderer.py --check": 0,
+    "v2-creative-critic.py --axes 10": 0,
+    "gate.sh --with-qa": 0
+  },
+  "test_summary": {
+    "video_core_unit_tests": 79,
+    "video_core_four_lane_fixtures": 5,
+    "video_core_focused_creative": 7,
+    "total": 91
+  }
+}
