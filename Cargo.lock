@@ -669,6 +669,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "video-agent"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "video-actions",
+ "video-capabilities",
+ "video-project",
+ "video-sessions",
+]
+
+[[package]]
 name = "video-benchmarks"
 version = "0.1.0"
 dependencies = [
@@ -703,6 +717,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "video-editorial"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+ "video-benchmarks",
+]
+
+[[package]]
 name = "video-feedback"
 version = "0.1.0"
 dependencies = [
@@ -717,9 +741,12 @@ dependencies = [
 name = "video-jobs"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "chrono",
  "serde",
  "serde_json",
+ "tempfile",
+ "thiserror",
  "video-core",
 ]
 
@@ -765,6 +792,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "video-core",
+ "video-media",
 ]
 
 [[package]]
@@ -800,6 +828,19 @@ dependencies = [
  "serde_json",
  "thiserror",
  "video-core",
+]
+
+[[package]]
+name = "video-services"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+ "video-core",
+ "video-jobs",
+ "video-runtime",
+ "video-state",
 ]
 
 [[package]]

@@ -7,10 +7,10 @@ import { relinkMatchesHash } from "./components/SourceInspector";
 
 describe("SourcesTranscript", () => {
   it("rejects relink when candidate hash differs", () => {
-    expect(relinkMatchesHash({ source_id: "s1", display_name: "x", blake3: "abc", probe: { duration_ms: 1, width: 1, height: 1 }, scenes: [] }, "def")).toBe(false);
+    expect(relinkMatchesHash({ source_id: "s1", display_name: "x", blake3: "abc", probe: { duration_ms: 1, width: 1, height: 1, fps: 30, is_hdr: false }, scenes: [] }, "def")).toBe(false);
   });
   it("accepts relink when candidate hash matches", () => {
-    expect(relinkMatchesHash({ source_id: "s1", display_name: "x", blake3: "abc", probe: { duration_ms: 1, width: 1, height: 1 }, scenes: [] }, "abc")).toBe(true);
+    expect(relinkMatchesHash({ source_id: "s1", display_name: "x", blake3: "abc", probe: { duration_ms: 1, width: 1, height: 1, fps: 30, is_hdr: false }, scenes: [] }, "abc")).toBe(true);
   });
   it("SourcesModeV2 renders a header", () => {
     const tree = SourcesModeV2({ sources: [] });

@@ -19,7 +19,7 @@ export function TranscriptMode(props: {
   segments: readonly TranscriptSegmentView[];
   onCorrectText?: (input: { segment_id: string; text: string }) => void;
   children?: ReactNode;
-}): JSX.Element {
+}): React.ReactElement {
   return (
     <main className="transcript-mode" aria-label="Transcript">
       <h1>Transcript</h1>

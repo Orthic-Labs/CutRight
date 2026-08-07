@@ -1,0 +1,20 @@
+[package]
+name = "video-agent"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+description = "CutRight loopback MCP adapter (CR-V2-B2-025). Exposes the same ActionExecutor as the CLI/Studio."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+video-actions = { path = "../video-actions" }
+video-capabilities = { path = "../video-capabilities" }
+video-project = { path = "../video-project" }
+video-sessions = { path = "../video-sessions" }
+
+[dev-dependencies]
+tempfile = "3.23"
