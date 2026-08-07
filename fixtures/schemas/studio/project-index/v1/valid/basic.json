@@ -1,0 +1,19 @@
+{
+  "schema": "cutright.studio.project_index/v1",
+  "version": 1,
+  "rows": [
+    {
+      "project_instance_id": "proj_001",
+      "package_path": "/Users/example/projects/coffee-talk",
+      "title": "Coffee Talk Episode 1",
+      "lane": "recorded_footage",
+      "active_revision": "rev_001",
+      "run_status": "ready",
+      "ready_count": 4,
+      "needs_review_count": 0,
+      "failed_count": 0,
+      "updated_at": "2026-08-07T10:00:00Z"
+    }
+  ],
+  "watch_folder_import_enabled": false
+}

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "cutright.studio.project_index/v1",
+  "title": "StudioProjectIndex",
+  "description": "Disposable projection of recent projects. Rebuilt from project packages and app-local history. Deleting the index loses no project truth. Two same-title projects remain distinct via project_instance_id.",
+  "type": "object",
+  "required": ["schema", "version", "rows"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "cutright.studio.project_index/v1"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "rows": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/row" }
+    },
+    "watch_folder_import_enabled": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "definitions": {
+    "row": {
+      "type": "object",
+      "required": [
+        "project_instance_id",
+        "package_path",
+        "title",
+        "lane",
+        "active_revision",
+        "run_status",
+        "ready_count",
+        "needs_review_count",
+        "failed_count",
+        "updated_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "project_instance_id": { "type": "string" },
+        "package_path": { "type": "string" },
+        "title": { "type": "string" },
+        "lane": {
+          "type": "string",
+          "enum": ["recorded_footage", "repurpose", "explainer", "anchored_creative"]
+        },
+        "active_revision": { "type": "string" },
+        "run_status": {
+          "type": "string",
+          "enum": ["idle", "running", "ready", "needs_review", "failed", "stale", "missing"]
+        },
+        "ready_count": { "type": "integer", "minimum": 0 },
+        "needs_review_count": { "type": "integer", "minimum": 0 },
+        "failed_count": { "type": "integer", "minimum": 0 },
+        "updated_at": { "type": "string" },
+        "thumbnail_hash": { "type": "string" }
+      }
+    }
+  }
+}
