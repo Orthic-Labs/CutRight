@@ -1,0 +1,20 @@
+{
+  "schema": "cutright.capability/v1",
+  "capability_id": "timeline.read",
+  "version": 1,
+  "kind": "read",
+  "owner_component": "video-actions",
+  "permission_set": "evidence_read",
+  "inputs": {
+    "revision": "string"
+  },
+  "outputs": {
+    "bounded": true,
+    "windowed": true,
+    "max_items": 4096
+  },
+  "eval_suites": [
+    "actions.contract"
+  ],
+  "degradation": "ok"
+}

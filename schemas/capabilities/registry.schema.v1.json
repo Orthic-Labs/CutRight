@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/capabilities/registry.schema.v1.json",
+  "title": "CutRight v2 capability registry entry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "capability_id",
+    "version",
+    "kind",
+    "owner_component",
+    "permission_set",
+    "inputs",
+    "outputs"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cutright.capability/v1"
+    },
+    "capability_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.]+$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kind": {
+      "enum": [
+        "read",
+        "mutation"
+      ]
+    },
+    "owner_component": {
+      "type": "string"
+    },
+    "permission_set": {
+      "type": "string"
+    },
+    "inputs": {
+      "type": "object"
+    },
+    "outputs": {
+      "type": "object",
+      "properties": {
+        "bounded": {
+          "type": "boolean"
+        },
+        "windowed": {
+          "type": "boolean"
+        },
+        "max_items": {
+          "type": "integer"
+        }
+      }
+    },
+    "eval_suites": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "degradation": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "degraded",
+        "missing"
+      ]
+    }
+  }
+}

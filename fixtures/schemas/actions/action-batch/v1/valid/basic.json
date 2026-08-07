@@ -1,0 +1,21 @@
+{
+  "schema": "cutright.action_batch/v1",
+  "batch_id": "batch_0001",
+  "expected_revision": "rev_0001",
+  "intent": "remove filler word",
+  "evidence_refs": [
+    "ev_w0",
+    "ev_w1"
+  ],
+  "actions": [
+    {
+      "kind": "timeline.cut",
+      "target": "clip_clip_5",
+      "params": {
+        "start_ns": 1200000000,
+        "end_ns": 1400000000
+      }
+    }
+  ],
+  "dry_run": false
+}
