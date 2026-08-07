@@ -1,0 +1,138 @@
+{
+  "book": 4,
+  "title": "Benchmark-First Evaluation and Editorial Intelligence",
+  "status": "frozen",
+  "frozen_at": "2026-08-07T18:50:00Z",
+  "benchmark_profile": {
+    "profile_id": "reviewed-v2",
+    "version": 1,
+    "format": "shorts",
+    "pack_set": "v2"
+  },
+  "autonomy_auto_advance": false,
+  "ci_forbidden": true,
+  "commits": [
+    {
+      "id": "B4-001",
+      "slug": "freeze-v2-benchmark-and-editorial-taxonomy",
+      "expected_commit": "freeze benchmark taxonomy"
+    },
+    {
+      "id": "B4-002",
+      "slug": "freeze-v2-evaluation-axis-and-metricstatus",
+      "expected_commit": "axis & MetricStatus"
+    },
+    {
+      "id": "B4-003",
+      "slug": "freeze-v2-benchmark-corpus-and-runner-skeletons",
+      "expected_commit": "corpus + runner skeletons"
+    },
+    {
+      "id": "B4-004",
+      "slug": "freeze-v2-evaluation-context-and-benchmarks-crate",
+      "expected_commit": "EvalContext + benchmarks crate"
+    },
+    {
+      "id": "B4-005",
+      "slug": "freeze-v2-evidence-and-boundary-fixture-schemas",
+      "expected_commit": "evidence/word-boundary fixtures"
+    },
+    {
+      "id": "B4-006",
+      "slug": "freeze-v2-word-boundary-evaluators",
+      "expected_commit": "word boundary evaluators"
+    },
+    {
+      "id": "B4-007",
+      "slug": "freeze-v2-word-boundary-fixtures",
+      "expected_commit": "word boundary fixtures"
+    },
+    {
+      "id": "B4-008",
+      "slug": "freeze-v2-audio-video-sync-evaluators",
+      "expected_commit": "audio/video sync evaluators"
+    },
+    {
+      "id": "B4-009",
+      "slug": "implement-visual-preservation-crop-stability-and-collision-evaluators"
+    },
+    {
+      "id": "B4-010",
+      "slug": "implement-action-atomicity-undo-crash-cache-and-offline-evaluators"
+    },
+    {
+      "id": "B4-011",
+      "slug": "implement-editorial-human-agreement-metrics-and-benchmark-runner"
+    },
+    {
+      "id": "B4-012",
+      "slug": "implement-deterministic-beat-segmentation-from-transcript-and-evidence"
+    },
+    {
+      "id": "B4-013",
+      "slug": "cluster-duplicate-takes-and-restatements-with-stable-evidence-anchors"
+    },
+    {
+      "id": "B4-014",
+      "slug": "score-takes-against-evidence-anchors-with-confidence-and-rationale"
+    },
+    {
+      "id": "B4-015",
+      "slug": "decide-filler-false-starts-slates-and-dead-air-with-word-safe-ranges"
+    },
+    {
+      "id": "B4-016",
+      "slug": "build-boundary-consensus-and-word-safe-cut-segments"
+    },
+    {
+      "id": "B4-017",
+      "slug": "define-narrative-arc-templates-and-the-director-request-contract"
+    },
+    {
+      "id": "B4-018",
+      "slug": "order-hook-payoff-cta-and-truthfulness-with-evidence-anchors"
+    },
+    {
+      "id": "B4-019",
+      "slug": "discover-semantic-short-form-clips-from-evidence-and-take-scores"
+    },
+    {
+      "id": "B4-020",
+      "slug": "estimate-confidence-ambiguity-and-required-escalations"
+    },
+    {
+      "id": "B4-021",
+      "slug": "produce-self-reflection-and-repair-attempts-when-confidence-is-low"
+    },
+    {
+      "id": "B4-022",
+      "slug": "create-the-editorial-engine-facade-and-variant-orchestration"
+    },
+    {
+      "id": "B4-023",
+      "slug": "compile-natural-tight-long-and-short-variants-into-versioned-plans"
+    },
+    {
+      "id": "B4-024",
+      "slug": "bind-benchmark-profiles-and-metrics-to-the-editorial-facade"
+    },
+    {
+      "id": "B4-025",
+      "slug": "expose-editorial-read-models-to-the-studio-backend"
+    },
+    {
+      "id": "B4-026",
+      "slug": "run-full-editorial-benchmark-and-studio-acceptance"
+    },
+    {
+      "id": "B4-027",
+      "slug": "run-focused-editorial-and-benchmark-tests-and-freeze-evidence"
+    }
+  ],
+  "freeze_head_hint": "post-B4-027 main",
+  "report_hash_unavailable": true,
+  "missing_metrics": [],
+  "missing_projects": [],
+  "release_claim_policy": "only metrics with required sample count and status pass; all others remain unproven",
+  "ci": "forbidden"
+}
