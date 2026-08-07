@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "registry_id": "cutright-v2-canonical",
+  "note": "Canonical CutRight v2 capability registry. Owned by Lane P-B (CR-V2-B2-013). Every mutation references exactly one action schema; every read declares bounded=true and windowed=true. Permission sets are inlined so this document is the single source of truth for both capability_id -> permission_set_id and permission_set_id -> grant mappings.",
+  "permission_sets": [
+    {
+      "schema": "cutright.permission_set/v1",
+      "permission_set_id": "pset.evidence_read_only",
+      "grants": [
+        { "capability": "evidence.read", "scope": "evidence_read" },
+        { "capability": "timeline.read", "scope": "timeline_read" }
+      ]
+    },
+    {
+      "schema": "cutright.permission_set/v1",
+      "permission_set_id": "pset.asset_plan",
+      "grants": [
+        { "capability": "evidence.read", "scope": "evidence_read" },
+        { "capability": "asset.plan", "scope": "asset_plan" }
+      ]
+    },
+    {
+      "schema": "cutright.permission_set/v1",
+      "permission_set_id": "pset.editorial_engine",
+      "grants": [
+        { "capability": "evidence.read", "scope": "evidence_read" },
+        { "capability": "asset.plan", "scope": "asset_plan" },
+        { "capability": "timeline.read", "scope": "timeline_read" },
+        { "capability": "timeline.cut", "scope": "timeline_write" }
+      ]
+    },
+    {
+      "schema": "cutright.permission_set/v1",
+      "permission_set_id": "pset.render_jobs",
+      "grants": [
+        { "capability": "evidence.read", "scope": "evidence_read" },
+        { "capability": "render.dispatch", "scope": "render" },
+        { "capability": "export.publish", "scope": "export" }
+      ]
+    },
+    {
+      "schema": "cutright.permission_set/v1",
+      "permission_set_id": "pset.pack_manager",
+      "grants": [
+        { "capability": "settings.write", "scope": "settings" },
+        { "capability": "pack.manage", "scope": "pack_manage" }
+      ]
+    }
+  ],
+  "capabilities": [
+    {
+      "schema": "cutright.capability/v1",
+      "capability_id": "evidence.read",
+      "version": 1,
+      "kind": "read",
+      "owner_component": "video-state",
+      "permission_set": "pset.evidence_read_only",
+      "inputs": {
+        "type": "object",
+        "required": ["revision_id"],
+        "additionalProperties": false,
+        "properties": {
+          "revision_id": { "type": "string" },
+          "window": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "start_ns": { "type": "integer", "minimum": 0 },
+              "end_ns": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "max_items": { "type": "integer", "minimum": 1, "maximum": 10000 }
+        }
+      },
+      "outputs": {
+        "bounded": true,
+        "windowed": true,
+        "max_items": 10000
+      },
+      "eval_suites": ["eval.evidence_read_contracts"],
+      "degradation": "ok"
+    },
+    {
+      "schema": "cutright.capability/v1",
+      "capability_id": "timeline.read",
+      "version": 1,
+      "kind": "read",
+      "owner_component": "video-state",
+      "permission_set": "pset.evidence_read_only",
+      "inputs": {
+        "type": "object",
+        "required": ["revision_id"],
+        "additionalProperties": false,
+        "properties": {
+          "revision_id": { "type": "string" },
+          "track_id": { "type": "string" }
+        }
+      },
+      "outputs": {
+        "bounded": true,
+        "windowed": true
+      },
+      "eval_suites": ["eval.timeline_read_contracts"],
+      "degradation": "ok"
+    },
+    {
+      "schema": "cutright.capability/v1",
+      "capability_id": "asset.plan",
+      "version": 1,
+      "kind": "mutation",
+      "owner_component": "video-actions",
+      "permission_set": "pset.asset_plan",
+      "inputs": {
+        "type": "object",
+        "required": ["revision_id", "intent"],
+        "additionalProperties": false,
+        "properties": {
+          "revision_id": { "type": "string" },
+          "intent": { "type": "string" }
+        }
+      },
+      "outputs": {
+        "bounded": false,
+        "windowed": false
+      },
+      "eval_suites": ["eval.asset_plan_property"],
+      "degradation": "ok"
+    },
+    {
+      "schema": "cutright.capability/v1",
+      "capability_id": "timeline.cut",
+      "version": 1,
+      "kind": "mutation",
+      "owner_component": "video-actions",
+      "permission_set": "pset.editorial_engine",
+      "inputs": {
+        "type": "object",
+        "required": ["revision_id", "targets"],
+        "additionalProperties": false,
+        "properties": {
+          "revision_id": { "type": "string" },
+          "targets": { "type": "array" },
+          "ranges": { "type": "array" }
+        }
+      },
+      "outputs": {
+        "bounded": false,
+        "windowed": false
+      },
+      "eval_suites": ["eval.timeline_cut_roundtrip"],
+      "degradation": "ok"
+    },
+    {
+      "schema": "cutright.capability/v1",
+      "capability_id": "render.dispatch",
+      "version": 1,
+      "kind": "mutation",
+      "owner_component": "video-jobs",
+      "permission_set": "pset.render_jobs",
+      "inputs": {
+        "type": "object",
+        "required": ["revision_id", "preset_id"],
+        "additionalProperties": false,
+        "properties": {
+          "revision_id": { "type": "string" },
+          "preset_id": { "type": "string" }
+        }
+      },
+      "outputs": {
+        "bounded": false,
+        "windowed": false
+      },
+      "eval_suites": ["eval.render_dispatch_contracts"],
+      "degradation": "ok"
+    },
+    {
+      "schema": "cutright.capability/v1",
+      "capability_id": "export.publish",
+      "version": 1,
+      "kind": "mutation",
+      "owner_component": "video-jobs",
+      "permission_set": "pset.render_jobs",
+      "inputs": {
+        "type": "object",
+        "required": ["revision_id", "target"],
+        "additionalProperties": false,
+        "properties": {
+          "revision_id": { "type": "string" },
+          "target": { "type": "string" }
+        }
+      },
+      "outputs": {
+        "bounded": false,
+        "windowed": false
+      },
+      "eval_suites": ["eval.export_publish_contracts"],
+      "degradation": "ok"
+    },
+    {
+      "schema": "cutright.capability/v1",
+      "capability_id": "pack.manage",
+      "version": 1,
+      "kind": "mutation",
+      "owner_component": "video-runtime",
+      "permission_set": "pset.pack_manager",
+      "inputs": {
+        "type": "object",
+        "required": ["op"],
+        "additionalProperties": false,
+        "properties": {
+          "op": { "enum": ["install", "activate", "repair", "rollback", "offline"] },
+          "pack_id": { "type": "string" }
+        }
+      },
+      "outputs": {
+        "bounded": false,
+        "windowed": false
+      },
+      "eval_suites": ["eval.pack_lifecycle_contracts"],
+      "degradation": "ok"
+    },
+    {
+      "schema": "cutright.capability/v1",
+      "capability_id": "settings.write",
+      "version": 1,
+      "kind": "mutation",
+      "owner_component": "video-project",
+      "permission_set": "pset.pack_manager",
+      "inputs": {
+        "type": "object",
+        "required": ["key", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "type": "string" },
+          "value": { "type": ["string", "number", "boolean", "null"] }
+        }
+      },
+      "outputs": {
+        "bounded": false,
+        "windowed": false
+      },
+      "eval_suites": ["eval.settings_persistence"],
+      "degradation": "ok"
+    }
+  ]
+}
