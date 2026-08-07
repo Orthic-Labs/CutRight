@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/editorial/escalation.schema.v2.json",
+  "title": "CutRight v2 escalation",
+  "type": "object",
+  "required": [
+    "escalation_id",
+    "kind",
+    "blocking",
+    "summary",
+    "evidence_refs"
+  ],
+  "properties": {
+    "escalation_id": { "type": "string", "minLength": 1 },
+    "kind": {
+      "enum": [
+        "ambiguous",
+        "low_confidence",
+        "missing_evidence",
+        "truthfulness_risk",
+        "second_disagreement",
+        "policy_limit",
+        "human_required",
+        "out_of_arc"
+      ]
+    },
+    "blocking": { "type": "boolean" },
+    "summary": { "type": "string", "minLength": 1 },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "review_mode_target": {
+      "enum": ["reviewed", "review-light", "autonomous"]
+    },
+    "raised_by": {
+      "enum": ["deterministic", "director", "critic", "reviewer"]
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": 2,
+  "plan_id": "plan-basic-001",
+  "source_revision": "rev-001",
+  "evidence_graph_revision": "ev-001",
+  "policy_version": "1.0",
+  "beats": [
+    {"beat_id": "b-001", "label": "hook", "selected_take": "c-001", "alternates": [], "confidence": 0.7, "evidence": [{"source_range": [0, 1500]}]},
+    {"beat_id": "b-002", "label": "payoff", "selected_take": "c-002", "alternates": [], "confidence": 0.8, "evidence": [{"source_range": [1500, 4000]}]},
+    {"beat_id": "b-003", "label": "cta", "selected_take": "c-003", "alternates": [], "confidence": 0.85, "evidence": [{"source_range": [4000, 5500]}]}
+  ],
+  "order": ["b-001", "b-002", "b-003"],
+  "reorder_logs": [],
+  "escalations": [],
+  "drop_reasons": [{"candidate_id": "c-004", "reason": "low_signal"}],
+  "chronological_status": "truthful",
+  "review_flags": []
+}

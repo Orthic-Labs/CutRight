@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/editorial/beat.schema.v2.json",
+  "title": "CutRight v2 editorial beat",
+  "type": "object",
+  "required": [
+    "beat_id",
+    "label",
+    "selected_take",
+    "alternates",
+    "confidence",
+    "evidence"
+  ],
+  "properties": {
+    "beat_id": { "type": "string", "minLength": 1 },
+    "label": {
+      "enum": [
+        "hook",
+        "cold_open",
+        "setup",
+        "context",
+        "escalation",
+        "turn",
+        "payoff",
+        "resolution",
+        "cta",
+        "summary",
+        "evidence",
+        "quote",
+        "demo",
+        "transition"
+      ]
+    },
+    "selected_take": { "type": "string", "minLength": 1 },
+    "alternates": {
+      "type": "array",
+      "items": { "$ref": "take-score.schema.v2.json" }
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["source_range"],
+        "properties": {
+          "source_range": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "type": "integer", "minimum": 0 }
+          },
+          "word_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "frame_refs": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "notes": { "type": "string" }
+  }
+}
