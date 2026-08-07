@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/migrations/project-compatibility.schema.v1.json",
+  "title": "CutRight v2 project compatibility claim",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "project_id",
+    "from_version",
+    "to_version",
+    "compat"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cutright.project_compat/v1"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "from_version": {
+      "type": "string"
+    },
+    "to_version": {
+      "type": "string"
+    },
+    "compat": {
+      "enum": [
+        "migrate",
+        "preserve",
+        "reject",
+        "manual"
+      ]
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

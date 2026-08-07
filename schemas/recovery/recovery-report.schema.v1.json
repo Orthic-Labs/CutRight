@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/recovery/recovery-report.schema.v1.json",
+  "title": "CutRight v2 recovery report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "recovery_id",
+    "scenario",
+    "actions"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cutright.recovery_report/v1"
+    },
+    "recovery_id": {
+      "type": "string"
+    },
+    "scenario": {
+      "enum": [
+        "interrupted_action",
+        "interrupted_job",
+        "corrupt_index",
+        "missing_pack",
+        "tampered_receipt",
+        "partial_installer"
+      ]
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "target",
+          "result"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "resumed",
+              "rolled_back",
+              "repaired",
+              "aborted"
+            ]
+          }
+        }
+      }
+    },
+    "verified": {
+      "type": "boolean"
+    }
+  }
+}
