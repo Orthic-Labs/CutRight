@@ -5,6 +5,7 @@
   "publish_status": "not_requested",
   "upload_status": "not_performed",
   "tag": "none",
+  "head": "9406495d069bc64f540f96a35f6893e36e08da32",
   "external_services_contacted": [],
   "targets": [
     {
@@ -62,5 +63,7 @@
   "build_command": "python3 scripts/release/v2-build.py --self-test --profile release --target host --out release/v2/rc",
   "seal_command": "python3 scripts/release/v2-seal.py seal --manifest release/v2/rc/SEAL.json release/v2/rc",
   "verify_command": "python3 scripts/release/v2-seal.py verify release/v2/rc",
-  "verified": true
+  "verified": true,
+  "head_short": "9406495d",
+  "sealed_at": "2026-08-07T15:55:29Z"
 }
