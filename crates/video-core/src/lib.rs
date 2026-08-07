@@ -9,6 +9,7 @@ pub mod creative_skill_resolver;
 pub mod creative_skill_runtime;
 pub mod designer_service;
 pub mod finish_plan;
+pub mod job_plane_integration;
 pub mod models;
 pub mod native_audio;
 pub mod native_compositor;
@@ -38,6 +39,7 @@ pub use designer_service::{AssetRequest, AssetReview, DesignerError, DesignerSer
 pub use render_graph_compiler::{CompiledPlan, CompiledStep, RenderGraphCompileError, RenderGraphCompiler};
 pub use rollplan::{RollKind, RollPlan, RollPlanError, RollPlanner, ShotRoll};
 pub use native_compositor::{CompositeCommand, CompositorError, NativeCompositor, NodeKind, RenderGraph, RenderNode};
+pub use job_plane_integration::{CreativeJob, CreativeJobKind, JobHandle, JobPlaneIntegration, JobPlaneIntegrationError};
 pub use finish_plan::{CompiledFinishPlan, CompiledFinishPlanCompiler, CompiledFinishPlanError};
 pub use native_audio::{AudioCue, AudioError, AudioFinish, AudioProfile, NativeAudioEngine};
 pub use native_motion::{MotionBeat, MotionClip, MotionError, NativeMotionEngine, Placement, Reframe};
