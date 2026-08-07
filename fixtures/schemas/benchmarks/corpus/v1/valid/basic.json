@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-07T00:00:00Z",
+  "splits": {
+    "train": ["golden-recorded-001"],
+    "calibration": ["golden-explainer-001"],
+    "test": ["golden-adversarial-001"]
+  },
+  "items": [
+    {
+      "project_id": "golden-recorded-001",
+      "lane": "recorded",
+      "split": "train",
+      "source_hashes": ["blake3:0000000000000000000000000000000000000000000000000000000000000000"],
+      "rights_ref": "rights/golden-recorded-001.json",
+      "redistributable": false,
+      "expected_language": "en",
+      "conditions": {
+        "frame_rate": 30.0,
+        "audio_channels": 2,
+        "room_tone": "office",
+        "lighting": "natural",
+        "camera_handling": "tripod"
+      },
+      "labels": {
+        "reviewer_ids": ["reviewer-a"],
+        "annotation_paths": ["labels/golden-recorded-001.json"]
+      },
+      "allowed_distribution": "local_only"
+    },
+    {
+      "project_id": "golden-explainer-001",
+      "lane": "explainer",
+      "split": "calibration",
+      "source_hashes": ["blake3:1111111111111111111111111111111111111111111111111111111111111111"],
+      "rights_ref": "rights/golden-explainer-001.json",
+      "redistributable": true,
+      "expected_language": "en",
+      "conditions": {
+        "frame_rate": 24.0,
+        "audio_channels": 2
+      },
+      "labels": {
+        "reviewer_ids": ["reviewer-b"]
+      },
+      "allowed_distribution": "redistributable"
+    },
+    {
+      "project_id": "golden-adversarial-001",
+      "lane": "adversarial",
+      "split": "test",
+      "source_hashes": ["blake3:2222222222222222222222222222222222222222222222222222222222222222"],
+      "rights_ref": "rights/golden-adversarial-001.json",
+      "redistributable": false,
+      "expected_language": "en",
+      "conditions": {
+        "frame_rate": 29.97,
+        "audio_channels": 1,
+        "room_tone": "live",
+        "camera_handling": "handheld"
+      },
+      "labels": {
+        "reviewer_ids": ["reviewer-c", "reviewer-d"]
+      },
+      "allowed_distribution": "local_only"
+    }
+  ]
+}

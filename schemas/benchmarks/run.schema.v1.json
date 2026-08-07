@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/benchmarks/run.schema.v1.json",
+  "title": "CutRight v2 benchmark run document",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "corpus_ref",
+    "profile_ref",
+    "packs_ref",
+    "started_at",
+    "status",
+    "totals"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "run_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "corpus_ref": { "type": "string" },
+    "profile_ref": { "type": "string" },
+    "packs_ref": { "type": "string" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "status": {
+      "enum": ["running", "complete", "failed", "aborted"]
+    },
+    "totals": {
+      "type": "object",
+      "required": ["pass", "fail", "skipped_with_reason", "unsupported", "unproven"],
+      "properties": {
+        "pass": { "type": "integer", "minimum": 0 },
+        "fail": { "type": "integer", "minimum": 0 },
+        "skipped_with_reason": { "type": "integer", "minimum": 0 },
+        "unsupported": { "type": "integer", "minimum": 0 },
+        "unproven": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "git": {
+      "type": "object",
+      "properties": {
+        "commit": { "type": "string" },
+        "branch": { "type": "string" },
+        "dirty": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "outputs": {
+      "type": "object",
+      "properties": {
+        "per_project_jsonl": { "type": "string" },
+        "metrics_json": { "type": "string" },
+        "report_md": { "type": "string" },
+        "receipt_json": { "type": "string" },
+        "samples_dir": { "type": "string" },
+        "failures_dir": { "type": "string" },
+        "confusion_dir": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "metric_status": {
+      "enum": ["pass", "fail", "skipped_with_reason", "unsupported", "unproven"]
+    }
+  }
+}

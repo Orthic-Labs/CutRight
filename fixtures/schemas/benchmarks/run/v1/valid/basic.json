@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "run_id": "smoke-001",
+  "corpus_ref": "benchmarks/corpus/manifest.json",
+  "profile_ref": "benchmarks/profiles/reviewed-v2.json",
+  "packs_ref": "runtime/packs.lock.json",
+  "started_at": "2026-08-07T00:00:00Z",
+  "status": "complete",
+  "totals": {
+    "pass": 1,
+    "fail": 0,
+    "skipped_with_reason": 0,
+    "unsupported": 0,
+    "unproven": 0
+  }
+}

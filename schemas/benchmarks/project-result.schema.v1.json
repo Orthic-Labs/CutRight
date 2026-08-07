@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/benchmarks/project-result.schema.v1.json",
+  "title": "CutRight v2 benchmark per-project result",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "project_id",
+    "run_id",
+    "profile",
+    "split",
+    "metrics",
+    "status"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "project_id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "profile": { "type": "string", "minLength": 1 },
+    "split": { "enum": ["train", "calibration", "test"] },
+    "status": {
+      "enum": ["pass", "fail", "skipped_with_reason", "unsupported", "unproven"]
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "value", "unit"],
+        "properties": {
+          "id": { "type": "string" },
+          "axis": { "type": "string" },
+          "status": {
+            "enum": ["pass", "fail", "skipped_with_reason", "unsupported", "unproven"]
+          },
+          "value": {
+            "description": "Numeric, boolean, or null for skipped/unsupported metrics",
+            "type": ["number", "integer", "boolean", "null", "string"]
+          },
+          "unit": { "type": "string" },
+          "slices": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "reason": { "type": "string" },
+          "evidence": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "samples": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "failures": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
