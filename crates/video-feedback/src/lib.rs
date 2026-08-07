@@ -8,17 +8,15 @@
 
 pub mod decision;
 pub mod distributions;
+pub mod learn;
 
 pub use decision::{DecisionRecord, DecisionTarget, DecisionAction, DecisionReason, DecisionAxis,
                     FormatKey, UserOrigin, SessionOrigin, ReviewMode, append_record,
                     compute_record_hash, hash_chain_zero, record_hash_mismatch};
 pub use distributions::{AxisDistribution, DistributionSample};
-
-pub mod learn {
-    //! Stub for B7-008. The actual implementation lives in
-    //! `crates/video-feedback/src/learn.rs` once it is filled.
-    pub struct PreferenceEstimate;
-}
+pub use learn::{PreferenceEstimate, InsufficientReason, ScopedEstimate, Recommendation,
+                  EstimateScope, compute_preference, compute_recommendation,
+                  estimate_is_supported};
 
 pub mod profile {
     //! Stub for B7-009.
