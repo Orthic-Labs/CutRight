@@ -8,6 +8,7 @@ pub mod models;
 pub mod process_runner;
 pub mod providers;
 pub mod receipt;
+pub mod social_service;
 pub mod timestamp;
 pub mod writing_service;
 
@@ -18,6 +19,7 @@ pub use creative_skill_runtime::{
     RUNTIME_VERSION as CREATIVE_SKILL_RUNTIME_VERSION,
 };
 pub use designer_service::{AssetRequest, AssetReview, DesignerError, DesignerService};
+pub use social_service::{PlatformConstraints, PlatformProfile, SocialError, SocialService};
 pub use writing_service::{CopyAtom, Package, WritingError, WritingService};
 
 pub use benchmark_policy::BenchmarkPolicy;
