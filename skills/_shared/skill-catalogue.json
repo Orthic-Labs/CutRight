@@ -1,0 +1,94 @@
+{
+  "schema": "cutright.skill_catalogue/v1",
+  "catalogue_id": "cutright-skill-catalogue-v2",
+  "compiled_from": "skills/catalog.json",
+  "compiled_at_run": false,
+  "description": "Compiled view of the in-tree skill catalogue (Lane P-B). Each entry is the subset of `skills/catalog.json` needed by the canonical capability registry's `eval_suites` derivation in CR-V2-B2-015.",
+  "skills": [
+    {
+      "id": "brand",
+      "calls": ["brand-identity"],
+      "dependencies": [],
+      "permissions": ["timeline.read"],
+      "eval_suites": ["skill.brand_context_loading"],
+      "content_hash": "sha256:4af533a5df686e63643edeae60df578992808e7bf66bd297ff8b00afa07b084e",
+      "version": "0.1.0"
+    },
+    {
+      "id": "brand-identity",
+      "calls": ["brand"],
+      "dependencies": [],
+      "permissions": ["settings.write"],
+      "eval_suites": ["skill.brand_identity_audit"],
+      "content_hash": "sha256:14758940433e0043db9f1d27e36417c194e4e1140c6c6819e12fa7e41affb23f",
+      "version": "0.1.0"
+    },
+    {
+      "id": "content",
+      "calls": ["brand", "designer", "writing"],
+      "dependencies": ["brand"],
+      "permissions": ["timeline.read", "asset.plan"],
+      "eval_suites": ["skill.content_planning_roundtrip"],
+      "content_hash": "sha256:placeholder-content-hash",
+      "version": "0.1.0"
+    },
+    {
+      "id": "designer",
+      "calls": ["brand"],
+      "dependencies": ["brand-identity"],
+      "permissions": ["asset.plan", "settings.write"],
+      "eval_suites": ["skill.designer_render_property"],
+      "content_hash": "sha256:placeholder-designer-hash",
+      "version": "0.1.0"
+    },
+    {
+      "id": "qa",
+      "calls": ["content", "social", "writing"],
+      "dependencies": [],
+      "permissions": ["evidence.read", "timeline.read"],
+      "eval_suites": ["skill.qa_evidence_citation"],
+      "content_hash": "sha256:placeholder-qa-hash",
+      "version": "0.1.0"
+    },
+    {
+      "id": "social",
+      "calls": ["brand", "content"],
+      "dependencies": ["content"],
+      "permissions": ["asset.plan", "timeline.read"],
+      "eval_suites": ["skill.social_packaging"],
+      "content_hash": "sha256:placeholder-social-hash",
+      "version": "0.1.0"
+    },
+    {
+      "id": "video-director",
+      "calls": ["brand", "content", "qa"],
+      "dependencies": ["content", "qa"],
+      "permissions": ["timeline.read", "timeline.cut", "evidence.read", "render.dispatch", "export.publish"],
+      "eval_suites": [
+        "skill.director_timeline_cut",
+        "skill.director_render_dispatch",
+        "skill.director_export_publish"
+      ],
+      "content_hash": "sha256:placeholder-director-hash",
+      "version": "0.1.0"
+    },
+    {
+      "id": "voice",
+      "calls": ["brand"],
+      "dependencies": ["brand"],
+      "permissions": ["timeline.read", "asset.plan"],
+      "eval_suites": ["skill.voice_synthesis_property"],
+      "content_hash": "sha256:placeholder-voice-hash",
+      "version": "0.1.0"
+    },
+    {
+      "id": "writing",
+      "calls": ["brand"],
+      "dependencies": ["brand-identity"],
+      "permissions": ["timeline.read"],
+      "eval_suites": ["skill.writing_style_property"],
+      "content_hash": "sha256:placeholder-writing-hash",
+      "version": "0.1.0"
+    }
+  ]
+}

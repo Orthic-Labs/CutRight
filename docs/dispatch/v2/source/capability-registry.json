@@ -7,43 +7,82 @@
       "schema": "cutright.permission_set/v1",
       "permission_set_id": "pset.evidence_read_only",
       "grants": [
-        { "capability": "evidence.read", "scope": "evidence_read" },
-        { "capability": "timeline.read", "scope": "timeline_read" }
+        {
+          "capability": "evidence.read",
+          "scope": "evidence_read"
+        },
+        {
+          "capability": "timeline.read",
+          "scope": "timeline_read"
+        }
       ]
     },
     {
       "schema": "cutright.permission_set/v1",
       "permission_set_id": "pset.asset_plan",
       "grants": [
-        { "capability": "evidence.read", "scope": "evidence_read" },
-        { "capability": "asset.plan", "scope": "asset_plan" }
+        {
+          "capability": "evidence.read",
+          "scope": "evidence_read"
+        },
+        {
+          "capability": "asset.plan",
+          "scope": "asset_plan"
+        }
       ]
     },
     {
       "schema": "cutright.permission_set/v1",
       "permission_set_id": "pset.editorial_engine",
       "grants": [
-        { "capability": "evidence.read", "scope": "evidence_read" },
-        { "capability": "asset.plan", "scope": "asset_plan" },
-        { "capability": "timeline.read", "scope": "timeline_read" },
-        { "capability": "timeline.cut", "scope": "timeline_write" }
+        {
+          "capability": "evidence.read",
+          "scope": "evidence_read"
+        },
+        {
+          "capability": "asset.plan",
+          "scope": "asset_plan"
+        },
+        {
+          "capability": "timeline.read",
+          "scope": "timeline_read"
+        },
+        {
+          "capability": "timeline.cut",
+          "scope": "timeline_write"
+        }
       ]
     },
     {
       "schema": "cutright.permission_set/v1",
       "permission_set_id": "pset.render_jobs",
       "grants": [
-        { "capability": "evidence.read", "scope": "evidence_read" },
-        { "capability": "render.dispatch", "scope": "render" },
-        { "capability": "export.publish", "scope": "export" }
+        {
+          "capability": "evidence.read",
+          "scope": "evidence_read"
+        },
+        {
+          "capability": "render.dispatch",
+          "scope": "render"
+        },
+        {
+          "capability": "export.publish",
+          "scope": "export"
+        }
       ]
     },
     {
       "schema": "cutright.permission_set/v1",
       "permission_set_id": "pset.pack_manager",
       "grants": [
-        { "capability": "settings.write", "scope": "settings" },
-        { "capability": "pack.manage", "scope": "pack_manage" }
+        {
+          "capability": "settings.write",
+          "scope": "settings"
+        },
+        {
+          "capability": "pack.manage",
+          "scope": "pack_manage"
+        }
       ]
     }
   ],
@@ -57,19 +96,33 @@
       "permission_set": "pset.evidence_read_only",
       "inputs": {
         "type": "object",
-        "required": ["revision_id"],
+        "required": [
+          "revision_id"
+        ],
         "additionalProperties": false,
         "properties": {
-          "revision_id": { "type": "string" },
+          "revision_id": {
+            "type": "string"
+          },
           "window": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "start_ns": { "type": "integer", "minimum": 0 },
-              "end_ns": { "type": "integer", "minimum": 0 }
+              "start_ns": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "end_ns": {
+                "type": "integer",
+                "minimum": 0
+              }
             }
           },
-          "max_items": { "type": "integer", "minimum": 1, "maximum": 10000 }
+          "max_items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          }
         }
       },
       "outputs": {
@@ -77,7 +130,15 @@
         "windowed": true,
         "max_items": 10000
       },
-      "eval_suites": ["eval.evidence_read_contracts"],
+      "eval_suites": [
+        "eval.evidence_read_contracts",
+        "skill.director_export_publish",
+        "skill.director_render_dispatch",
+        "skill.director_timeline_cut",
+        "skill.qa",
+        "skill.qa_evidence_citation",
+        "skill.video-director"
+      ],
       "degradation": "ok"
     },
     {
@@ -89,18 +150,42 @@
       "permission_set": "pset.evidence_read_only",
       "inputs": {
         "type": "object",
-        "required": ["revision_id"],
+        "required": [
+          "revision_id"
+        ],
         "additionalProperties": false,
         "properties": {
-          "revision_id": { "type": "string" },
-          "track_id": { "type": "string" }
+          "revision_id": {
+            "type": "string"
+          },
+          "track_id": {
+            "type": "string"
+          }
         }
       },
       "outputs": {
         "bounded": true,
         "windowed": true
       },
-      "eval_suites": ["eval.timeline_read_contracts"],
+      "eval_suites": [
+        "eval.timeline_read_contracts",
+        "skill.brand",
+        "skill.brand_context_loading",
+        "skill.content",
+        "skill.content_planning_roundtrip",
+        "skill.director_export_publish",
+        "skill.director_render_dispatch",
+        "skill.director_timeline_cut",
+        "skill.qa",
+        "skill.qa_evidence_citation",
+        "skill.social",
+        "skill.social_packaging",
+        "skill.video-director",
+        "skill.voice",
+        "skill.voice_synthesis_property",
+        "skill.writing",
+        "skill.writing_style_property"
+      ],
       "degradation": "ok"
     },
     {
@@ -112,18 +197,35 @@
       "permission_set": "pset.asset_plan",
       "inputs": {
         "type": "object",
-        "required": ["revision_id", "intent"],
+        "required": [
+          "revision_id",
+          "intent"
+        ],
         "additionalProperties": false,
         "properties": {
-          "revision_id": { "type": "string" },
-          "intent": { "type": "string" }
+          "revision_id": {
+            "type": "string"
+          },
+          "intent": {
+            "type": "string"
+          }
         }
       },
       "outputs": {
         "bounded": false,
         "windowed": false
       },
-      "eval_suites": ["eval.asset_plan_property"],
+      "eval_suites": [
+        "eval.asset_plan_property",
+        "skill.content",
+        "skill.content_planning_roundtrip",
+        "skill.designer",
+        "skill.designer_render_property",
+        "skill.social",
+        "skill.social_packaging",
+        "skill.voice",
+        "skill.voice_synthesis_property"
+      ],
       "degradation": "ok"
     },
     {
@@ -135,19 +237,34 @@
       "permission_set": "pset.editorial_engine",
       "inputs": {
         "type": "object",
-        "required": ["revision_id", "targets"],
+        "required": [
+          "revision_id",
+          "targets"
+        ],
         "additionalProperties": false,
         "properties": {
-          "revision_id": { "type": "string" },
-          "targets": { "type": "array" },
-          "ranges": { "type": "array" }
+          "revision_id": {
+            "type": "string"
+          },
+          "targets": {
+            "type": "array"
+          },
+          "ranges": {
+            "type": "array"
+          }
         }
       },
       "outputs": {
         "bounded": false,
         "windowed": false
       },
-      "eval_suites": ["eval.timeline_cut_roundtrip"],
+      "eval_suites": [
+        "eval.timeline_cut_roundtrip",
+        "skill.director_export_publish",
+        "skill.director_render_dispatch",
+        "skill.director_timeline_cut",
+        "skill.video-director"
+      ],
       "degradation": "ok"
     },
     {
@@ -159,18 +276,31 @@
       "permission_set": "pset.render_jobs",
       "inputs": {
         "type": "object",
-        "required": ["revision_id", "preset_id"],
+        "required": [
+          "revision_id",
+          "preset_id"
+        ],
         "additionalProperties": false,
         "properties": {
-          "revision_id": { "type": "string" },
-          "preset_id": { "type": "string" }
+          "revision_id": {
+            "type": "string"
+          },
+          "preset_id": {
+            "type": "string"
+          }
         }
       },
       "outputs": {
         "bounded": false,
         "windowed": false
       },
-      "eval_suites": ["eval.render_dispatch_contracts"],
+      "eval_suites": [
+        "eval.render_dispatch_contracts",
+        "skill.director_export_publish",
+        "skill.director_render_dispatch",
+        "skill.director_timeline_cut",
+        "skill.video-director"
+      ],
       "degradation": "ok"
     },
     {
@@ -182,18 +312,31 @@
       "permission_set": "pset.render_jobs",
       "inputs": {
         "type": "object",
-        "required": ["revision_id", "target"],
+        "required": [
+          "revision_id",
+          "target"
+        ],
         "additionalProperties": false,
         "properties": {
-          "revision_id": { "type": "string" },
-          "target": { "type": "string" }
+          "revision_id": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          }
         }
       },
       "outputs": {
         "bounded": false,
         "windowed": false
       },
-      "eval_suites": ["eval.export_publish_contracts"],
+      "eval_suites": [
+        "eval.export_publish_contracts",
+        "skill.director_export_publish",
+        "skill.director_render_dispatch",
+        "skill.director_timeline_cut",
+        "skill.video-director"
+      ],
       "degradation": "ok"
     },
     {
@@ -205,18 +348,32 @@
       "permission_set": "pset.pack_manager",
       "inputs": {
         "type": "object",
-        "required": ["op"],
+        "required": [
+          "op"
+        ],
         "additionalProperties": false,
         "properties": {
-          "op": { "enum": ["install", "activate", "repair", "rollback", "offline"] },
-          "pack_id": { "type": "string" }
+          "op": {
+            "enum": [
+              "install",
+              "activate",
+              "repair",
+              "rollback",
+              "offline"
+            ]
+          },
+          "pack_id": {
+            "type": "string"
+          }
         }
       },
       "outputs": {
         "bounded": false,
         "windowed": false
       },
-      "eval_suites": ["eval.pack_lifecycle_contracts"],
+      "eval_suites": [
+        "eval.pack_lifecycle_contracts"
+      ],
       "degradation": "ok"
     },
     {
@@ -228,18 +385,36 @@
       "permission_set": "pset.pack_manager",
       "inputs": {
         "type": "object",
-        "required": ["key", "value"],
+        "required": [
+          "key",
+          "value"
+        ],
         "additionalProperties": false,
         "properties": {
-          "key": { "type": "string" },
-          "value": { "type": ["string", "number", "boolean", "null"] }
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "null"
+            ]
+          }
         }
       },
       "outputs": {
         "bounded": false,
         "windowed": false
       },
-      "eval_suites": ["eval.settings_persistence"],
+      "eval_suites": [
+        "eval.settings_persistence",
+        "skill.brand-identity",
+        "skill.brand_identity_audit",
+        "skill.designer",
+        "skill.designer_render_property"
+      ],
       "degradation": "ok"
     }
   ]
