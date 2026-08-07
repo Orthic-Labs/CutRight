@@ -4,7 +4,7 @@
 use video_benchmarks::editorial::{
     build_agreement, disagreement_score, EditorialAgreementEvaluator, ReviewerAnnotation,
 };
-use video_benchmarks::report::{build_report, write_report, Receipt};
+use video_benchmarks::report::{build_report, write_receipt, write_report, Receipt};
 use video_benchmarks::runner::{
     empty_project_run, outcomes_by_axis, tally, write_run, BenchmarkRun,
 };
