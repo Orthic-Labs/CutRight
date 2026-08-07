@@ -33,7 +33,7 @@
 # Examples:
 #   bash mix-voiceover.sh anim.mp4 --voiceover=narration/voiceover.mp3
 #   bash mix-voiceover.sh anim.mp4 --voiceover=v.mp3 --bgm-mood=educational
-#   bash mix-voiceover.sh anim.mp4 --voiceover=v.mp3 --bgm=~/Music/song.mp3 --bgm-volume=0.12
+#   bash mix-voiceover.sh anim.mp4 --voiceover=v.mp3 --bgm=<media-dir>/song.mp3 --bgm-volume=0.12
 #   bash mix-voiceover.sh anim.mp4 --voiceover=v.mp3 --bgm-mood=tech --no-ducking
 #
 set -e

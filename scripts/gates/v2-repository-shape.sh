@@ -29,6 +29,31 @@ fail() {
   violations=$((violations + 1))
 }
 
+# Lexically resolve a relative path token from a file directory and report
+# (exit 0) whether it escapes the repository root. No filesystem access: the
+# resolution is pure path arithmetic, so it works for references whose target
+# does not exist yet.
+path_escapes_root() {
+  local root="$1" filedir="$2" rel="$3" seg
+  local relbase="${filedir#"$root"}"
+  relbase="${relbase#/}"
+  relbase="${relbase%/}"
+  local -a stack=() relparts=()
+  IFS='/' read -r -a stack <<< "$relbase"
+  IFS='/' read -r -a relparts <<< "$rel"
+  for seg in "${relparts[@]}"; do
+    case "$seg" in
+      ''|'.') continue ;;
+      '..')
+        if [ "${#stack[@]}" -eq 0 ]; then return 0; fi
+        unset 'stack[${#stack[@]}-1]'
+        ;;
+      *) stack+=("$seg") ;;
+    esac
+  done
+  return 1
+}
+
 check_shape() {
   local root="$1"
   violations=0
@@ -59,15 +84,34 @@ check_shape() {
   done
 
   # 4. No sibling-repository path references in release code.
+  # A `../<sibling-name>` reference that still resolves INSIDE the repository
+  # is an intra-repo vendor-relative path (for example
+  # vendor/heardright/engine/Cargo.toml -> ../heardright_core) and is allowed;
+  # only references that resolve outside the repository root are rejected.
   if command -v rg >/dev/null 2>&1; then
-    local sibling_hits
-    sibling_hits=$(rg -n '\.\./(heardright|claude|autoshorts|vox-director|palmier)' \
+    local sibling_hits="" match file rest lineno dir token
+    while IFS= read -r match; do
+      [ -n "$match" ] || continue
+      file=${match%%:*}
+      rest=${match#*:}
+      lineno=${rest%%:*}
+      rest=${rest#*:}
+      dir=$(dirname "$file")
+      for token in $(printf '%s\n' "$rest" \
+          | grep -oE '"[^"]*\.\./[^"]*"|'"'"'[^'"'"']*\.\./[^'"'"']*'"'"'|\.\./[A-Za-z0-9._/-]+' \
+          | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//" | sort -u); do
+        if path_escapes_root "$root" "$dir" "$token"; then
+          sibling_hits="${sibling_hits}${file}:${lineno}:${rest}"$'\n'
+          break
+        fi
+      done
+    done < <(rg -n '\.\./(heardright|claude|autoshorts|vox-director|palmier)' \
       --glob '!target/' --glob '!node_modules/' --glob '!imports/' \
       --glob '!docs/' --glob '!scripts/' --glob '!tools/' \
       "$root" 2>/dev/null || true)
     if [ -n "$sibling_hits" ]; then
       fail "sibling-repository path reference in release code:"
-      echo "$sibling_hits" >&2
+      printf '%s' "$sibling_hits" >&2
     fi
   fi
 
@@ -126,9 +170,22 @@ self_test() {
   ln -s real.md "$tmp/symlink/skills/link.md"
   run_case symlink
 
-  mkdir -p "$tmp/sibling/crates/x/src"
-  echo 'let p = "../heardright/engine";' > "$tmp/sibling/crates/x/src/lib.rs"
+  mkdir -p "$tmp/sibling/src"
+  echo 'let p = "../../heardright/engine";' > "$tmp/sibling/src/lib.rs"
   run_case sibling
+
+  # Intra-repo vendor-relative path dependencies resolve inside the
+  # repository and must pass.
+  mkdir -p "$tmp/intrarepo/vendor/heardright/engine"
+  mkdir -p "$tmp/intrarepo/vendor/heardright/heardright_core"
+  printf '[dependencies]\nheardright_core = { path = "../heardright_core" }\n' \
+    > "$tmp/intrarepo/vendor/heardright/engine/Cargo.toml"
+  if ! check_shape "$tmp/intrarepo" >/dev/null 2>&1; then
+    echo "SELF-TEST FAIL: intra-repo vendor path should pass" >&2
+    failures=$((failures + 1))
+  else
+    echo "self-test ok: intra-repo vendor path passes"
+  fi
 
   mkdir -p "$tmp/override/crates/x/src"
   echo 'let o = env!("CUTRIGHT_RELEASE_ENV");' > "$tmp/override/crates/x/src/lib.rs"

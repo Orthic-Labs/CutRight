@@ -13,7 +13,7 @@ SPECIALIST_REFS_MAX: 1
 CHILD_AGENTS_MAX: 0
 EXTERNAL_REQUESTS_MAX: 0
 MAY_ADD_TASKS: NO
-MAY_CALL_SKILLS: cutright://skill/brand, cutright://skill/designer, cutright://skill/content, cutright://skill/writing
+MAY_CALL_SKILLS: cutright://skill/brand, cutright://skill/designer, cutright://skill/writing
 TERMINAL: Platform-native artifact or strategy meets frozen scope.
 
 ## Typed artefacts + boundary (CutRight v2)

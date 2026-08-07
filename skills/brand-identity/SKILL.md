@@ -13,7 +13,7 @@ SPECIALIST_REFS_MAX: 1
 CHILD_AGENTS_MAX: 0
 EXTERNAL_REQUESTS_MAX: 0
 MAY_ADD_TASKS: NO
-MAY_CALL_SKILLS: cutright://skill/brand
+MAY_CALL_SKILLS: NONE
 TERMINAL: Identity decisions, assets, restrictions, & QA evidence exist.
 
 ## Typed artefacts (CutRight v2)

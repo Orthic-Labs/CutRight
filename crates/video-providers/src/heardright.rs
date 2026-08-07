@@ -3,10 +3,16 @@
 //! One supervised HeardRight engine session backs both the transcription and
 //! file-VAD provider traits. This module owns:
 //!
-//! - engine discovery (§9.3): `CUTRIGHT_HEARDRIGHT_ENGINE` override →
-//!   installed platform location → `heardright-engine` on `PATH` → a clear
-//!   unavailable result. No hard-coded absolute path, no model-directory
-//!   knowledge — HeardRight resolves its own models and runtime.
+//! - engine sourcing (§9.3, v2 standalone boundary): the speech engine binary
+//!   ships inside the signed CutRight speech runtime pack. Release code never
+//!   resolves the engine through environment overrides, installed-location
+//!   probing, or bare-name lookup; until the pack is materialized,
+//!   [`discover_engine`] returns the typed
+//!   [`ProviderError::RuntimePackNotInstalled`] degraded state, and a
+//!   pack-provided engine path is constructed explicitly via
+//!   [`HeardRightClient::with_engine`]. No hard-coded absolute path, no
+//!   model-directory knowledge — HeardRight resolves its own models and
+//!   runtime.
 //! - a health/capability handshake performed once per session, before any
 //!   transcription/VAD request;
 //! - unique request and trace IDs per request, generated locally;
@@ -71,9 +77,9 @@ fn handshake_timeout() -> Duration {
 #[derive(Debug, Error)]
 pub enum ProviderError {
     #[error(
-        "HeardRight engine was not found; set CUTRIGHT_HEARDRIGHT_ENGINE or install the HeardRight engine, or put heardright-engine on PATH"
+        "HeardRight speech engine is unavailable: the signed CutRight speech runtime pack is not installed"
     )]
-    EngineMissing,
+    RuntimePackNotInstalled,
     #[error("HeardRight engine could not start: {0}")]
     Start(#[source] std::io::Error),
     #[error("HeardRight engine request failed: {0}")]
@@ -134,55 +140,17 @@ fn unique_id(prefix: &str) -> String {
     )
 }
 
-/// Resolve the HeardRight engine location (§9.3).
+/// Resolve the HeardRight engine location (§9.3, v2 standalone boundary).
 ///
-/// Discovery order:
-/// 1. explicit `CUTRIGHT_HEARDRIGHT_ENGINE` (or `HEARDRIGHT_ENGINE_BIN`)
-///    development override;
-/// 2. an installed HeardRight engine location appropriate to the current
-///    platform;
-/// 3. `heardright-engine` resolved on `PATH`;
-/// 4. a clear [`ProviderError::EngineMissing`] result.
-///
-/// There is deliberately no hard-coded absolute default and no
-/// model-directory path: HeardRight resolves its own models and runtime.
+/// The speech engine ships inside the signed CutRight speech runtime pack.
+/// Release code never resolves it through environment overrides,
+/// installed-location probing, or bare-name lookup: until the pack is
+/// materialized this returns the typed
+/// [`ProviderError::RuntimePackNotInstalled`] degraded state. The pack
+/// installer constructs a session from the pack-provided engine path
+/// explicitly via [`HeardRightClient::with_engine`].
 pub fn discover_engine() -> Result<PathBuf, ProviderError> {
-    if let Some(path) =
-        env::var_os("CUTRIGHT_HEARDRIGHT_ENGINE").or_else(|| env::var_os("HEARDRIGHT_ENGINE_BIN"))
-    {
-        let path = PathBuf::from(path);
-        if path.is_file() {
-            return Ok(path);
-        }
-        return Err(ProviderError::EngineMissing);
-    }
-    if let Some(installed) = installed_engine_location() {
-        if installed.is_file() {
-            return Ok(installed);
-        }
-    }
-    // A bare command name resolves on PATH at spawn time; we do not probe
-    // PATH ourselves (that duplicates the OS's own resolution and can drift
-    // from it). Spawn failure surfaces as `ProviderError::Start`.
-    Ok(PathBuf::from("heardright-engine"))
-}
-
-/// The platform-appropriate installed HeardRight engine location, if this
-/// platform has a known standard install path. Returns `None` (falling
-/// through to `PATH` resolution) rather than guessing.
-fn installed_engine_location() -> Option<PathBuf> {
-    #[cfg(target_os = "macos")]
-    {
-        let home = env::var_os("HOME")?;
-        Some(
-            PathBuf::from(home)
-                .join("Library/Application Support/HeardRight/bin/heardright-engine"),
-        )
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        None
-    }
+    Err(ProviderError::RuntimePackNotInstalled)
 }
 
 /// One supervised HeardRight engine session: spawn, handshake, and a
@@ -467,8 +435,11 @@ impl HeardRightClient {
         })
     }
 
-    #[cfg(test)]
-    pub(crate) fn with_engine(engine: PathBuf) -> Self {
+    /// Construct a client from an explicit engine binary path provided by
+    /// the signed CutRight speech runtime pack (§9.3). This is the only
+    /// engine-sourcing path in release code: there is no environment
+    /// override and no bare-name resolution.
+    pub fn with_engine(engine: PathBuf) -> Self {
         Self {
             engine,
             session: Mutex::new(None),

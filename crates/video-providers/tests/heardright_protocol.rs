@@ -1,16 +1,18 @@
 //! Black-box process-boundary tests for the HeardRight client protocol
 //! (hardening plan §10.9): request correlation, malformed JSON, timeout,
 //! early EOF, and the restart-once policy, all driven through the crate's
-//! real public API (`HeardRightProvider::discover`) against fake engine
-//! scripts — never HeardRight's real engine.
+//! real public API against fake engine scripts — never HeardRight's real
+//! engine.
 //!
-//! These tests drive discovery through `CUTRIGHT_HEARDRIGHT_ENGINE` (the
-//! documented §9.3 development override) and the timeout env overrides
-//! (`CUTRIGHT_HEARDRIGHT_REQUEST_TIMEOUT_SECS` /
-//! `CUTRIGHT_HEARDRIGHT_HANDSHAKE_TIMEOUT_SECS`), so they run in-process
-//! against the crate exactly as an external caller would, with no test-only
-//! constructor. Environment variables are process-global, so every test
-//! holds `ENV_LOCK` for its duration to avoid cross-test interference.
+//! Per the v2 standalone boundary (§9.3) the release code no longer resolves
+//! the engine through environment overrides or bare-name lookup: the engine
+//! ships in the signed speech runtime pack. These tests therefore construct
+//! the provider through the explicit pack-style seam
+//! `HeardRightProvider::with_engine(<fake engine path>)` and use only the
+//! timeout env overrides (`CUTRIGHT_HEARDRIGHT_REQUEST_TIMEOUT_SECS` /
+//! `CUTRIGHT_HEARDRIGHT_HANDSHAKE_TIMEOUT_SECS`). Those timeout variables
+//! are process-global, so every test holds `ENV_LOCK` for its duration to
+//! avoid cross-test interference.
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
@@ -33,24 +35,33 @@ fn unique_temp_dir(prefix: &str) -> PathBuf {
     root
 }
 
-/// Write a fake HeardRight engine as a POSIX shell script and point
-/// `CUTRIGHT_HEARDRIGHT_ENGINE` (and the timeout overrides) at it. Returns
-/// the temp root so the caller can inspect side files (e.g. a start-count
-/// log) and clean up afterward. The caller must be holding `ENV_LOCK`.
-fn set_fake_engine(root: &Path, script_body: &str) {
+/// Write a fake HeardRight engine as a POSIX shell script and return its
+/// path, so the caller can construct a provider through the explicit
+/// pack-style seam (`HeardRightProvider::with_engine`) and inspect side
+/// files (e.g. a start-count log) and clean up afterward.
+fn write_fake_engine(root: &Path, script_body: &str) -> PathBuf {
     let engine = root.join("fake-engine");
     fs::write(&engine, format!("#!/bin/sh\n{script_body}\n")).expect("write fake engine");
     fs::set_permissions(&engine, fs::Permissions::from_mode(0o700))
         .expect("make fake engine executable");
-    std::env::set_var("CUTRIGHT_HEARDRIGHT_ENGINE", &engine);
-    std::env::remove_var("HEARDRIGHT_ENGINE_BIN");
+    engine
 }
 
 fn clear_env() {
-    std::env::remove_var("CUTRIGHT_HEARDRIGHT_ENGINE");
-    std::env::remove_var("HEARDRIGHT_ENGINE_BIN");
     std::env::remove_var("CUTRIGHT_HEARDRIGHT_REQUEST_TIMEOUT_SECS");
     std::env::remove_var("CUTRIGHT_HEARDRIGHT_HANDSHAKE_TIMEOUT_SECS");
+}
+
+#[test]
+fn discover_without_a_runtime_pack_reports_the_typed_degraded_state() {
+    // With no signed speech runtime pack materialized, discovery returns the
+    // typed degraded state rather than resolving any external binary.
+    let error =
+        HeardRightProvider::discover().expect_err("discovery must report the missing runtime pack");
+    assert!(
+        matches!(error, ProviderError::RuntimePackNotInstalled),
+        "expected RuntimePackNotInstalled, got {error:?}"
+    );
 }
 
 const HANDSHAKE_REPLY: &str = "printf '{\"schema_name\":\"session_handshake_result\",\"protocol_major\":1,\"protocol_minor\":0,\"engine_version\":\"fake-engine/1.0\",\"request_id\":\"%s\",\"payload\":{\"capabilities\":[]}}\\n' \"$rid\"";
@@ -72,14 +83,14 @@ fn response_with_mismatched_request_id_is_rejected_as_correlation_error() {
     let root = unique_temp_dir("cutright-hs-correlation");
     // The engine answers every non-handshake request with a *fixed*,
     // deliberately wrong request_id, never the caller's own.
-    set_fake_engine(
+    let engine = write_fake_engine(
         &root,
         &format!(
             "while IFS= read -r line; do\n  rid=$(printf '%s' \"$line\" | sed -n 's/.*\"request_id\":\"\\([^\"]*\\)\".*/\\1/p')\n  case \"$line\" in\n    *session_handshake_request*) {HANDSHAKE_REPLY} ;;\n    *) printf '{{\"schema_name\":\"file_vad_result\",\"request_id\":\"not-the-callers-id\",\"payload\":{{\"sample_rate\":16000,\"regions\":[]}}}}\\n' ;;\n  esac\ndone"
         ),
     );
 
-    let provider = HeardRightProvider::discover().expect("discover fake engine");
+    let provider = HeardRightProvider::with_engine(engine);
     let error = provider
         .analyze_file_vad(&vad_request(&root))
         .expect_err("mismatched request_id must be rejected");
@@ -96,14 +107,14 @@ fn response_with_mismatched_request_id_is_rejected_as_correlation_error() {
 fn malformed_json_response_surfaces_as_a_json_error() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let root = unique_temp_dir("cutright-hs-malformed-json");
-    set_fake_engine(
+    let engine = write_fake_engine(
         &root,
         &format!(
             "while IFS= read -r line; do\n  rid=$(printf '%s' \"$line\" | sed -n 's/.*\"request_id\":\"\\([^\"]*\\)\".*/\\1/p')\n  case \"$line\" in\n    *session_handshake_request*) {HANDSHAKE_REPLY} ;;\n    *) printf 'this is not json\\n' ;;\n  esac\ndone"
         ),
     );
 
-    let provider = HeardRightProvider::discover().expect("discover fake engine");
+    let provider = HeardRightProvider::with_engine(engine);
     let error = provider
         .analyze_file_vad(&vad_request(&root))
         .expect_err("malformed JSON must be rejected");
@@ -125,7 +136,7 @@ fn a_hanging_request_times_out_then_recovers_after_one_restart() {
     // First spawn: handshakes fine, then hangs forever on the real request
     // (never responds, never exits) — must time out rather than block. On
     // restart, the fresh (second) spawn behaves normally.
-    set_fake_engine(
+    let engine = write_fake_engine(
         &root,
         &format!(
             "echo start >> '{}'\nwhile IFS= read -r line; do\n  rid=$(printf '%s' \"$line\" | sed -n 's/.*\"request_id\":\"\\([^\"]*\\)\".*/\\1/p')\n  case \"$line\" in\n    *session_handshake_request*) {HANDSHAKE_REPLY} ;;\n    *) if [ \"$(wc -l < '{}')\" -eq 1 ]; then sleep 30; else printf '{{\"schema_name\":\"file_vad_result\",\"request_id\":\"%s\",\"payload\":{{\"sample_rate\":16000,\"regions\":[]}}}}\\n' \"$rid\"; fi ;;\n  esac\ndone",
@@ -134,7 +145,7 @@ fn a_hanging_request_times_out_then_recovers_after_one_restart() {
         ),
     );
 
-    let provider = HeardRightProvider::discover().expect("discover fake engine");
+    let provider = HeardRightProvider::with_engine(engine);
     let result = provider.analyze_file_vad(&vad_request(&root));
     assert!(
         result.is_ok(),
@@ -159,7 +170,7 @@ fn engine_exiting_mid_request_recovers_after_one_restart() {
     // First spawn: handshakes fine, then exits immediately on the real
     // request (stdout closes -> early EOF). Second spawn (after restart)
     // behaves normally.
-    set_fake_engine(
+    let engine = write_fake_engine(
         &root,
         &format!(
             "echo start >> '{}'\nwhile IFS= read -r line; do\n  rid=$(printf '%s' \"$line\" | sed -n 's/.*\"request_id\":\"\\([^\"]*\\)\".*/\\1/p')\n  case \"$line\" in\n    *session_handshake_request*) {HANDSHAKE_REPLY} ;;\n    *) if [ \"$(wc -l < '{}')\" -eq 1 ]; then exit 0; else printf '{{\"schema_name\":\"file_vad_result\",\"request_id\":\"%s\",\"payload\":{{\"sample_rate\":16000,\"regions\":[]}}}}\\n' \"$rid\"; fi ;;\n  esac\ndone",
@@ -168,7 +179,7 @@ fn engine_exiting_mid_request_recovers_after_one_restart() {
         ),
     );
 
-    let provider = HeardRightProvider::discover().expect("discover fake engine");
+    let provider = HeardRightProvider::with_engine(engine);
     let result = provider.analyze_file_vad(&vad_request(&root));
     assert!(
         result.is_ok(),
@@ -194,7 +205,7 @@ fn restart_budget_is_exactly_one_when_the_engine_keeps_failing() {
     // real request. A single request() call must therefore spawn exactly
     // twice (initial + one restart) and then return the failure — never an
     // unbounded retry loop.
-    set_fake_engine(
+    let engine = write_fake_engine(
         &root,
         &format!(
             "echo start >> '{}'\nwhile IFS= read -r line; do\n  rid=$(printf '%s' \"$line\" | sed -n 's/.*\"request_id\":\"\\([^\"]*\\)\".*/\\1/p')\n  case \"$line\" in\n    *session_handshake_request*) {HANDSHAKE_REPLY} ;;\n    *) exit 0 ;;\n  esac\ndone",
@@ -202,7 +213,7 @@ fn restart_budget_is_exactly_one_when_the_engine_keeps_failing() {
         ),
     );
 
-    let provider = HeardRightProvider::discover().expect("discover fake engine");
+    let provider = HeardRightProvider::with_engine(engine);
     let error = provider
         .analyze_file_vad(&vad_request(&root))
         .expect_err("an always-crashing engine must fail after the restart budget");
@@ -228,12 +239,12 @@ fn engine_protocol_major_mismatch_is_rejected_without_starting_work() {
     let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let root = unique_temp_dir("cutright-hs-major-mismatch");
     // Handshake reports an incompatible major version.
-    set_fake_engine(
+    let engine = write_fake_engine(
         &root,
         "while IFS= read -r line; do\n  rid=$(printf '%s' \"$line\" | sed -n 's/.*\"request_id\":\"\\([^\"]*\\)\".*/\\1/p')\n  case \"$line\" in\n    *session_handshake_request*) printf '{\"schema_name\":\"session_handshake_result\",\"protocol_major\":99,\"protocol_minor\":0,\"engine_version\":\"fake-engine/99\",\"request_id\":\"%s\",\"payload\":{}}\\n' \"$rid\" ;;\n    *) printf '{}\\n' ;;\n  esac\ndone",
     );
 
-    let provider = HeardRightProvider::discover().expect("discover fake engine");
+    let provider = HeardRightProvider::with_engine(engine);
     let error = provider
         .analyze_file_vad(&vad_request(&root))
         .expect_err("protocol major mismatch must be rejected");

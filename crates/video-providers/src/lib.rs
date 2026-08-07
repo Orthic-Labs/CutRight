@@ -44,17 +44,21 @@ pub struct HeardRightProvider {
 }
 
 impl HeardRightProvider {
-    /// Resolve the HeardRight engine location and construct a provider that
-    /// has not yet started a session (lazy start on first request). See
-    /// [`heardright::discover_engine`] for the discovery order (§9.3).
+    /// Construct a provider for the speech runtime pack's engine without
+    /// starting a session yet (lazy start on first request). This returns the
+    /// typed degraded state [`ProviderError::RuntimePackNotInstalled`] until
+    /// the signed speech runtime pack is materialized (§9.3).
     pub fn discover() -> Result<Self, ProviderError> {
         Ok(Self {
             client: heardright::HeardRightClient::discover()?,
         })
     }
 
-    #[cfg(test)]
-    fn with_engine(engine: std::path::PathBuf) -> Self {
+    /// Construct a provider from an explicit engine binary path provided by
+    /// the signed CutRight speech runtime pack (§9.3). This is the only
+    /// engine-sourcing path in release code: there is no environment
+    /// override and no bare-name resolution.
+    pub fn with_engine(engine: std::path::PathBuf) -> Self {
         Self {
             client: heardright::HeardRightClient::with_engine(engine),
         }
@@ -299,11 +303,11 @@ impl VadProvider for HeardRightProvider {
 /// HeardRight resolve its own model and runtime.
 ///
 /// # HeardRight location
-/// The engine is resolved via `CUTRIGHT_HEARDRIGHT_ENGINE` (or
-/// `HEARDRIGHT_ENGINE_BIN`), then an installed platform location, then
-/// `heardright-engine` on `PATH` (§9.3). There is no hard-coded absolute
-/// default. If HeardRight is unavailable the call fails with a clear
-/// [`ProviderError`]; there is never a silent fallback to a bundled model.
+/// The engine ships inside the signed CutRight speech runtime pack (§9.3).
+/// Release code never resolves it through environment overrides or bare-name
+/// lookup; until the pack is materialized this fails with the typed
+/// [`ProviderError::RuntimePackNotInstalled`] degraded state. There is never
+/// a silent fallback to a bundled model.
 pub mod audio_vad {
     use crate::{
         HeardRightProvider, ProviderError, DEFAULT_VAD_SAMPLE_RATE, DEFAULT_VAD_THRESHOLD,

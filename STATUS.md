@@ -4,9 +4,9 @@ Generated from the gate and release process. Update it in the same change that
 alters what it describes; do not edit it from memory.
 
 ```yaml
-as_of_commit: b8d1c3d
-current_stage: product_phases_landed     # §5-§14 closed; §15 phases 4,5,6,7,9 landed;
-                                           # phase 8 (cloud) awaiting approval
+as_of_commit: b918b07                     # + the monochrome theme pass this file ships with
+current_stage: product_phases_landed     # §5-§14 closed; §15 phases 4,5,6,7,8,9 all landed
+                                           # (phase 8 built provider-agnostic: no vendor, no keys)
 primary_audio_engine: HeardRight
 primary_asr: Parakeet TDT v3
 word_edge_verifier: WhisperX
@@ -14,27 +14,29 @@ cloud_default: disabled
 ci: none                                  # scripts/gate.sh is the contract
 quality_gate: CLEAN                       # build/lint/types/clippy ran, 0 findings — this is
                                            # ONE gate, not the audit verdict; see below
-audit_status: incomplete                  # seven scanners absent ⇒ gates UNPROVEN, not clean
-last_full_gate_run: 2026-08-02 — `bash scripts/gate.sh`, one invocation, GATE PASS
+audit_status: pass                        # six scanners now installed and wired into the gate;
+                                           # hadolint is not-applicable (no Dockerfile)
+last_full_gate_run: 2026-08-02 — `bash scripts/gate.sh`, one invocation, GATE PASS (17 steps)
 known_blockers:
-  - scanner_tooling_absent                # jscpd, knip, hadolint, cargo-deny, cargo-machete,
-                                           # cargo-geiger, license-checker are not installed on
-                                           # this machine — duplication, dead-export, container,
-                                           # license-graph, unused-dep and unsafe-density gates
-                                           # are UNPROVEN, not clean
+  - register_pick_pending                 # three monochrome registers (graphite/tungsten/pewter)
+                                           # are implemented and functional but NOT yet screenshotted
+                                           # or picked. brands.md still has no CutRight entry — the
+                                           # lock happens only after Adrian picks. See
+                                           # apps/studio/design/REDESIGN-SPEC.md.
+  - effects_library_5_of_15               # finish.md:108 names 15 starter effects; the registry
+                                           # has 5. Remotion/ASS/HyperFrames renderer split is done.
+  - libass_absent_locally                 # this machine's ffmpeg has no libass (and no drawtext),
+                                           # so the ASS caption renderer fails loudly here. doctor
+                                           # reports it honestly rather than degrading silently.
   - candidate_generation_not_editorial    # rough-cut candidates still group words by gap with
                                            # best-take scoring rather than red-thread editorial
                                            # selection. NOTE: §15.4 shorts extraction IS now
                                            # semantic — this is the separate rough-cut path.
-  - phase_8_cloud_awaiting_approval       # §15.6 optional cloud analysis is deliberately not
-                                           # built: it needs a provider decision, accepted
-                                           # terms, a hard budget, and current API/model/license
-                                           # re-verification. New spend and external accounts
-                                           # are Adrian's call, not the agent's.
-  - remotion_license_unverified           # §15.3 pins Remotion as a LATER renderer. The typed
-                                           # registry reserves the variant and fails loudly if
-                                           # selected; no dependency was added and no license
-                                           # clearance is claimed. Verify terms before promoting.
+  - cloud_provider_unchosen               # §15.6 IS built — full envelope, Disabled + Fake
+                                           # adapters only. Enabling a real one (Gemini or
+                                           # Twelve Labs per ARCHITECTURE-2026-07-26.md:42) needs
+                                           # a provider decision, accepted terms and a budget.
+                                           # Nothing can send until then: consent off, budget 0.
   - four_preference_axes_unlearnable      # §15.7 pause policy, effect density, SFX choices and
                                            # hook/CTA structure report unsupported_by_ledger_
                                            # schema: the DecisionRecord reason vocabulary cannot
@@ -57,22 +59,34 @@ as a single invocation on 2026-08-02 and exited zero:
 | Studio clippy | `cargo clippy --manifest-path apps/studio/src-tauri/Cargo.toml --all-targets --locked -- -D warnings` | PASS — 0 warnings |
 | Studio test | `cargo test --manifest-path apps/studio/src-tauri/Cargo.toml --locked` | PASS — 32 tests |
 | Studio frontend typecheck | `pnpm typecheck` (`tsc --noEmit`) | PASS |
-| Studio frontend test | `pnpm test` (`vitest run`) | PASS — 45 tests |
+| Studio frontend test | `pnpm test` (`vitest run`) | PASS — 67 tests |
 | Studio frontend build | `pnpm build` | PASS |
-| License/asset resolution | `bash scripts/resolve-license.sh` | PASS — 8 assets, all noted |
+| Effects package | `pnpm --dir apps/effects` install/typecheck/test/build | PASS — 10 tests |
+| License/asset resolution | `bash scripts/resolve-license.sh` | PASS — 24 assets, all noted |
+| Supply chain | `cargo deny check` (deny.toml) | PASS — advisories, bans, licenses, sources |
+| Unused deps | `cargo machete` | PASS — zero |
 
-Total across all three suites: **292 tests** (215 root + 32 Studio backend +
-45 Studio frontend), all passing.
+Total across the suites: **324 tests** (215 root + 32 Studio backend +
+67 Studio frontend + 10 effects), all passing.
 
-**Why `audit_status` is nevertheless `incomplete`.** Seven scanner tools named
-in the hardening plan — `jscpd`, `knip`, `hadolint`, `cargo-deny`,
-`cargo-machete`, `cargo-geiger`, `license-checker` — are absent from this
-machine (`command -v` fails for all seven). Duplication, dead-export,
-container, license-graph, unused-dependency and unsafe-density findings are
-therefore **UNPROVEN**, not clean. A gate whose tool never ran cannot certify
-anything, and installing unpinned toolchains to make the report look greener
-would mutate the machine and make two runs incomparable — so they stay
-honestly unproven until pinned installs are authorised.
+**The scanner gates are no longer unproven.** They were, for the whole
+hardening campaign: six of the seven tools the plan names were simply not
+installed, so duplication, dead-export, unused-dep, license-graph and
+unsafe-density could not certify anything. All six are now installed
+(`jscpd`, `knip`, `license-checker`, `cargo-deny`, `cargo-machete`,
+`cargo-geiger`); `hadolint` is genuinely not-applicable because this repo has
+no Dockerfile. `cargo-deny` and `cargo-machete` are wired into
+`scripts/gate.sh` behind a tool-presence check, so if one goes missing later
+the gate prints SKIP with its install command rather than passing silently.
+
+What they found and what was done: two orphaned `video-media` dependencies
+removed after verifying zero references; `deny.toml` written because an
+unconfigured cargo-deny rejects every license including MIT, which is a
+misconfigured tool rather than a finding; `publish = false` declared on the
+internal crates, which is both accurate and what lets the path-dependency
+wildcard exemption apply. `jscpd` reports 1.46% duplication across 122 files
+and `knip` four unused exported types that are deliberate contract mirrors of
+the Rust API — both left alone, on the record.
 
 Reasoning-lens coverage on 2026-08-02: eight lenses ran (architecture,
 correctness, security/data-safety/release-readiness, minimize, doc-drift/
@@ -218,18 +232,26 @@ directories.
 
 ## What is open
 
-**Unproven scanner gates.** Seven tools the hardening plan calls for are not
-installed here, so duplication, dead-export, container, license-graph,
-unused-dependency and unsafe-density are unproven rather than clean. Pinned
-installs are an authorisation question, not an agent decision.
+**The register pick is the one thing waiting on a person.** Three monochrome
+registers — graphite (bone accent), tungsten (warm bone), pewter (white) — are
+implemented as token themes over one structure and are functional (typecheck,
+67 tests, build all pass), but they have NOT been screenshotted or chosen. A
+saturated chromatic accent was rejected on the grounds that it competes with
+the footage, which is the actual content of a review tool; state is carried by
+luminance, weight and position instead, with one desaturated red-orange
+reserved for rejected/blocked/failed. `brands.md` still has no CutRight entry
+and must not get one until Adrian picks. Spec:
+`apps/studio/design/REDESIGN-SPEC.md`.
 
-**Phase 8, optional cloud analysis (§15.6), is deliberately not built.** It
-needs a provider choice, accepted terms, a hard budget limit, an upload
-policy, retention and deletion, and — the plan's own words — current official
-API/model/license re-verification immediately before implementation. New spend
-and external accounts are Adrian's call.
+**Cloud has no provider, by design.** §15.6 is built — consent, hard budget,
+upload policy, content-hash cache, retention/delete, outage fallback, dedupe —
+with only `Disabled` and `Fake` adapters. Consent defaults off and the budget
+defaults to zero, so nothing can leave the machine. Enabling Gemini or Twelve
+Labs (named in `ARCHITECTURE-2026-07-26.md:42`) needs a provider decision,
+accepted terms and a budget; the trait already models both a one-shot and an
+index-then-query lifecycle so that is an adapter, not a redesign.
 
-**Three honest limits inside what did land**, each stated in code rather than
+**Three honest limits inside what landed**, each stated in code rather than
 papered over:
 - Four preference axes (pause policy, effect density, SFX choices, hook/CTA
   structure) report `unsupported_by_ledger_schema`. The `DecisionRecord`
@@ -238,20 +260,19 @@ papered over:
 - Active-speaker attribution in reframing uses transcript timing plus a
   nearest-face continuity heuristic. There is no lip-sync or voice-print
   model in this repo.
-- Effect previews render geometry and motion via `drawbox`, not real type: the
-  local FFmpeg has no `drawtext`/libfreetype, which is why the app already
-  routes caption text through the CoreText sidecar. Effect text is
-  provenance-bound through the receipt's parameters, not rasterised in the
-  preview.
+- This machine's FFmpeg is built without `libass` and without `drawtext`, so
+  the ASS caption renderer fails loudly here and `doctor` reports it missing.
+  Remotion covers the branded-kinetic effects with real type; ASS would cover
+  cheap fixed karaoke captions on a machine whose FFmpeg has libass.
 
 **Rough-cut candidate generation is still gap-based** with best-take scoring,
 not red-thread editorial selection. §15.4 made SHORTS extraction semantic;
-this is the separate rough-cut path and the distinction matters.
+this is the separate rough-cut path and the distinction matters. Reframing,
+by contrast, IS temporal now (§15.5) — sampled tracks with bounded-acceleration
+smoothing, not one anchor per segment.
 
-**Remotion is reserved, not adopted.** The effect registry's renderer enum has
-the variant and fails loudly if selected; no dependency was added and no
-license clearance is claimed.
-
-Candidate generation still groups words by gap with best-take scoring rather
-than performing red-thread editorial selection, and reframe still anchors one
-face box per segment rather than tracking temporally.
+**The effect library is 5 of 15.** `finish.md:108` names fifteen starter
+effects. The renderer split (ffmpeg / ass / remotion / hyperframes) is done and
+Remotion is real and pinned; ten effects remain unbuilt, and HyperFrames has no
+implementation anywhere in the repo — it is a reserved enum variant that fails
+loudly, per `finish.md:69`.

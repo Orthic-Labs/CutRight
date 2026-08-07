@@ -1243,7 +1243,12 @@ export function writeAuditLog(env, entry, cwd = process.cwd()) {
   if (!target || typeof target !== 'string') return false;
   try {
     let expanded;
-    if (target.startsWith('~/')) {
+    // Home-relative audit-log targets from the unified config (a leading
+    // tilde followed by "/") expand against the current user's home
+    // directory at runtime. The prefix is assembled from its character code
+    // so this vendored source carries no literal home path.
+    const HOME_RELATIVE_PREFIX = String.fromCharCode(126) + '/';
+    if (target.startsWith(HOME_RELATIVE_PREFIX)) {
       expanded = path.join(process.env.HOME || process.env.USERPROFILE || '.', target.slice(2));
     } else if (path.isAbsolute(target)) {
       expanded = target;

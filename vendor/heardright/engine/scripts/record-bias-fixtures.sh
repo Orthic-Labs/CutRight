@@ -2,11 +2,13 @@
 set -euo pipefail
 
 # HeardRight ASR bias-fixture recording script
-# Records audio from default input device to ~/hr-bias-clips/
+# Records audio from the default input device into an output directory:
+# the first positional argument wins, otherwise a script-local directory
+# (hr-bias-clips next to this script) keeps the fixtures self-contained.
 # Reads prompts from fixtures-positive.txt and fixtures-negative.txt
 
-OUTPUT_DIR="${HOME}/hr-bias-clips"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OUTPUT_DIR="${1:-${SCRIPT_DIR}/hr-bias-clips}"
 POSITIVE_FIXTURES="${SCRIPT_DIR}/fixtures-positive.txt"
 NEGATIVE_FIXTURES="${SCRIPT_DIR}/fixtures-negative.txt"
 SAMPLE_RATE=16000

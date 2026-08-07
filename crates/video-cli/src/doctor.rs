@@ -566,7 +566,7 @@ fn check_heardright_discover() -> Value {
             true,
             "missing",
             json!({ "error": error.to_string() }),
-            Some("set CUTRIGHT_HEARDRIGHT_ENGINE or put heardright-engine on PATH"),
+            Some("install the signed CutRight speech runtime pack; the engine ships in the pack and is never resolved from the environment or the shell search path"),
         ),
     }
 }
@@ -587,7 +587,7 @@ fn check_heardright_handshake() -> Value {
                 false,
                 "missing",
                 json!({ "error": error.to_string() }),
-                Some("set CUTRIGHT_HEARDRIGHT_ENGINE or put heardright-engine on PATH"),
+                Some("install the signed CutRight speech runtime pack; the engine ships in the pack and is never resolved from the environment or the shell search path"),
             );
         }
     };

@@ -95,10 +95,6 @@ fn doctor_reports_missing_required_capability_as_nonzero_exit_five() {
 fn doctor_audio_profile_includes_core_and_audio_checks() {
     let output = videoctl()
         .args(["doctor", "--profile", "audio"])
-        .env(
-            "CUTRIGHT_HEARDRIGHT_ENGINE",
-            "/nonexistent/videoctl-doctor-test/heardright-engine",
-        )
         .output()
         .expect("videoctl runs");
 
@@ -349,15 +345,14 @@ fn doctor_sidecar_materialize_probe_verifies_the_real_content_store() {
 }
 
 /// `audio.heardright.handshake` must honestly report `missing` (never a
-/// fabricated `ok`) when no HeardRight engine can be discovered at all.
+/// fabricated `ok`) when the signed speech runtime pack is not installed.
+/// Per the v2 standalone boundary (§9.3) there is no environment override
+/// to point doctor at an engine, so the degraded state is the only honest
+/// outcome and no env hook is set here.
 #[test]
 fn doctor_heardright_handshake_reports_missing_when_engine_is_unreachable() {
     let output = videoctl()
         .args(["doctor", "--profile", "audio"])
-        .env(
-            "CUTRIGHT_HEARDRIGHT_ENGINE",
-            "/nonexistent/videoctl-doctor-test/heardright-engine",
-        )
         .output()
         .expect("videoctl runs");
 
@@ -371,42 +366,35 @@ fn doctor_heardright_handshake_reports_missing_when_engine_is_unreachable() {
     assert!(handshake["remediation"].is_string());
 }
 
-/// `audio.heardright.handshake` reports `ok` and the negotiated identity
-/// when it can complete the real handshake against a HeardRight engine —
-/// here, a fake engine script standing in for the real one (never the real
-/// engine), the same pattern `video-providers`'s own protocol tests use.
-/// The fake engine treats any non-handshake request as a hard failure, so a
-/// passing test also proves the probe never sent a transcription/VAD
-/// request.
+/// With no signed speech runtime pack installed, `audio.heardright.discover`
+/// and `audio.heardright.handshake` must both report the typed degraded
+/// state (`missing`) with runtime-pack remediation. Under the v2 standalone
+/// boundary (§9.3) release code never resolves the engine from an environment
+/// override or a shell search path, so the former fake-engine handshake test
+/// was replaced by this honest degraded-state assertion; the handshake
+/// protocol itself stays covered by `video-providers`'s protocol tests
+/// through the explicit `with_engine` pack seam.
 #[test]
-fn doctor_heardright_handshake_reports_ok_against_a_fake_engine() {
-    use std::os::unix::fs::PermissionsExt;
-
-    let dir = tempfile_dir();
-    let engine = dir.join("fake-heardright-engine");
-    std::fs::write(
-        &engine,
-        "#!/bin/sh\nwhile IFS= read -r line; do\n  rid=$(printf '%s' \"$line\" | sed -n 's/.*\"request_id\":\"\\([^\"]*\\)\".*/\\1/p')\n  case \"$line\" in\n    *session_handshake_request*) printf '{\"schema_name\":\"session_handshake_result\",\"protocol_major\":1,\"protocol_minor\":0,\"engine_version\":\"fake-engine/1.0\",\"request_id\":\"%s\",\"payload\":{\"capabilities\":[\"file_vad_regions_v1\"]}}\\n' \"$rid\" ;;\n    *) exit 1 ;;\n  esac\ndone\n",
-    )
-    .expect("write fake engine");
-    std::fs::set_permissions(&engine, std::fs::Permissions::from_mode(0o700))
-        .expect("make fake engine executable");
-
+fn doctor_heardright_reports_the_missing_runtime_pack_degraded_state() {
     let output = videoctl()
         .args(["doctor", "--profile", "audio"])
-        .env("CUTRIGHT_HEARDRIGHT_ENGINE", &engine)
         .output()
         .expect("videoctl runs");
 
     let value = parse_stdout_json(&output);
     let checks = value["checks"].as_array().expect("checks is an array");
-    let handshake = checks
-        .iter()
-        .find(|check| check["id"] == "audio.heardright.handshake")
-        .expect("audio.heardright.handshake check is present");
-    assert_eq!(handshake["status"], "ok", "probe result: {handshake}");
-    assert_eq!(handshake["evidence"]["engine_version"], "fake-engine/1.0");
-    assert_eq!(handshake["evidence"]["protocol_major"], 1);
-
-    let _ = std::fs::remove_dir_all(&dir);
+    for id in ["audio.heardright.discover", "audio.heardright.handshake"] {
+        let check = checks
+            .iter()
+            .find(|check| check["id"] == id)
+            .unwrap_or_else(|| panic!("{id} check is present"));
+        assert_eq!(check["status"], "missing", "check result: {check}");
+        let remediation = check["remediation"]
+            .as_str()
+            .unwrap_or_else(|| panic!("{id} carries remediation: {check}"));
+        assert!(
+            remediation.contains("runtime pack"),
+            "{id} remediation must point at the runtime pack: {remediation}"
+        );
+    }
 }

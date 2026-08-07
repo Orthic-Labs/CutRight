@@ -245,7 +245,7 @@ function findBrowser() {
         "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
         "/Applications/Chromium.app/Contents/MacOS/Chromium",
         "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-        // Standalone "Chrome for Testing" extracted under ~/.local (no installer).
+        // Standalone "Chrome for Testing" extracted under a user-local directory (no installer).
         join(home, ".local/chrome-for-testing/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"),
         join(home, ".local/chrome-for-testing/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"),
         "/usr/bin/google-chrome",

@@ -37,7 +37,7 @@
 #   bash add-music.sh my.mp4                              # default: tech mood
 #   bash add-music.sh my.mp4 --mood=ad                    # switch mood
 #   bash add-music.sh my.mp4 --mood=educational --out=final.mp4
-#   bash add-music.sh my.mp4 --music=~/Downloads/song.mp3 # bring your own
+#   bash add-music.sh my.mp4 --music=<media-dir>/song.mp3   # bring your own
 #
 set -e
 

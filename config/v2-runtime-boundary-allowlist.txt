@@ -26,6 +26,14 @@ scripts/
 # Development-only tooling (import-closure, evals) is not release code.
 tools/
 
+# Adapted Designer engine scripts (adapt_with_notice, CR-V2-B1-008). These
+# authoring-time media scripts intentionally invoke the host ffmpeg/ffprobe/
+# node of the authoring environment — the same host-tooling model `videoctl
+# doctor --profile core` verifies — and are not part of the CutRight runtime
+# that resolves executables from signed packs. Recorded here rather than by
+# rewording the scripts, so the guard's text rule stays honest.
+skills/designer/engine/
+
 # Third-party notice aggregation.
 third_party/
 

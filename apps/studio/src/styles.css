@@ -17,14 +17,76 @@
 }
 
 /* ==========================================================================
-   Design tokens — shared, then three register themes over one structure
-   (redesign spec Phase 2). `data-register` on <html> selects the theme;
-   `data-theme` (existing) selects dark/light within it. Dark is the
-   product's primary mode (task truth: "dark room next to an editing
+   Design tokens — MONOCHROME pass (2026-08-02), superseding the Phase 2
+   three-register spec below this note. Adrian reviewed R1/R2/R3 and gave a
+   precise verdict: he likes the grey-and-black BASE of R1 "Cutting Room";
+   he rejects every chromatic accent (teal, cyan, green) and blue is
+   independently off-limits (taken by ViewRight, plus gold/ember/crimson/red
+   /violet taken by the rest of the Right Suite). This is a video review
+   tool — any saturated chrome accent competes with the footage, which is
+   the actual content — so identity now runs on LUMINANCE, WEIGHT and
+   POSITION, not hue. Exactly one saturated colour survives, `--rejected`,
+   reserved for blocking/destructive state (rejected verdict, blocked/failed
+   source integrity, missing artifacts) — never for selection, success, or
+   decoration.
+
+   `data-register` on <html> still selects the theme and the QA-only
+   RegisterSwitch still drives it — the ATTRIBUTE VALUES are unchanged
+   (`cutting-room` | `bench` | `screening-room`, owned by ../types.ts, out
+   of scope for this pass) but each now carries a monochrome identity named
+   for what it visually is rather than what it used to be:
+     cutting-room → Graphite  — neutral near-black ramp, warm-bone accent
+                                 `#E6E1D8`. Purest monochrome, highest
+                                 contrast. Default register.
+     bench        → Tungsten  — same grey/black structure, whole ramp
+                                 carries a barely-perceptible warm cast,
+                                 low-saturation warm-bone accent `#D8C6AC`
+                                 (kept well short of ScrapeRight's gold).
+     screening-room → Pewter  — cool-neutral ramp with NO blue push (b*
+                                 stays ~0 in Lab — verified, see design/
+                                 REDESIGN-SPEC.md follow-up notes), pure
+                                 white accent `#FFFFFF`. Most clinical.
+   RegisterSwitch.tsx renders "Graphite / Tungsten / Pewter" as the button
+   labels; ../types.ts's REGISTER_LABEL strings ("R1 · Cutting Room" etc.)
+   are legacy display text this pass does not own and are superseded by
+   that in-component override.
+
+   This is a PURE TOKEN/THEME pass: structure (mode rail, Word-Locked
+   Bench, receipt verdicts, transcript spine, two-zone status strip) is
+   unchanged. Density and type are now IDENTICAL across all three variants
+   (Hanken Grotesk UI / Spline Sans Mono data / 12px / 1.35 leading / 52px
+   rows) — R1's structural base, since Adrian's verdict was about base
+   colour, not density, and the three new variants are explicitly grey-ramp
+   siblings of one structure rather than three differently-dense registers.
+
+   Light theme: each variant now carries its OWN light base (neutral /
+   warm / cool-neutral respectively, "the same logic inverted" — light bg,
+   dark ink accent) rather than one shared cream across all three, since
+   the warm/cool identity has to read in both modes to mean anything.
+
+   `--approved` and `--warn` are deliberately NOT chromatic anymore: they
+   are shared, register-flat neutral tones used only to differentiate
+   weight/emphasis from plain text, never to encode "this is a warning" via
+   hue alone. Every place that used to lean on `--warn` for a genuine
+   caution (bench-switch-warn, cut-marker, flag-segment/flag-badge,
+   bench-banner, confirm-strip, status-chip.stale_artifact) got a shape/
+   position cue instead (ring, weight, dashed border) — see those rules
+   below. The one exception that stays on the alarm colour is
+   `mark.warn` (SourcesRail's BLOCKED / UNVERIFIED integrity chips): those
+   two states are literally "blocked" and "failed" per the reserved list.
+   All of `.badge`, `.receipt-*`, `.verify-state`, `.good`/`.bad` already
+   carry a ✓/✕ glyph or self-describing text in the component markup
+   (VerdictPanel.tsx, SourceIntegrityPanel.tsx, QaMode.tsx) — colour was
+   never their only indicator, so no CSS-injected glyphs were needed there.
+
+   Superseded Phase 2 spec (kept for history — the ≥2-axis/density/type
+   differentiation and the teal/cyan/jade accents below are REJECTED, do
+   not reintroduce them):
+
+   `data-theme` (existing) selects dark/light within the register. Dark is
+   the product's primary mode (task truth: "dark room next to an editing
    monitor... low-luminance base, no pure white, accent reserved for
-   state"); light shares one cream base across all three registers (the
-   same convention every other Right Suite app uses) and only the accent
-   varies per register in light mode.
+   state").
 
    Registers differ on base, accent, density, and type (spec's ≥2-axis
    requirement, met on all four): R1 Cutting Room is the default until
@@ -39,12 +101,20 @@
    shipped Spline Sans Mono (or the OS default) wherever they aren't
    installed locally. Every register still renders correctly today; a
    register pick that needs the exact named face just needs those two font
-   files added once Adrian licenses them. ========================== */
+   files added once Adrian licenses them. This whole paragraph is moot now
+   that density/type are unified — General Sans/JetBrains Mono no longer
+   appear in any live token. ========================== */
 :root {
   --viewer-bg: #000;
-  --approved: #34d399;
-  --rejected: #f87171;
-  --warn: #fbbf24;
+  /* Monochrome pass: --approved/--warn are neutral emphasis tones, flat
+     across all three registers (paired with the ✓/✕ glyphs and
+     self-describing text components already render). --rejected is the
+     ONE saturated colour in the system — a desaturated red-orange,
+     reserved for rejected/blocked/failed/over-budget — also flat across
+     registers so it reads identically everywhere it appears. */
+  --approved: #d6d3cb;
+  --rejected: #cb664d;
+  --warn: #b0ada5;
   --dur-micro: 120ms;
   --dur-state: 180ms;
   --dur-swap: 140ms; /* variant crossfade + settle (motion table) */
@@ -59,20 +129,21 @@
   background: var(--bg);
 }
 
-/* --- R1 · Cutting Room (technical/console) — default register --------- */
+/* --- Graphite (was "R1 · Cutting Room") — neutral near-black, purest
+   monochrome, highest contrast. Default register. ---------------------- */
 :root,
 :root[data-register="cutting-room"] {
-  --bg: #101012;
-  --surface: #17171a;
-  --elevated: #1e1e22;
-  --border: #2a2a2f;
-  --border-strong: #3a3a42;
-  --text: #ececee;
-  --muted: #a7a7ac;
-  --faint: #84848a;
-  --accent: #3fd8c7;
-  --accent-ink: #04211d;
-  --focus: #3fd8c7;
+  --bg: #0e0e0f;
+  --surface: #161616;
+  --elevated: #1f1f1f;
+  --border: #2b2b2b;
+  --border-strong: #3c3c3c;
+  --text: #ececec;
+  --muted: #a8a8a8;
+  --faint: #8b8b8b;
+  --accent: #e6e1d8;
+  --accent-ink: #1b1916;
+  --focus: #e6e1d8;
   --font-ui: "Hanken Grotesk", ui-sans-serif, -apple-system, sans-serif;
   --font-mono: "Spline Sans Mono", ui-monospace, monospace;
   --text-scale: 12px;
@@ -82,79 +153,107 @@
   --transcript-measure: 34ch;
 }
 
-/* --- R2 · Bench (operational/dense) — editor-grade, densest ----------- */
+/* --- Tungsten (was "R2 · Bench") — same grey/black structure as
+   Graphite, whole ramp carries a barely-perceptible warm cast; accent is a
+   low-saturation warm bone, deliberately far short of ScrapeRight's gold
+   (S≈36% / L≈76% here vs ScrapeRight's S≈100% / L≈65%). --------------- */
 :root[data-register="bench"] {
-  --bg: #131720;
-  --surface: #191c24;
-  --elevated: #212632;
-  --border: #2c3242;
-  --border-strong: #3c4356;
-  --text: #eef1f6;
-  --muted: #a9afbd;
-  --faint: #828a9a;
-  --accent: #4dc8f0;
-  --accent-ink: #031621;
-  --focus: #4dc8f0;
-  --font-ui: "General Sans", ui-sans-serif, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", "Spline Sans Mono", ui-monospace, monospace;
-  --text-scale: 12px;
-  --leading-base: 1.25;
-  --row-h: 46px;
-  --pad-unit: 5px;
-  --transcript-measure: 32ch;
-}
-
-/* --- R3 · Screening Room (calm/editorial) — roomy -------------------- */
-:root[data-register="screening-room"] {
-  --bg: #17161a;
-  --surface: #1e1c21;
-  --elevated: #26232a;
-  --border: #332f38;
-  --border-strong: #45404a;
-  --text: #f1eeec;
-  --muted: #b2aca6;
-  --faint: #928c86;
-  --accent: #57c79a;
-  --accent-ink: #052c1f;
-  --focus: #57c79a;
+  --bg: #131110;
+  --surface: #1b1917;
+  --elevated: #242220;
+  --border: #322f2b;
+  --border-strong: #443f3a;
+  --text: #edeae6;
+  --muted: #aca69e;
+  --faint: #8c867e;
+  --accent: #d8c6ac;
+  --accent-ink: #1c1712;
+  --focus: #d8c6ac;
   --font-ui: "Hanken Grotesk", ui-sans-serif, -apple-system, sans-serif;
   --font-mono: "Spline Sans Mono", ui-monospace, monospace;
-  --text-scale: 14px;
-  --leading-base: 1.55;
-  --row-h: 60px;
-  --pad-unit: 8px;
-  --transcript-measure: 42ch;
+  --text-scale: 12px;
+  --leading-base: 1.35;
+  --row-h: 52px;
+  --pad-unit: 6px;
+  --transcript-measure: 34ch;
 }
 
-/* --- Light theme: shared cream base, per-register accent -------------- */
+/* --- Pewter (was "R3 · Screening Room") — cool-neutral ramp with NO blue
+   push (built R=B with G nudged +3 so the Lab a* axis tilts faintly green
+   while b*, the blue/yellow axis, stays ~0 — verified: bg b*=1.14,
+   surface b*=1.59, both positive/near-zero, never negative-blue). Accent
+   is pure white — the most clinical of the three. --------------------- */
+:root[data-register="screening-room"] {
+  --bg: #0e110e;
+  --surface: #161916;
+  --elevated: #1f221f;
+  --border: #2b2e2b;
+  --border-strong: #3c3f3c;
+  --text: #ececec;
+  --muted: #ababab;
+  --faint: #8c8e8c;
+  --accent: #ffffff;
+  --accent-ink: #101110;
+  --focus: #ffffff;
+  --font-ui: "Hanken Grotesk", ui-sans-serif, -apple-system, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, monospace;
+  --text-scale: 12px;
+  --leading-base: 1.35;
+  --row-h: 52px;
+  --pad-unit: 6px;
+  --transcript-measure: 34ch;
+}
+
+/* --- Light theme: --approved/--rejected/--warn stay register-flat (same
+   neutral pass shared across all three, see :root above); bg through
+   accent now differ per register — "the same logic inverted": each
+   variant's light base carries its own neutral/warm/cool-neutral cast, and
+   the dark mode's light accent becomes a dark ink fill instead of one
+   shared cream + shared white ink. -------------------------------------- */
 :root[data-theme="light"] {
-  --bg: #f7f3ec;
-  --surface: #fffdf8;
-  --elevated: #fff;
-  --border: #e2dad1;
-  --border-strong: #cfc5b9;
-  --text: #1a1a1c;
-  --muted: #5b5b61;
-  --faint: #7a746e;
-  --approved: #047857;
-  --rejected: #b91c1c;
-  --warn: #92400e;
+  --approved: #3a3a3a;
+  --rejected: #a6462c;
+  --warn: #54504a;
 }
 :root[data-register="cutting-room"][data-theme="light"],
 :root:not([data-register])[data-theme="light"] {
-  --accent: #0e7e72;
-  --accent-ink: #fff;
-  --focus: #0e7e72;
+  --bg: #f4f4f3;
+  --surface: #fafafa;
+  --elevated: #fff;
+  --border: #dedede;
+  --border-strong: #c7c7c7;
+  --text: #1a1a1a;
+  --muted: #5e5e5e;
+  --faint: #666;
+  --accent: #1a1a1a;
+  --accent-ink: #f4f4f3;
+  --focus: #1a1a1a;
 }
 :root[data-register="bench"][data-theme="light"] {
-  --accent: #0a6e9e;
-  --accent-ink: #fff;
-  --focus: #0a6e9e;
+  --bg: #f7f3ec;
+  --surface: #fff9f0;
+  --elevated: #fff;
+  --border: #e7ded2;
+  --border-strong: #d4c8b8;
+  --text: #221d18;
+  --muted: #6e6359;
+  --faint: #665d53;
+  --accent: #4a3b2c;
+  --accent-ink: #f7f3ec;
+  --focus: #4a3b2c;
 }
 :root[data-register="screening-room"][data-theme="light"] {
-  --accent: #177452;
+  --bg: #f2f4f2;
+  --surface: #f9fbf9;
+  --elevated: #fff;
+  --border: #dddfdd;
+  --border-strong: #c7c9c7;
+  --text: #111211;
+  --muted: #626462;
+  --faint: #636663;
+  --accent: #000;
   --accent-ink: #fff;
-  --focus: #177452;
+  --focus: #000;
 }
 
 * {
@@ -442,6 +541,16 @@ mark {
   background: none;
   margin-left: 4px;
 }
+/* SourcesRail's two integrity chips (BLOCKED / UNVERIFIED) are the one
+   place `mark` carries real alarm semantics — "blocked" and "failed"
+   verification are both on the reserved list, so this is the sole spot
+   outside `--rejected`'s own selectors that earns the saturated colour.
+   Plain HDR marks (no .warn class) stay on the neutral `--warn` token
+   above — informational, not a caution. */
+mark.warn {
+  color: var(--rejected);
+  font-weight: 700;
+}
 .ledger footer {
   display: flex;
   align-items: baseline;
@@ -576,12 +685,19 @@ mark {
 .bench-switch-pane.active {
   color: var(--accent-ink);
 }
+/* aria-hidden decorative dot ("word timestamps unverified") — the one spot
+   in the system with no text/glyph fallback, so it needs a SHAPE cue, not
+   just the neutral --warn fill: a ring (double box-shadow) reads as
+   "flagged" by outline, not only by tone. */
 .bench-switch-warn {
   display: inline-block;
   width: 5px;
   height: 5px;
   border-radius: 50%;
   background: var(--warn);
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 3px var(--border-strong);
 }
 .bench-swap-btn {
   flex: 0 0 auto;
