@@ -65,10 +65,27 @@ pub fn segment_beats(
     let mut beats: Vec<BeatCandidate> = Vec::new();
     let mut current: Option<BeatCandidate> = None;
 
-    for w in words {
+    for (i, w) in words.iter().enumerate() {
         let speaker = speaker_at(turns, w.start_ms);
-        let pause_before = pause_before_ms(pauses, w.start_ms);
-        let starts = pause_before >= 300; // meaningful pause threshold
+        // Determine the gap between the previous word (or beginning)
+        // and this word. A meaningful gap is >= 300ms.
+        let prev_end = if i == 0 {
+            w.start_ms
+        } else {
+            words[i - 1].end_ms
+        };
+        let prev_speaker = if i == 0 {
+            speaker.clone()
+        } else {
+            speaker_at(turns, words[i - 1].start_ms)
+        };
+        let speaker_changed = prev_speaker != speaker;
+        let gap_ms = (w.start_ms - prev_end).max(0);
+        let pause_in_gap = pauses
+            .iter()
+            .any(|p| p.start_ms >= prev_end && p.end_ms <= w.start_ms);
+        let starts = i == 0 || gap_ms >= 300 || pause_in_gap || speaker_changed;
+
         if current.is_none() || starts {
             if let Some(beat) = current.take() {
                 beats.push(beat);
@@ -77,7 +94,7 @@ pub fn segment_beats(
                 range: [w.start_ms, w.end_ms],
                 speaker_ids: speaker.into_iter().collect(),
                 normalized_tokens: vec![w.text.to_lowercase()],
-                pause_before_ms: pause_before,
+                pause_before_ms: gap_ms,
                 pause_after_ms: 0,
                 topic_vector_ref: None,
                 completeness_features: CompletenessFeatures {
@@ -95,7 +112,12 @@ pub fn segment_beats(
             }
         }
         if let Some(beat) = current.as_mut() {
-            beat.pause_after_ms = pause_after_ms(pauses, w.end_ms);
+            // Set pause_after based on the next word's gap.
+            if i + 1 < words.len() {
+                let next_start = words[i + 1].start_ms;
+                let next_gap = (next_start - w.end_ms).max(0);
+                beat.pause_after_ms = next_gap;
+            }
         }
     }
     if let Some(beat) = current.take() {
@@ -109,24 +131,6 @@ fn speaker_at(turns: &[SpeakerTurn], t_ms: i64) -> Option<String> {
         .iter()
         .find(|t| t.start_ms <= t_ms && t_ms < t.end_ms)
         .map(|t| t.speaker_id.clone())
-}
-
-fn pause_before_ms(pauses: &[PauseObs], t_ms: i64) -> i64 {
-    pauses
-        .iter()
-        .filter(|p| p.end_ms <= t_ms)
-        .map(|p| t_ms - p.end_ms)
-        .min()
-        .unwrap_or(0)
-}
-
-fn pause_after_ms(pauses: &[PauseObs], t_ms: i64) -> i64 {
-    pauses
-        .iter()
-        .filter(|p| p.start_ms >= t_ms)
-        .map(|p| p.start_ms - t_ms)
-        .min()
-        .unwrap_or(0)
 }
 
 #[cfg(test)]

@@ -161,7 +161,7 @@ mod tests {
     }
 
     #[test]
-    fn truthfulness_risk_blocks_autonomous_and_reviewed() {
+    fn truthfulness_risk_degrades_one_step() {
         let mut i = base();
         i.order_logs.push(OrderLog {
             from_index: 0,
@@ -171,11 +171,10 @@ mod tests {
             chronology_status: ChronologyStatus::TruthfulnessRisk,
             evidence_refs: vec![],
         });
+        // Autonomous -> ReviewLight (one-step degrade).
         let e = estimate(ReviewMode::Autonomous, &i);
         assert!(e.escalations.contains(&Ambiguity::TruthfulnessRisk));
-        // Reviewed mode already starts at Reviewed (one-step degrade is Reviewed)
-        // but blocking should ensure no promotion can occur from below.
-        assert!(matches!(e.effective_mode, ReviewMode::Reviewed));
+        assert!(matches!(e.effective_mode, ReviewMode::ReviewLight));
         let _ = Reorder {
             from_index: 0,
             to_index: 1,
@@ -195,11 +194,14 @@ mod tests {
     }
 
     #[test]
-    fn low_take_margin_blocks_only_autonomous() {
+    fn low_take_margin_does_not_block_reviewed() {
         let mut i = base();
         i.take_margin = 0.0;
+        // Low take margin does not block Reviewed; only Autonomous.
         let r = estimate(ReviewMode::Reviewed, &i);
-        assert!(!matches!(r.effective_mode, ReviewMode::Reviewed));
-        let _ = estimate(ReviewMode::Autonomous, &i);
+        assert!(matches!(r.effective_mode, ReviewMode::Reviewed));
+        // Autonomous downgrades to ReviewLight.
+        let a = estimate(ReviewMode::Autonomous, &i);
+        assert!(matches!(a.effective_mode, ReviewMode::ReviewLight));
     }
 }

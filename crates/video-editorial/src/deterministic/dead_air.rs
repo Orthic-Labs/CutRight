@@ -33,12 +33,26 @@ pub fn classify_silence(
 ) -> DeadAirRegion {
     let dur = end_ms - start_ms;
     let kind = match (speech_before_end_ms, speech_after_start_ms) {
-        (None, _) => DeadAirKind::PreSpeech,
-        (_, None) => DeadAirKind::PostSpeech,
-        (Some(b), Some(a)) if start_ms >= b && end_ms <= a => DeadAirKind::InterSpeech,
-        _ => DeadAirKind::Breathing,
-    };
-    let keep = dur < min_keep_ms || matches!(kind, DeadAirKind::NoUsableContent);
+            (None, _) => DeadAirKind::PreSpeech,
+            (_, None) => DeadAirKind::PostSpeech,
+            (Some(b), Some(a)) => {
+                // Silence is "between" speech if both speech markers
+                // bound it (b <= start and a >= end). In that case a
+                // short gap is breathing; a longer gap is
+                // inter-speech.
+                // If either marker overlaps the silence, the silence
+                // is fully inside speech and is inter-speech.
+                if b > end_ms || a < start_ms {
+                    DeadAirKind::InterSpeech
+                } else if dur < min_keep_ms {
+                    DeadAirKind::Breathing
+                } else {
+                    DeadAirKind::InterSpeech
+                }
+            }
+            _ => DeadAirKind::Breathing,
+        };
+    let keep = dur < min_keep_ms || matches!(kind, DeadAirKind::Breathing);
     DeadAirRegion {
         start_ms,
         end_ms,
@@ -48,24 +62,40 @@ pub fn classify_silence(
     }
 }
 
-/// Compute a word-safe range by clamping to the nearest word boundaries.
+/// Compute a word-safe range by snapping each end to the nearest word
+/// boundary (any word start or word end). When two boundaries are
+/// equidistant, `safe_start` snaps forward and `safe_end` snaps
+/// backward. This guarantees we never cut inside a word while
+/// minimising the displacement from the requested range.
 pub fn word_safe_range(start_ms: i64, end_ms: i64, word_starts: &[i64], word_ends: &[i64]) -> (i64, i64) {
     if word_starts.is_empty() || word_ends.is_empty() {
         return (start_ms, end_ms);
     }
-    let safe_start = word_ends
+    let boundaries: Vec<i64> = word_starts
         .iter()
-        .filter(|&&e| e <= start_ms)
-        .max()
+        .chain(word_ends.iter())
         .copied()
-        .unwrap_or(start_ms);
-    let safe_end = word_starts
-        .iter()
-        .filter(|&&s| s >= end_ms)
-        .min()
-        .copied()
-        .unwrap_or(end_ms);
-    (safe_start.max(start_ms), safe_end.min(end_ms))
+        .collect();
+
+    let safe_start = nearest_boundary(&boundaries, start_ms, /*prefer_forward*/ true);
+    let safe_end = nearest_boundary(&boundaries, end_ms, /*prefer_forward*/ false);
+    (safe_start, safe_end)
+}
+
+fn nearest_boundary(boundaries: &[i64], target: i64, prefer_forward: bool) -> i64 {
+    let mut best = boundaries[0];
+    let mut best_dist = (best - target).abs();
+    let mut best_forward = best >= target;
+    for &b in &boundaries[1..] {
+        let d = (b - target).abs();
+        let forward = b >= target;
+        if d < best_dist || (d == best_dist && prefer_forward && !best_forward) {
+            best = b;
+            best_dist = d;
+            best_forward = forward;
+        }
+    }
+    best
 }
 
 #[cfg(test)]

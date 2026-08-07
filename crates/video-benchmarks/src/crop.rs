@@ -115,7 +115,9 @@ mod tests {
         let samples: Vec<CropSample> = (0..10)
             .map(|i| sample(i * 100, i as f32 * 0.1, 0.0, false))
             .collect();
-        assert_eq!(crop_jerk(&samples), 0.0);
+        // Linear motion has zero jerk (third derivative is zero);
+        // floating-point error is bounded by an epsilon.
+        assert!(crop_jerk(&samples).abs() < 1e-5);
         assert!(crop_acceleration(&samples) < 1e-5);
     }
 

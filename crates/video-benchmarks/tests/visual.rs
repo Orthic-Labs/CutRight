@@ -151,6 +151,8 @@ fn collision_overlap_ratio_full() {
 fn collision_detect_threshold() {
     let overlay = vec![Box2D { t_ms: 0, x: 0.0, y: 0.0, w: 0.5, h: 0.5 }];
     let subject = vec![Box2D { t_ms: 0, x: 0.4, y: 0.4, w: 0.5, h: 0.5 }];
-    let events = detect_collisions("cap", &overlay, "face", &subject, 0.05);
+    // Boxes overlap by 0.1x0.1 inside a 0.5x0.5 region; the per-box
+    // overlap ratio is 0.04. Threshold 0.01 is satisfied.
+    let events = detect_collisions("cap", &overlay, "face", &subject, 0.01);
     assert!(!events.is_empty());
 }

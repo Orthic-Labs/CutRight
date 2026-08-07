@@ -107,14 +107,24 @@ pub fn rank(candidates: &[ShortCandidate]) -> Vec<&ShortCandidate> {
 }
 
 /// Diversity filter: drop candidates whose beat set is a strict subset
-/// of an earlier candidate. Stable across ties.
+/// of an earlier candidate. Earlier candidates are ranked by coverage
+/// (more beats first), then by score. Stable across ties.
 pub fn diversity_filter(candidates: Vec<ShortCandidate>) -> Vec<ShortCandidate> {
-    let ranked = rank(&candidates);
+    let mut recorded: Vec<ShortCandidate> =
+        candidates.into_iter().filter(|c| c.exclusion_reason.is_none()).collect();
+    recorded.sort_by(|a, b| {
+        b.beat_ids
+            .len()
+            .cmp(&a.beat_ids.len())
+            .then_with(|| {
+                b.score
+                    .partial_cmp(&a.score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| a.candidate_id.cmp(&b.candidate_id))
+    });
     let mut kept: Vec<ShortCandidate> = Vec::new();
-    for c in ranked.into_iter().cloned() {
-        if c.exclusion_reason.is_some() {
-            continue;
-        }
+    for c in recorded {
         let subset = kept.iter().any(|k| {
             k.beat_ids.len() > c.beat_ids.len()
                 && c.beat_ids.iter().all(|b| k.beat_ids.contains(b))

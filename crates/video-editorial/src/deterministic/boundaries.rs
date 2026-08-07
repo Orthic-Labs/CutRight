@@ -99,18 +99,19 @@ fn clamp_pad(target_ms: i64, words: &[WordEdge], leading: bool) -> i64 {
     if words.is_empty() {
         return target_ms;
     }
+    // Treat every word start and word end as a cuttable boundary.
+    let mut boundaries: Vec<i64> = words.iter().flat_map(|w| [w.start_ms, w.end_ms]).collect();
+    boundaries.sort_unstable();
     if leading {
-        words
-            .iter()
-            .map(|w| w.start_ms)
-            .find(|&s| s >= target_ms)
+        boundaries
+            .into_iter()
+            .find(|&b| b >= target_ms)
             .unwrap_or(target_ms)
     } else {
-        words
-            .iter()
-            .map(|w| w.end_ms)
+        boundaries
+            .into_iter()
             .rev()
-            .find(|&e| e <= target_ms)
+            .find(|&b| b <= target_ms)
             .unwrap_or(target_ms)
     }
 }

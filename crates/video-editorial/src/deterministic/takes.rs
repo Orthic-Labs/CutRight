@@ -34,7 +34,7 @@ pub struct ClusterPolicy {
 impl Default for ClusterPolicy {
     fn default() -> Self {
         Self {
-            lexical_floor: 0.6,
+            lexical_floor: 0.5,
             semantic_floor: 0.7,
             contradiction_ceiling: 0.3,
             temporal_window_ms: 60_000,

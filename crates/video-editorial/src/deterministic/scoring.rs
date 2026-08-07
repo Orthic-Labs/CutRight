@@ -74,14 +74,14 @@ pub fn score_take(
     }
 }
 
-/// Pick the highest-confidence `Selected` take. Margin = top - second.
+/// Pick the highest-confidence take. Margin = top - second across all
+/// scored takes (disqualified included, so a disqualified runner-up
+/// still narrows the margin between the winner and runner-up). The
+/// caller is responsible for selecting only `Selected` takes.
 pub fn winner_margin(scores: &[TakeScore]) -> f32 {
     let mut top = f32::NEG_INFINITY;
     let mut second = f32::NEG_INFINITY;
     for s in scores {
-        if matches!(s.status, TakeStatus::Disqualified) {
-            continue;
-        }
         if s.total >= top {
             second = top;
             top = s.total;
