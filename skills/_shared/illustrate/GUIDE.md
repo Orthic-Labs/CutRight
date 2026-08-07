@@ -7,7 +7,7 @@ Create semantically coherent biological-mechanical illustrations in the approved
 1. Read `references/style-contract.md` completely.
 2. Read `references/tool-adapters.md` for the selected generator.
 3. Use `assets/style-anchor.png` as the primary style reference.
-4. Read the target brand entry in `/Volumes/D/claude/.claude/rules/brands.md` before choosing colors.
+4. Load the target brand entry via `cutright://skill/brand {"brand_code":"<code>"}` (typed result: BrandCard) before choosing colors.
 
 ## Build the concept
 

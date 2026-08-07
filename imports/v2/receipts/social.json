@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "source_id": "workspace-capabilities",
+  "revision_type": "git_commit",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "destination": "skills/social",
+  "file_count": 13,
+  "total_bytes": 67095,
+  "sha256_of_sorted_path_list": "0ead08a5ee45cad73df7940987eda07ffa8a473bab9542b1ebfa1091fdfb1455",
+  "imported_by_task": "CR-V2-B1-011",
+  "imported_at": "2026-08-07",
+  "selection": {
+    "selection_id": "social",
+    "path": "imports/v2/selections/social.json"
+  },
+  "omitted_reachable_nodes": [],
+  "notes": "Graph snapshot is pre-adaptation; adaptation is logged in skills/social/CUTRIGHT-ADAPTATION.md."
+}

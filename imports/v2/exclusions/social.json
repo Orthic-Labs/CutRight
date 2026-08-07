@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "selection_id": "social",
+  "excluded_paths": [],
+  "excluded_with_reason": [
+    {
+      "path": "(behavioral)",
+      "reason": "posting, scheduling, and account connectors excluded per CR-V2-B1-011 procedure: no skill may post, schedule, spend, or mutate an account; platform rules carried only as versioned data"
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "root": "/Volumes/D/claude/cutright/skills/writing",
+  "file_count": 16,
+  "total_bytes": 133466,
+  "sha256_of_sorted_path_list": "51da867aac58bf9f6deb64f5d9bc0355416d68fcc6c17192e20af4cba1ee49b7",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "791698496bc02a105c1f77229d1ca21dd670ff82d976f5f7caaf6e5774caf631",
+      "bytes": 1415
+    },
+    {
+      "path": "THIRD_PARTY.yml",
+      "sha256": "0568f147864306dce3f1cf1a1df3843bcb0003a7e588d6b452a1f524aaaba346",
+      "bytes": 926
+    },
+    {
+      "path": "evals/evals.json",
+      "sha256": "137d29d10b3e7fba4fa4b98e1d2343ca3222445e5d2f3f30f4ce4b06b75f6bff",
+      "bytes": 4654
+    },
+    {
+      "path": "references/content-repurposer/reference.md",
+      "sha256": "3750955542d8d2df31b66485c60db7ee80815e51bcd5ad352e3d38c9cf6b5817",
+      "bytes": 5564
+    },
+    {
+      "path": "references/manual.md",
+      "sha256": "2c81dbca2278c7a50ac17a3f9a60f705de68d9a01fba066daae54a3874a9f1b8",
+      "bytes": 3924
+    },
+    {
+      "path": "references/repurpose-content/reference.md",
+      "sha256": "d95aa4cc9ca709e4cc96554faf7a90c621635d0d15d33c3cdd4e02b7807b423b",
+      "bytes": 2999
+    },
+    {
+      "path": "references/research-article.md",
+      "sha256": "3537cacac8f061944204927b498c660c8ed8108ff59055cc81da7370fdbf5493",
+      "bytes": 15149
+    },
+    {
+      "path": "references/script.md",
+      "sha256": "aac53784f5c381d6ae653d059301be75a02b350f47c196f74989d1f974f9b4de",
+      "bytes": 17813
+    },
+    {
+      "path": "specialists/copywriting/GUIDE.md",
+      "sha256": "b15082cdb97648049fc64ab394682092027e53c32605fdb45adbc05565b46a3c",
+      "bytes": 11009
+    },
+    {
+      "path": "specialists/copywriting/evals/evals.json",
+      "sha256": "254248b75bb218fe20f789397b477feac42776e64790b61bb9b66cb5561b078e",
+      "bytes": 8717
+    },
+    {
+      "path": "specialists/copywriting/references/ad-assets/generative-tools.md",
+      "sha256": "0b889838bc46f5f9c09c9fc336a7b9a0f084a8fbb5b12d9a3a340454c3429504",
+      "bytes": 24097
+    },
+    {
+      "path": "specialists/copywriting/references/ad-assets/platform-specs.md",
+      "sha256": "de69753161071a8d3e4d244280562810a6c4d6ae2696c5a21940f983abd0aa8e",
+      "bytes": 6525
+    },
+    {
+      "path": "specialists/copywriting/references/ad.md",
+      "sha256": "28f68dff8cfb4466436110ae3e8cef35cd5dac635e38ce4d10f47969383f9179",
+      "bytes": 13286
+    },
+    {
+      "path": "specialists/copywriting/references/craft-research.md",
+      "sha256": "f03e865103c2142b252fdbf3d1f0e3f8ab61b390dfc936157a07ebc3fe59fb1f",
+      "bytes": 4496
+    },
+    {
+      "path": "specialists/copywriting/references/hook.md",
+      "sha256": "61e817a06caf3bb469bd8111f5e8665e739c41de3066d01b1a4fa4d55c27b972",
+      "bytes": 5324
+    },
+    {
+      "path": "specialists/editorial/GUIDE.md",
+      "sha256": "bcf6138beedb015cb1f652e6983c92e5e09e9f1fb14d1a656cdcd3729b1fff81",
+      "bytes": 7568
+    }
+  ],
+  "selection_id": "writing",
+  "source_id": "workspace-capabilities",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302"
+}

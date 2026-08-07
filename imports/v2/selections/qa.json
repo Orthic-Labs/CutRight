@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "selection_id": "qa",
+  "source_id": "workspace-capabilities",
+  "revision_type": "commit",
+  "source_repo": "/Volumes/D/claude",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "include_paths": [
+    "tools/skills/qa"
+  ],
+  "strip_prefix": "tools/skills",
+  "dest": "skills/",
+  "graph": "imports/v2/graphs/qa.json",
+  "receipt": "imports/v2/receipts/qa.json",
+  "imported_by_task": "CR-V2-B1-011"
+}

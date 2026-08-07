@@ -55,7 +55,7 @@ Do not ask viewers to decode private symbolism such as one shape meaning a claim
 - Keep accent coverage below roughly 10% of the frame.
 - Apply the accent to selected material, active force, current route, or transformed result.
 - For Orthic Labs, inherit the product accent; use ember `#DF6428` only when no product accent is defined.
-- For Right Suite, read the app's locked light/dark tokens in `/Volumes/D/claude/.claude/rules/brands.md` & substitute its accent. Do not homogenize app palettes.
+- For Right Suite, read the app's locked light/dark tokens from the brand card (`cutright://skill/brand {"brand_code":"HR"}`) & substitute its accent. Do not homogenize app palettes.
 
 ## Human presence
 

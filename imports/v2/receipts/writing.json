@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "source_id": "workspace-capabilities",
+  "revision_type": "git_commit",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "destination": "skills/writing",
+  "file_count": 16,
+  "total_bytes": 133466,
+  "sha256_of_sorted_path_list": "51da867aac58bf9f6deb64f5d9bc0355416d68fcc6c17192e20af4cba1ee49b7",
+  "imported_by_task": "CR-V2-B1-011",
+  "imported_at": "2026-08-07",
+  "selection": {
+    "selection_id": "writing",
+    "path": "imports/v2/selections/writing.json"
+  },
+  "omitted_reachable_nodes": [
+    {
+      "path": "specialists/email",
+      "reason": "excluded: email lane not in selected writing closure (imports/v2/exclusions/writing.json)"
+    },
+    {
+      "path": "specialists/blogs",
+      "reason": "excluded: blogs lane not in selected writing closure (imports/v2/exclusions/writing.json)"
+    },
+    {
+      "path": "specialists/profile-copy",
+      "reason": "excluded: profile lane not in selected writing closure (imports/v2/exclusions/writing.json)"
+    },
+    {
+      "path": "specialists/changelog",
+      "reason": "excluded: changelog lane not in selected writing closure (imports/v2/exclusions/writing.json)"
+    }
+  ],
+  "notes": "Graph snapshot is pre-adaptation; adaptation is logged in skills/writing/CUTRIGHT-ADAPTATION.md."
+}

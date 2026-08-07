@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "selection_id": "qa",
+  "excluded_paths": [],
+  "excluded_with_reason": [
+    {
+      "path": "(behavioral)",
+      "reason": "browser-download assumptions removed per CR-V2-B1-011 procedure: QA runs only bundled/local tooling provided by the signed runtime pack"
+    }
+  ]
+}

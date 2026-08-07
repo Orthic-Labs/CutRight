@@ -1,0 +1,16 @@
+schema_version: 1
+source_id: workspace-capabilities
+name: writing
+canonical_url: https://github.com/bogusyogi/claude
+revision: 6ee21f03a787e7b57dc412760a8996ea7a235302
+license: user_owned_with_third_party_notices
+notice: |
+  Selected closure vendored from the workspace-capabilities corpus (upstream path
+  tools/skills/writing) at pinned revision 6ee21f03a787e7b57dc412760a8996ea7a235302
+  by task CR-V2-B1-011. Selection per imports/v2/selections/writing.json; explicit
+  exclusions with reasons in imports/v2/exclusions/writing.json (email, blogs,
+  profile-copy, changelog lanes). The upstream repository ships no LICENSE file at
+  this path; the corpus disposition is adapt_with_notice under license_status
+  user_owned_with_third_party_notices. Variance V-2 applies: corpus allowed_paths
+  map to tools/skills/* at the pin. Handoffs were rewritten to local typed
+  artefacts (see skills/writing/CUTRIGHT-ADAPTATION.md).

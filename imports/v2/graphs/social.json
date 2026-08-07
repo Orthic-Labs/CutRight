@@ -1,0 +1,76 @@
+{
+  "root": "/Volumes/D/claude/cutright/skills/social",
+  "file_count": 13,
+  "total_bytes": 67095,
+  "sha256_of_sorted_path_list": "0ead08a5ee45cad73df7940987eda07ffa8a473bab9542b1ebfa1091fdfb1455",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "30e209f262223e7fd19a11a68e02683041af725c2223f595dd9c331c399b70d3",
+      "bytes": 1460
+    },
+    {
+      "path": "THIRD_PARTY.yml",
+      "sha256": "c7754f3d15914f8d512de4a0b04d74f66ee213dc67dfc340ce6389d41a012988",
+      "bytes": 904
+    },
+    {
+      "path": "evals/evals.json",
+      "sha256": "a8842b72ed1ebf5a611c43f388f47f908caeb56abc4373ea4e0e8326787e1083",
+      "bytes": 7077
+    },
+    {
+      "path": "references/content/evals/evals.json",
+      "sha256": "e1728b38632ccc549c3a9a6f1b8ec7accca77a05e80937d3d2b99c564bc51137",
+      "bytes": 3899
+    },
+    {
+      "path": "references/content/reference.md",
+      "sha256": "fb886cabb9968f540f957a1d7e36789c11e4ada282b5f2732a7c74c2432790a9",
+      "bytes": 10805
+    },
+    {
+      "path": "references/content/references/platforms.md",
+      "sha256": "3c4e1b15717a3bcd4ed0cf29dc167dac28aa88bbf01723fde53815122396090f",
+      "bytes": 4420
+    },
+    {
+      "path": "references/content/references/post-templates.md",
+      "sha256": "db6525e51a690b61faf97a0acf51a2a57526de90da01c6bb37679d056c18c7f4",
+      "bytes": 3694
+    },
+    {
+      "path": "references/content/references/reverse-engineering.md",
+      "sha256": "c27bef59d463b3b11331c1770f4a23e9e6bbce7d7c8db1e7f7f4f14ba206243f",
+      "bytes": 5551
+    },
+    {
+      "path": "references/instagram/reference.md",
+      "sha256": "80edd73ae94722c4c029779c6330a30f1eb1cd3d84084f2bb58ed7c597234411",
+      "bytes": 5057
+    },
+    {
+      "path": "references/manual.md",
+      "sha256": "20de1a2da9ab3f9b7196572417bb2af8e865d92bc960c2162f50165236012805",
+      "bytes": 5676
+    },
+    {
+      "path": "references/pinterest/reference.md",
+      "sha256": "dfeec810e6e6802a5675a3d89a96ab77f684cd049c0873eb2f74b5a9e95f30f1",
+      "bytes": 2868
+    },
+    {
+      "path": "references/twitter/reference.md",
+      "sha256": "ea7b235808c9814c0bd62c76123e981601fb118f972aeaa699be40b201ad8d72",
+      "bytes": 12920
+    },
+    {
+      "path": "references/youtube/reference.md",
+      "sha256": "19354dc720b385f14838a392f8495a28a8a14fce1714e454429a2b47e65005e8",
+      "bytes": 2764
+    }
+  ],
+  "selection_id": "social",
+  "source_id": "workspace-capabilities",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302"
+}

@@ -1,0 +1,51 @@
+{
+  "root": "/Volumes/D/claude/cutright/skills/qa",
+  "file_count": 8,
+  "total_bytes": 47067,
+  "sha256_of_sorted_path_list": "6ee4caf387c71dd608dc618199a7b0086c043a1308e62777a104bfb310945bd6",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "6da8a07afdea2ec0bec09660093f7ffe6738af20e96849a9b2330a9abffe2d5e",
+      "bytes": 1594
+    },
+    {
+      "path": "THIRD_PARTY.yml",
+      "sha256": "663a1a586ddc512ce2d31c83e685685b97669368ec92269452b49b86ccc0b74a",
+      "bytes": 847
+    },
+    {
+      "path": "evals/evals.json",
+      "sha256": "4d22c7ceb3cc749818f47409e85e809410a809bd9f76067438ff64115aae09bc",
+      "bytes": 5079
+    },
+    {
+      "path": "references/browser-automation.md",
+      "sha256": "e812249583f9e41c554c1f1e41b50602572667acf2277bf5e957ff008951577b",
+      "bytes": 2306
+    },
+    {
+      "path": "references/manual.md",
+      "sha256": "a01f93a92ec40d1afbf977914e3a53a26c474d236c49e45c2f34b834309e0660",
+      "bytes": 6751
+    },
+    {
+      "path": "scripts/qa-functional.mjs",
+      "sha256": "9d82b3db8a72d267c8558dbb593be642b33ef7787dcd71b9d672efceaaa6b62a",
+      "bytes": 533
+    },
+    {
+      "path": "scripts/qa-shot.mjs",
+      "sha256": "757b8c8a20474ee217a3fc0730de1ed89d450983eddfd683a7ace726a4bd2f92",
+      "bytes": 424
+    },
+    {
+      "path": "scripts/qa.mjs",
+      "sha256": "dc857291d50048d76adf10bce53a2cf4259ea2a9d4ae72a806dbfce709c59730",
+      "bytes": 29533
+    }
+  ],
+  "selection_id": "qa",
+  "source_id": "workspace-capabilities",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302"
+}

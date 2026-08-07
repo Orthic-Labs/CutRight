@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "source_id": "workspace-capabilities",
+  "revision_type": "git_commit",
+  "revision": "6ee21f03a787e7b57dc412760a8996ea7a235302",
+  "destination": "skills/qa",
+  "file_count": 8,
+  "total_bytes": 47067,
+  "sha256_of_sorted_path_list": "6ee4caf387c71dd608dc618199a7b0086c043a1308e62777a104bfb310945bd6",
+  "imported_by_task": "CR-V2-B1-011",
+  "imported_at": "2026-08-07",
+  "selection": {
+    "selection_id": "qa",
+    "path": "imports/v2/selections/qa.json"
+  },
+  "omitted_reachable_nodes": [],
+  "notes": "Graph snapshot is pre-adaptation; adaptation is logged in skills/qa/CUTRIGHT-ADAPTATION.md."
+}

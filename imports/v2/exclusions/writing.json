@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "selection_id": "writing",
+  "excluded_paths": [
+    "specialists/email/*",
+    "specialists/blogs/*",
+    "specialists/profile-copy/*",
+    "specialists/changelog/*"
+  ],
+  "excluded_with_reason": [
+    {
+      "path": "specialists/email",
+      "reason": "email lane excluded per CR-V2-B1-011 procedure (not in selected writing closure)"
+    },
+    {
+      "path": "specialists/blogs",
+      "reason": "blogs lane excluded per CR-V2-B1-011 procedure (not in selected writing closure)"
+    },
+    {
+      "path": "specialists/profile-copy",
+      "reason": "profile lane excluded per CR-V2-B1-011 procedure (not in selected writing closure)"
+    },
+    {
+      "path": "specialists/changelog",
+      "reason": "changelog lane excluded per CR-V2-B1-011 procedure (not in selected writing closure)"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Parametric Design Contract (shared reference)
 
-Canonical distillation of `/Volumes/D/claude/newproj/para design/` (5 research docs, 2026-07)
+Canonical distillation of the upstream parametric-design research corpus (5 research docs, 2026-07; venture workspace source, not vendored — this document carries the distilled rules)
 for every skill that produces a designed or written artifact. Loaded on demand by skill
 routers; do not inline this whole file into prompts — apply the contract.
 
