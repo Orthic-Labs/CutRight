@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.dev/schemas/creative/lane-ownership.schema.v2.json",
+  "title": "Creative OS Lane Ownership",
+  "description": "Frozen lane ownership and ACL matrix for the CutRight creative OS. Each lane owns a fixed set of crates, schemas, and decision rights.",
+  "type": "object",
+  "required": ["version", "lanes", "exclusive_files", "shared_contracts"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string", "const": "v2" },
+    "lanes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/lane" }
+    },
+    "exclusive_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "owner"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "owner": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "shared_contracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "owners"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "owners": {
+            "type": "array",
+            "minItems": 2,
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "lane": {
+      "type": "object",
+      "required": ["id", "name", "decision_rights", "crates"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": [
+            "brand",
+            "brand-identity",
+            "designer",
+            "writing",
+            "social",
+            "planning",
+            "asset-validation",
+            "native-renderer",
+            "native-typography",
+            "native-motion",
+            "native-audio",
+            "render-graph",
+            "creative-critic",
+            "job-plane"
+          ]
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "decision_rights": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "brand-system",
+              "style-direction",
+              "bake-off",
+              "creative-plan",
+              "creative-types",
+              "typography",
+              "motion-grammar",
+              "audio-finishing",
+              "render-graph",
+              "finish-plan",
+              "visual-qa",
+              "critic-verdict",
+              "asset-rights",
+              "job-assignment"
+            ]
+          }
+        },
+        "crates": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
