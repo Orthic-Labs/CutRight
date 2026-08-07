@@ -194,10 +194,10 @@ mod tests {
     #[test]
     fn contradictory_negation_not_duplicate() {
         let policy = ClusterPolicy::default();
-        let a = take("t1", &["yes", "go"], false, false);
+        let mut a = take("t1", &["yes", "go"], false, false);
         let mut b = take("t2", &["yes", "go"], true, false);
+        a.embedding_ref = Some("e".into());
         b.embedding_ref = Some("e".into());
-        a.embedding_ref.clone_from(&b.embedding_ref);
         assert!(!is_duplicate(&a, &b, &policy));
     }
 
