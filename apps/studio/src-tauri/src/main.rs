@@ -32,7 +32,8 @@ fn main() {
             commands::write_cloud_settings,
             commands::delete_cloud_data,
             commands::credential_env_var_present,
-            commands::read_engine_status
+            commands::read_engine_status,
+            commands::apply::apply_action_batch
         ])
         .run(tauri::generate_context!())
         .expect("CutRight Studio failed to start");

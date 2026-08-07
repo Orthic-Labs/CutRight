@@ -15,11 +15,15 @@ tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-window-state = "2"
 uuid = { version = "1", features = ["v4"] }
+video-actions = { path = "../../../crates/video-actions" }
+video-capabilities = { path = "../../../crates/video-capabilities" }
 video-media = { path = "../../../crates/video-media" }
 video-project = { path = "../../../crates/video-project" }
 video-security = { path = "../../../crates/video-security" }
+video-sessions = { path = "../../../crates/video-sessions" }
 
 [dev-dependencies]
 tauri = { version = "2", features = ["protocol-asset", "test"] }
+tempfile = "3.23"
 
 [workspace]

@@ -2,6 +2,8 @@
 //! the decision-ledger and variant-selection commands. Moved out of
 //! `main.rs` per REV2 §14.5 — pure move, no behavior change.
 
+pub(crate) mod apply;
+
 use crate::artifact_state;
 use crate::decision_contract::{self, DecisionIntent, DecisionRecord, DecisionReplay};
 use crate::decision_store::read_sources;
