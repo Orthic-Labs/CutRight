@@ -69,7 +69,7 @@ impl CreativeSkillResolver {
                 SkillFamily::NativeAudio => "native-audio",
                 SkillFamily::CreativeCritic => "creative-critic",
             };
-            skill_to_lane.insert(format!("{lane}.any"), lane.to_string());
+            skill_to_lane.insert(format!("{lane}."), lane.to_string());
         }
         Self {
             runtime,
