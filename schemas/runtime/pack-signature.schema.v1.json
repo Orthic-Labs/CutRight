@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/runtime/pack-signature.schema.v1.json",
+  "title": "CutRight v2 pack signature (v1)",
+  "description": "Detached signature over a pack manifest or release lock. The signature covers every file entry, the compatibility declaration and the manifest_hash. Algorithms are limited to BLAKE3+Ed25519 and SHA-256+RSA-PSS-3072 to avoid surprise runtime dependencies.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "algorithm",
+    "key_id",
+    "signed_at_ns",
+    "digest",
+    "value"
+  ],
+  "properties": {
+    "schema": {"const": "cutright.pack_signature/v1"},
+    "algorithm": {
+      "enum": ["blake3+ed25519", "sha256+rsa-pss-3072"],
+      "description": "Signature algorithm. Algorithms outside this list are invalid for release packs."
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "description": "Stable identifier of the public key that verifies this signature."
+    },
+    "signed_at_ns": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Nanosecond unix timestamp when the signature was produced."
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "BLAKE3 hash of the canonicalised signed body (manifest body + sorted file entries + compatibility declarations)."
+    },
+    "value": {
+      "type": "string",
+      "pattern": "^[0-9a-f]+$",
+      "description": "Hex-encoded signature value (algorithm-specific)."
+    },
+    "covers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "type": "boolean",
+          "description": "True iff the signature covers every entry in the manifest's files array."
+        },
+        "compatibility": {
+          "type": "boolean",
+          "description": "True iff the signature covers the compatibility declaration."
+        },
+        "manifest_hash": {
+          "type": "boolean",
+          "description": "True iff the signature covers the manifest_hash field."
+        }
+      }
+    },
+    "signer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "publisher_id": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"},
+        "build_host": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"},
+        "build_pipeline": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"}
+      }
+    }
+  }
+}

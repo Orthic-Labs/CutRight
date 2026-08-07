@@ -1,0 +1,238 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/runtime/pack-manifest.schema.v1.json",
+  "title": "CutRight v2 runtime pack manifest (v1)",
+  "description": "Immutable descriptor for a CutRight runtime pack: identity, version, target, file entries, source and licence links, requirements, capabilities, measurements, compatibility, signature and rollback metadata. Locked files declare SHA-256 and BLAKE3 hashes for every shipped file. The manifest_hash binds the entire sorted manifest body.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "pack_id",
+    "kind",
+    "version",
+    "target",
+    "files",
+    "requirements",
+    "capabilities",
+    "compatibility",
+    "manifest_hash"
+  ],
+  "properties": {
+    "schema": {"const": "cutright.pack_manifest/v1"},
+    "pack_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]+$",
+      "description": "Stable pack identifier (e.g. 'media.ffmpeg', 'speech.parakeet')."
+    },
+    "kind": {
+      "enum": [
+        "media_runtime",
+        "speech_asr",
+        "speech_vad",
+        "speech_quality",
+        "inference_llm",
+        "inference_vlm",
+        "voice_tts",
+        "visual_qa",
+        "evidence_graph",
+        "skill",
+        "benchmark",
+        "creative"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[A-Za-z0-9.-]+)?$"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["triple", "arch"],
+      "properties": {
+        "triple": {
+          "type": "string",
+          "pattern": "^[a-z0-9_.-]+-[a-z0-9_.-]+-[a-z0-9_.-]+$",
+          "description": "Target triple (e.g. 'x86_64-unknown-linux-gnu')."
+        },
+        "arch": {"enum": ["x86_64", "aarch64", "arm64", "universal"]},
+        "features": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"}
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/definitions/file_entry"}
+    },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_memory_mb": {"type": "integer", "minimum": 0},
+        "min_disk_mb": {"type": "integer", "minimum": 0},
+        "min_cpu_cores": {"type": "integer", "minimum": 1},
+        "needs_gpu": {"type": "boolean"},
+        "needs_avx2": {"type": "boolean"},
+        "needs_avx512": {"type": "boolean"},
+        "needs_neon": {"type": "boolean"},
+        "peer_packs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["pack_id", "version_range"],
+            "properties": {
+              "pack_id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]+$"},
+              "version_range": {
+                "type": "string",
+                "pattern": "^(\\^|~)?[0-9]+\\.[0-9]+\\.[0-9]+([+\\*]|(-[0-9]+\\.[0-9]+\\.[0-9]+))?$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "version"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]+$"},
+          "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+          "parameters_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "BLAKE3 hash of the canonicalised parameters object."
+          }
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["application", "benchmark_profile"],
+      "properties": {
+        "application": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+            "max": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+            "excludes": {
+              "type": "array",
+              "items": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+            }
+          }
+        },
+        "project": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min_revision": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+            "forbidden_targets": {
+              "type": "array",
+              "items": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]+$"}
+            }
+          }
+        },
+        "benchmark_profile": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["profile", "floor"],
+            "properties": {
+              "profile": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]+$"},
+              "floor": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+            }
+          }
+        },
+        "peer_packs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["pack_id", "compatible"],
+            "properties": {
+              "pack_id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]+$"},
+              "compatible": {"type": "boolean"},
+              "version_range": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {"type": "string", "format": "uri"},
+        "revision": {"type": "string", "minLength": 7},
+        "licence": {"type": "string", "pattern": "^[A-Za-z0-9.+-]+$"}
+      }
+    },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "cold_start_ms": {"type": "integer", "minimum": 0},
+        "warm_start_ms": {"type": "integer", "minimum": 0},
+        "tokens_per_sec": {"type": "number", "minimum": 0.0},
+        "rtf": {"type": "number", "minimum": 0.0},
+        "measured_at_ns": {"type": "integer", "minimum": 0},
+        "measured_on": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"}
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "previous_version": {"type": "string"},
+        "previous_manifest_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "manifest_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "BLAKE3 hash of the canonicalised (sorted-keys) manifest body, minus this field."
+    },
+    "signature": {"$ref": "pack-signature.schema.v1.json"}
+  },
+  "definitions": {
+    "file_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "blake3", "size_bytes"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_./-]+$",
+          "description": "Path inside the pack archive (forward slashes, no leading slash)."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "blake3": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "mode": {"type": "string", "pattern": "^[0-7]{3,4}$"},
+        "kind": {
+          "enum": ["binary", "model", "config", "licence", "manifest", "signature"]
+        },
+        "executable": {"type": "boolean"}
+      }
+    }
+  }
+}

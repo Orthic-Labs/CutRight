@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/runtime/pack-lock.schema.v1.json",
+  "title": "CutRight v2 release pack lock (v1)",
+  "description": "Signed, immutable lock entry that ships a release pack. Backed by a manifest plus cryptographic measurements for every file. Zero/empty hashes and measurements are invalid in release locks. Lock files must be reproducible from the manifest, signed manifest, and offline measurement evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "pack",
+    "version",
+    "target",
+    "manifest_hash",
+    "files",
+    "measurements",
+    "compatibility",
+    "signature",
+    "released_at_ns"
+  ],
+  "properties": {
+    "schema": {"const": "cutright.pack_lock/v1"},
+    "pack": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]+$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[A-Za-z0-9.-]+)?$"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["triple", "arch"],
+      "properties": {
+        "triple": {"type": "string", "pattern": "^[a-z0-9_.-]+-[a-z0-9_.-]+-[a-z0-9_.-]+$"},
+        "arch": {"enum": ["x86_64", "aarch64", "arm64", "universal"]}
+      }
+    },
+    "manifest_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "BLAKE3 hash of the locked manifest body."
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "blake3", "size_bytes"],
+        "properties": {
+          "path": {"type": "string", "pattern": "^[A-Za-z0-9_./-]+$"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "blake3": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "size_bytes": {"type": "integer", "minimum": 1},
+          "mode": {"type": "string", "pattern": "^[0-7]{3,4}$"},
+          "kind": {
+            "enum": ["binary", "model", "config", "licence", "manifest", "signature"]
+          }
+        }
+      }
+    },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["size_bytes", "measured_at_ns"],
+      "properties": {
+        "size_bytes": {"type": "integer", "minimum": 1},
+        "cold_start_ms": {"type": "integer", "minimum": 0},
+        "warm_start_ms": {"type": "integer", "minimum": 0},
+        "tokens_per_sec": {"type": "number", "minimum": 0.0},
+        "rtf": {"type": "number", "minimum": 0.0},
+        "measured_at_ns": {"type": "integer", "minimum": 1},
+        "measured_on": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"}
+      },
+      "anyOf": [
+        {"required": ["cold_start_ms"]},
+        {"required": ["warm_start_ms"]},
+        {"required": ["tokens_per_sec"]},
+        {"required": ["rtf"]}
+      ]
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["application", "benchmark_profile"],
+      "properties": {
+        "application": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+            "max": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+            "excludes": {
+              "type": "array",
+              "items": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+            }
+          }
+        },
+        "benchmark_profile": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["profile", "floor"],
+            "properties": {
+              "profile": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]+$"},
+              "floor": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+            }
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "licence"],
+      "properties": {
+        "url": {"type": "string", "format": "uri"},
+        "revision": {"type": "string", "minLength": 7},
+        "licence": {"type": "string", "pattern": "^[A-Za-z0-9.+-]+$"},
+        "lockfile_url": {"type": "string", "format": "uri"},
+        "mirror_urls": {
+          "type": "array",
+          "items": {"type": "string", "format": "uri"},
+          "maxItems": 0,
+          "description": "Release locks MUST NOT carry mutable URLs."
+        }
+      }
+    },
+    "signature": {"$ref": "pack-signature.schema.v1.json"},
+    "released_at_ns": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Nanosecond unix timestamp when the pack was locked."
+    },
+    "released_by": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "description": "Stable publisher id (e.g. 'cutright.release')."
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "previous_version": {"type": "string"},
+        "previous_lock_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}
