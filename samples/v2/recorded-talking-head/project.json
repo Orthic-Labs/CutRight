@@ -1,0 +1,21 @@
+{
+  "schema_version": "v2",
+  "lane": "creator",
+  "title": "Recorded talking head",
+  "description": "Single-camera talking head, vertical 9:16, primary lane exercises the speech + creative flow with native render and ready review.",
+  "format_key": {
+    "content_type": "recorded_talking_head",
+    "platform": "tiktok",
+    "variant": "v1"
+  },
+  "expected_stages": [
+    "media_probe",
+    "speech_transcribe",
+    "editorial_plan",
+    "native_render",
+    "qa_floors",
+    "ready_review"
+  ],
+  "review_mode": "reviewed",
+  "external_runtime_dependencies": []
+}

@@ -1,0 +1,109 @@
+{
+  "external_runtime_dependencies": [],
+  "kind": "sample",
+  "offline_only": true,
+  "samples": [
+    {
+      "assets": [
+        {
+          "path": "sources/talking-head-cam-a.json",
+          "sha256": "e0c41b4a259922dfb0e790e0aeaea5be0ebeb0ecbf2062f5194e7dc0b2a0b655",
+          "size": 334
+        }
+      ],
+      "content_type": "recorded_talking_head",
+      "expected_stages": [
+        "media_probe",
+        "speech_transcribe",
+        "editorial_plan",
+        "native_render",
+        "qa_floors",
+        "ready_review"
+      ],
+      "lane": "creator",
+      "name": "recorded-talking-head",
+      "platform": "tiktok",
+      "rights_cleared": true,
+      "rights_statement": "Original recording by the operator. Captured with explicit consent for redistribution inside the v2 sample set. No third-party music, voices, or stock footage included.",
+      "title": "Recorded talking head",
+      "tutorial_path": "README.md"
+    },
+    {
+      "assets": [
+        {
+          "path": "sources/podcast-mic-1.json",
+          "sha256": "801445e50e619b2873ec149073efd9b3955e1b833f128562e309d9c8560f26b7",
+          "size": 279
+        }
+      ],
+      "content_type": "repurpose_podcast",
+      "expected_stages": [
+        "media_probe",
+        "speech_transcribe",
+        "beat_detect",
+        "clip_select",
+        "native_render",
+        "ready_review"
+      ],
+      "lane": "speech",
+      "name": "repurpose-podcast",
+      "platform": "reels",
+      "rights_cleared": true,
+      "rights_statement": "Operator-owned recording. Distributed under the same terms as the v2 sample set. No third-party music, voices, or stock footage included.",
+      "title": "Repurpose podcast",
+      "tutorial_path": "README.md"
+    },
+    {
+      "assets": [
+        {
+          "path": "sources/explainer-script-1.json",
+          "sha256": "26e92e7ee27099be33c416640a46192af29d99c65d4f9f706ebcfa272ecd0d04",
+          "size": 177
+        }
+      ],
+      "content_type": "procedural_explainer",
+      "expected_stages": [
+        "script_resolve",
+        "caption_timing",
+        "procedural_motion",
+        "native_render",
+        "qa_floors",
+        "ready_review"
+      ],
+      "lane": "creative",
+      "name": "procedural-explainer",
+      "platform": "shorts",
+      "rights_cleared": true,
+      "rights_statement": "Synthetic script authored for the v2 sample set. No third-party assets. No recorded media.",
+      "title": "Procedural explainer",
+      "tutorial_path": "README.md"
+    },
+    {
+      "assets": [
+        {
+          "path": "sources/product-photo-1.json",
+          "sha256": "5083524ab8a696b19a8e3fc219360766bd95d9947da7f4fbc06938afc6e9a4ac",
+          "size": 238
+        }
+      ],
+      "content_type": "anchored_product",
+      "expected_stages": [
+        "media_probe",
+        "subject_detect",
+        "anchored_graphic",
+        "native_render",
+        "qa_floors",
+        "ready_review"
+      ],
+      "lane": "vision",
+      "name": "anchored-product",
+      "platform": "linkedin",
+      "rights_cleared": true,
+      "rights_statement": "Operator-owned product photograph. Released for redistribution inside the v2 sample set.",
+      "title": "Anchored product",
+      "tutorial_path": "README.md"
+    }
+  ],
+  "samples_dir": "/Volumes/D/claude/cutright/samples/v2",
+  "schema_version": "v2"
+}

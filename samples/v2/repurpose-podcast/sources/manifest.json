@@ -1,0 +1,18 @@
+{
+  "schema_version": "v2",
+  "rights_cleared": true,
+  "rights_statement": "Operator-owned recording. Distributed under the same terms as the v2 sample set. No third-party music, voices, or stock footage included.",
+  "external_runtime_dependencies": [],
+  "items": [
+    {
+      "id": "podcast-mic-1",
+      "kind": "audio",
+      "duration_ms": 3600000,
+      "sample_rate": 48000,
+      "channels": 2,
+      "rights": "operator-owned",
+      "path": "sources/podcast-mic-1.json",
+      "note": "Synthetic descriptor for a 60-minute episode. The real media lives in the operator's offline fixture directory."
+    }
+  ]
+}

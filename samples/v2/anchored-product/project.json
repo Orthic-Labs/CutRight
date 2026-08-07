@@ -1,0 +1,21 @@
+{
+  "schema_version": "v2",
+  "lane": "vision",
+  "title": "Anchored product",
+  "description": "Static product photograph with an anchored callout. Exercises the vision lane: subject detection, anchored graphic, design pass.",
+  "format_key": {
+    "content_type": "anchored_product",
+    "platform": "linkedin",
+    "variant": "v1"
+  },
+  "expected_stages": [
+    "media_probe",
+    "subject_detect",
+    "anchored_graphic",
+    "native_render",
+    "qa_floors",
+    "ready_review"
+  ],
+  "review_mode": "reviewed",
+  "external_runtime_dependencies": []
+}

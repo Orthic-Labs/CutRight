@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "kind": "transcript",
+  "engine": "synthetic",
+  "engine_fingerprint": "sample-script@procedural-explainer-0.1.0",
+  "language": "en",
+  "tolerance": {
+    "wer_max": 0.0,
+    "timing_coverage_min": 1.0
+  },
+  "words": [
+    {"t0_ms": 0, "t1_ms": 400, "text": "CutRight", "conf": 1.0},
+    {"t0_ms": 400, "t1_ms": 1200, "text": "composes", "conf": 1.0},
+    {"t0_ms": 1200, "t1_ms": 1500, "text": "transcribes", "conf": 1.0},
+    {"t0_ms": 1500, "t1_ms": 1800, "text": "plans", "conf": 1.0},
+    {"t0_ms": 1800, "t1_ms": 2000, "text": "and", "conf": 1.0},
+    {"t0_ms": 2000, "t1_ms": 2500, "text": "renders", "conf": 1.0}
+  ],
+  "fixture_hash": "unresolved"
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "v2",
+  "lane": "creative",
+  "title": "Procedural explainer",
+  "description": "Synthetic explainer built from procedural motion graphics, a script transcript and caption timing. Exercises the creative lane without recorded media.",
+  "format_key": {
+    "content_type": "procedural_explainer",
+    "platform": "shorts",
+    "variant": "v1"
+  },
+  "expected_stages": [
+    "script_resolve",
+    "caption_timing",
+    "procedural_motion",
+    "native_render",
+    "qa_floors",
+    "ready_review"
+  ],
+  "review_mode": "reviewed",
+  "external_runtime_dependencies": []
+}

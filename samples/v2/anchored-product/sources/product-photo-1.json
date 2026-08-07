@@ -1,0 +1,9 @@
+{
+  "id": "product-photo-1",
+  "kind": "image",
+  "rational_fps_num": 1,
+  "rational_fps_den": 1,
+  "resolution": {"w": 2048, "h": 2048},
+  "rights": "operator-owned",
+  "note": "Placeholder descriptor for a square product photograph."
+}

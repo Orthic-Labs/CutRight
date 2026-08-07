@@ -1,0 +1,11 @@
+{
+  "schema_version": "v2",
+  "sample": "repurpose-podcast",
+  "assets": [
+    {
+      "path": "sources/podcast-mic-1.json",
+      "role": "descriptor",
+      "sha256": "801445e50e619b2873ec149073efd9b3955e1b833f128562e309d9c8560f26b7"
+    }
+  ]
+}
