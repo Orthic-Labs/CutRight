@@ -1,0 +1,142 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/creative/asset-review.schema.v2.json",
+  "title": "CutRight v2 creative asset review",
+  "description": "Acceptance record for an asset delivery. Combines mechanical checks, rights resolution, protected-region checks and semantic intent comparison. Accepts only when all checks pass and the binding hashes are intact.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "asset_review_id",
+    "asset_request_id",
+    "asset_delivery_id",
+    "status",
+    "mechanical_checks",
+    "rights_check",
+    "protected_region_checks",
+    "semantic_intent_check",
+    "binding"
+  ],
+  "properties": {
+    "schema": { "const": "cutright.asset_review/v2" },
+    "asset_review_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "asset_request_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "asset_delivery_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "status": {
+      "enum": ["accepted", "rejected", "needs_revision"]
+    },
+    "mechanical_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "details"],
+      "properties": {
+        "passed": { "type": "boolean" },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "passed", "message"],
+            "properties": {
+              "code": { "type": "string", "pattern": "^[a-z][a-z0-9_.]{2,127}$" },
+              "passed": { "type": "boolean" },
+              "message": { "type": "string", "maxLength": 4096 }
+            }
+          }
+        }
+      }
+    },
+    "rights_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resolved", "license_id"],
+      "properties": {
+        "resolved": { "type": "boolean" },
+        "license_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "geo_restrictions": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[A-Z]{2}$" }
+        },
+        "notes": { "type": "string", "maxLength": 4096 }
+      }
+    },
+    "protected_region_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "passed", "regions"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "passed": { "type": "boolean" },
+          "regions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "x", "y", "width", "height"],
+              "properties": {
+                "name": { "type": "string", "minLength": 1, "maxLength": 64 },
+                "x": { "type": "number", "minimum": 0, "maximum": 1 },
+                "y": { "type": "number", "minimum": 0, "maximum": 1 },
+                "width": { "type": "number", "minimum": 0, "maximum": 1 },
+                "height": { "type": "number", "minimum": 0, "maximum": 1 }
+              }
+            }
+          },
+          "comparison_evidence_ids": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" }
+          },
+          "drift_score": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "semantic_intent_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "purpose_match"],
+      "properties": {
+        "passed": { "type": "boolean" },
+        "purpose_match": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" }
+        },
+        "notes": { "type": "string", "maxLength": 4096 }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_request_hash", "delivery_hash", "delivery_files_hash"],
+      "properties": {
+        "asset_request_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "delivery_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "delivery_files_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "remediation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z][a-z0-9_.]{2,127}$" },
+          "message": { "type": "string", "minLength": 1, "maxLength": 4096 }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/creative/asset-delivery.schema.v2.json",
+  "title": "CutRight v2 creative asset delivery",
+  "description": "Asset delivery produced by an asset producer (procedural native effect, generated raster, captured audio, transcribed text). Records file hash, provenance, generator, rights, semantic inspection and acceptance status.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "asset_delivery_id",
+    "asset_request_id",
+    "asset_request_revision",
+    "output_id",
+    "files",
+    "provenance",
+    "rights",
+    "hash_bindings"
+  ],
+  "properties": {
+    "schema": { "const": "cutright.asset_delivery/v2" },
+    "asset_delivery_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "asset_request_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "asset_request_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "output_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "path", "format", "size_bytes", "hash", "immutable"],
+        "properties": {
+          "role": {
+            "enum": ["source", "preview", "proxy", "final"]
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^[/A-Za-z0-9._-]+$",
+            "description": "Project-relative path. Must live under the staging scope."
+          },
+          "format": { "type": "string", "minLength": 1, "maxLength": 32 },
+          "size_bytes": { "type": "integer", "minimum": 0 },
+          "hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "blake3 hash of the file bytes."
+          },
+          "immutable": { "const": true }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generator", "generator_revision", "method", "created_at"],
+      "properties": {
+        "generator": {
+          "enum": [
+            "native_procedural",
+            "native_text_shaper",
+            "native_audio_graph",
+            "local_inference",
+            "deterministic_layout",
+            "user_supplied"
+          ]
+        },
+        "generator_revision": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "method": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "prompt_config": { "type": "object" },
+        "source_refs": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$" }
+        },
+        "skill_pack_id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{2,127}$" },
+        "skill_pack_revision": { "type": "integer", "minimum": 1 },
+        "model_id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{2,127}$" },
+        "model_revision": { "type": "integer", "minimum": 1 },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "rights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "license_id"],
+      "properties": {
+        "status": {
+          "enum": ["owned", "licensed", "user_supplied", "cc0", "cc_by", "cc_by_sa", "public_domain", "needs_review", "rejected"]
+        },
+        "license_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "license_notice": { "type": "string", "maxLength": 4096 },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "geo_restrictions": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[A-Z]{2}$" }
+        },
+        "attribution": { "type": "string", "maxLength": 1024 }
+      }
+    },
+    "semantic_inspection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "enum": ["ok", "needs_review", "rejected"]
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message", "regions"],
+            "properties": {
+              "code": { "type": "string", "pattern": "^[a-z][a-z0-9_.]{2,127}$" },
+              "message": { "type": "string", "minLength": 1, "maxLength": 4096 },
+              "regions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "x", "y", "width", "height"],
+                  "properties": {
+                    "name": { "type": "string", "minLength": 1, "maxLength": 64 },
+                    "x": { "type": "number", "minimum": 0, "maximum": 1 },
+                    "y": { "type": "number", "minimum": 0, "maximum": 1 },
+                    "width": { "type": "number", "minimum": 0, "maximum": 1 },
+                    "height": { "type": "number", "minimum": 0, "maximum": 1 }
+                  }
+                }
+              },
+              "comparison_evidence_ids": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "hash_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_request_hash", "delivery_hash"],
+      "properties": {
+        "asset_request_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "delivery_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

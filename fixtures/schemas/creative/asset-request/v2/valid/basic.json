@@ -1,0 +1,64 @@
+{
+  "schema": "cutright.asset_request/v2",
+  "asset_request_id": "ar-2026-08-07-001",
+  "asset_request_revision": 1,
+  "kind": "lower_third",
+  "purpose": "Identify the on-screen speaker for shot 1 of the hook segment.",
+  "outputs": [
+    {
+      "output_id": "out-1280x720",
+      "width": 1280,
+      "height": 720,
+      "aspect": "16:9",
+      "alpha": "straight",
+      "duration_ms": 4000,
+      "format": "png",
+      "color_space": "srgb",
+      "bit_depth": "8",
+      "variants": ["light", "dark"]
+    },
+    {
+      "output_id": "out-1080x1920",
+      "width": 1080,
+      "height": 1920,
+      "aspect": "9:16",
+      "alpha": "straight",
+      "duration_ms": 4000,
+      "format": "png",
+      "color_space": "srgb",
+      "bit_depth": "8"
+    }
+  ],
+  "protected": {
+    "safe_zones": [
+      { "name": "lower_third_box", "x": 0.05, "y": 0.70, "width": 0.55, "height": 0.15 }
+    ],
+    "identity_locks": [
+      { "subject_id": "subject-host-001", "policy": "no_change", "evidence_id": "face-track-0001" }
+    ],
+    "label_locks": [
+      { "text": "Adrian Dsouza", "evidence_id": "label-track-0001", "tolerance": "exact" }
+    ],
+    "wardrobe_locks": [
+      { "subject_id": "subject-host-001", "evidence_id": "wardrobe-track-0001" }
+    ],
+    "product_locks": []
+  },
+  "brand": {
+    "brand_card_ref": {
+      "brand_card_id": "brand-orthic-v3",
+      "brand_card_revision": 3
+    },
+    "style_direction_id": "style-dir-punchy-001"
+  },
+  "evidence": [
+    { "evidence_id": "face-track-0001", "kind": "face_track" },
+    { "evidence_id": "label-track-0001", "kind": "label_track" }
+  ],
+  "text_slots": [
+    { "slot_id": "name", "role": "lower_third", "max_chars": 32, "max_lines": 1 },
+    { "slot_id": "tagline", "role": "subtitle", "max_chars": 80, "max_lines": 2 }
+  ],
+  "allowed_transforms": ["scale", "color_grade", "text_animate"],
+  "timeline_writable": false
+}
