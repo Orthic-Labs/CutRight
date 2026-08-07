@@ -1,0 +1,19 @@
+{
+  "schema": "cutright.semantic_diff/v1",
+  "diffs": [
+    {
+      "action_kind": "export",
+      "target_id": "timeline_main",
+      "before_id": "rev_after_cut",
+      "after_id": "rev_after_export",
+      "range": {
+        "start": {"numerator": 0, "denominator": 1, "unit": "s"},
+        "end": {"numerator": 60, "denominator": 1, "unit": "s"}
+      },
+      "duration_delta_ns": 0,
+      "evidence_refs": ["evidence_render_preset_1080p"],
+      "confidence": 1.0,
+      "risk_flags": []
+    }
+  ]
+}

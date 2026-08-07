@@ -1,0 +1,30 @@
+{
+  "schema": "cutright.action_batch/v1",
+  "batch_id": "batch_contract_caption_001",
+  "expected_revision": "rev_baseline",
+  "intent": "Add a burned-in caption to clip clip_intro_1 from 0.000s to 3.500s.",
+  "evidence_refs": ["evidence_caption_draft_001"],
+  "actions": [
+    {
+      "action_kind": "caption",
+      "target_id": "clip_intro_1",
+      "rational_range": {
+        "numerator": 0,
+        "denominator": 1,
+        "unit": "s"
+      },
+      "rational_end": {
+        "numerator": 7,
+        "denominator": 2,
+        "unit": "s"
+      },
+      "text": "Welcome to the demo",
+      "style": "primary",
+      "safe_zone": "lower_third",
+      "evidence_refs": ["evidence_caption_draft_001"],
+      "confidence": 0.97,
+      "risk_flags": []
+    }
+  ],
+  "dry_run": false
+}

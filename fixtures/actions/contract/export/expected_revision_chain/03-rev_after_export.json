@@ -1,0 +1,8 @@
+{
+  "schema": "cutright.revision/v1",
+  "revision_id": "rev_after_export",
+  "parents": ["rev_after_cut"],
+  "created_at_ns": 1700000003000000000,
+  "active_pointer": "timeline_main",
+  "compatibility_fp": "deadbeefcafebabe1234567890abcdef"
+}

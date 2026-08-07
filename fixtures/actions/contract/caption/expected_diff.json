@@ -1,0 +1,19 @@
+{
+  "schema": "cutright.semantic_diff/v1",
+  "diffs": [
+    {
+      "action_kind": "caption",
+      "target_id": "clip_intro_1",
+      "before_id": "rev_baseline",
+      "after_id": "rev_after_caption",
+      "range": {
+        "start": {"numerator": 0, "denominator": 1, "unit": "s"},
+        "end": {"numerator": 7, "denominator": 2, "unit": "s"}
+      },
+      "duration_delta_ns": 0,
+      "evidence_refs": ["evidence_caption_draft_001"],
+      "confidence": 0.97,
+      "risk_flags": []
+    }
+  ]
+}

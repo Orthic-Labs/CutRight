@@ -1,0 +1,25 @@
+{
+  "schema": "cutright.action_result/v1",
+  "batch_id": "batch_contract_caption_001",
+  "status": "applied",
+  "before_revision": "rev_baseline",
+  "after_revision": "rev_after_caption",
+  "applied_at_ns": 1700000002000000000,
+  "stages": [
+    {
+      "stage": "validation",
+      "outcome": "ok",
+      "details": {"action_count": 1, "denied_actions": 0}
+    },
+    {
+      "stage": "apply",
+      "outcome": "ok",
+      "details": {"staged_clone": "staged_clone_caption_001", "active_swap": true}
+    },
+    {
+      "stage": "receipt_emit",
+      "outcome": "ok",
+      "details": {"receipt_id": "receipt_caption_001"}
+    }
+  ]
+}

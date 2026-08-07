@@ -1,0 +1,31 @@
+{
+  "schema": "cutright.action_batch/v1",
+  "batch_id": "batch_contract_export_001",
+  "expected_revision": "rev_after_cut",
+  "intent": "Render the cut revision to a 1080p MP4 with AAC audio.",
+  "evidence_refs": ["evidence_render_preset_1080p"],
+  "actions": [
+    {
+      "action_kind": "export",
+      "target_id": "timeline_main",
+      "preset": "youtube_1080p",
+      "container": "mp4",
+      "video_codec": "h264",
+      "audio_codec": "aac",
+      "rational_range": {
+        "numerator": 0,
+        "denominator": 1,
+        "unit": "s"
+      },
+      "rational_end": {
+        "numerator": 60,
+        "denominator": 1,
+        "unit": "s"
+      },
+      "evidence_refs": ["evidence_render_preset_1080p"],
+      "confidence": 1.0,
+      "risk_flags": []
+    }
+  ],
+  "dry_run": false
+}

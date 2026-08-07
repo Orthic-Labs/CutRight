@@ -1,0 +1,31 @@
+{
+  "schema": "cutright.action_batch/v1",
+  "batch_id": "batch_contract_cut_001",
+  "expected_revision": "rev_baseline",
+  "intent": "Remove filler word from clip clip_sentence_5 (12.000s → 14.000s) to tighten the introduction.",
+  "evidence_refs": [
+    "evidence_filler_um_001",
+    "evidence_transcript_v3_001"
+  ],
+  "actions": [
+    {
+      "action_kind": "cut",
+      "target_id": "clip_sentence_5",
+      "rational_range": {
+        "numerator": 12,
+        "denominator": 1,
+        "unit": "s"
+      },
+      "rational_end": {
+        "numerator": 14,
+        "denominator": 1,
+        "unit": "s"
+      },
+      "duration_delta_ns": -200000000,
+      "evidence_refs": ["evidence_filler_um_001"],
+      "confidence": 0.92,
+      "risk_flags": ["low_confidence_end"]
+    }
+  ],
+  "dry_run": false
+}

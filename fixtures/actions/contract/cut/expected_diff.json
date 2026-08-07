@@ -1,0 +1,19 @@
+{
+  "schema": "cutright.semantic_diff/v1",
+  "diffs": [
+    {
+      "action_kind": "cut",
+      "target_id": "clip_sentence_5",
+      "before_id": "rev_baseline",
+      "after_id": "rev_after_cut",
+      "range": {
+        "start": {"numerator": 12, "denominator": 1, "unit": "s"},
+        "end": {"numerator": 14, "denominator": 1, "unit": "s"}
+      },
+      "duration_delta_ns": -200000000,
+      "evidence_refs": ["evidence_filler_um_001"],
+      "confidence": 0.92,
+      "risk_flags": ["low_confidence_end"]
+    }
+  ]
+}
