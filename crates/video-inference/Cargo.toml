@@ -1,0 +1,28 @@
+// Video inference crate (CR-V2-B3-012).
+//
+// This crate is owned by Book 3 lane B. The merge step (CR-V2-B3-022)
+// lifts it into the workspace membership. Until then, the file is
+// dormant inside the source tree.
+//
+// The runtime trait `LocalInferenceRuntime` is the only public surface
+// that the rest of the workspace uses. The vendored llama.cpp is
+// reached only through the `runtime.rs` adapter.
+
+[package]
+name = "video-inference"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "MIT"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+video-core = { path = "../video-core" }
+video-runtime = { path = "../video-runtime" }
+
+[features]
+default = []
+local-ipc = []
