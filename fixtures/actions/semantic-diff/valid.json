@@ -1,0 +1,25 @@
+{
+  "schema": "cutright.semantic_diff/v1",
+  "batch_id": "batch_0001",
+  "expected_revision": "rev_0001",
+  "planned_revision": "rev_0002",
+  "diff": [
+    {
+      "action_kind": "timeline.cut",
+      "target_id": "clip_clip_5",
+      "before_id": "clip_clip_5",
+      "after_id": "clip_clip_5",
+      "range": {
+        "start_ns": 1200000000,
+        "end_ns": 1400000000
+      },
+      "duration_delta_ns": -200000000,
+      "evidence_refs": [
+        "ev_w0",
+        "ev_w1"
+      ],
+      "confidence": 0.92,
+      "risk_flags": []
+    }
+  ]
+}
