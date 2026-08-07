@@ -1,0 +1,18 @@
+schema_version: 1
+source_id: attached-cutaway-finish-material
+name: Attached Cutaway/Finish material (asset notice)
+canonical_url: https://github.com/Orthic-Labs/CutRight
+revision: attachment-manifest:imports/provenance/cutaway-finish/hash-manifest.json
+license: user_supplied_audited_separately
+notice: |
+  User-supplied cutaway/finish sample material, materialized unchanged into
+  imports/provenance/cutaway-finish/ by CR-V2-B1-014 and hash-bound in
+  imports/provenance/cutaway-finish/hash-manifest.json. Entry kind: asset
+  (sample_media); disposition provenance_only. This material never ships as
+  runtime code: live behavior migrates to typed CutRight stages, and the
+  scripts are retained as golden-behavior references only.
+
+  Licence status is user_supplied_audited_separately per
+  imports/v2/dispositions.json: no licence is claimed or inferred here,
+  and the row stays explicitly unresolved for release purposes until the
+  separate audit closes it. No repository licence is inherited.

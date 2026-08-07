@@ -1,0 +1,19 @@
+schema_version: 1
+source_id: workspace-capabilities
+name: Workspace capabilities (aggregated skills import)
+canonical_url: https://github.com/bogusyogi/claude
+revision: 6ee21f03a787e7b57dc412760a8996ea7a235302
+license: user_owned_with_third_party_notices
+notice: |
+  Aggregated notice for the user-owned workspace corpus material copied at
+  pinned commit 6ee21f03a787e7b57dc412760a8996ea7a235302 into skills/
+  (designer, brand, brand-identity, content, writing, social, qa and the
+  bounded-run/eval adaptations). The corpus row declares license_status
+  user_owned_with_third_party_notices; the upstream corpus ships no single
+  LICENSE file for these paths, so this notice records provenance in lieu
+  of one. Third-party notices embedded in individual files are preserved
+  intact on copy, and every copied subtree carries its own THIRD_PARTY.yml
+  (e.g. skills/designer/THIRD_PARTY.yml). Excluded roots (ads, marketing,
+  seo, architect, coder, commit, debugger, dispatch, tasklist, jfdi) were
+  never vendored. Ledger row: imports/v2/dispositions.json
+  (workspace-capabilities, adapt_with_notice).

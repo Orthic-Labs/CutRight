@@ -1,0 +1,23 @@
+schema_version: 1
+source_id: heardright
+name: HeardRight (aggregated vendored source)
+canonical_url: https://github.com/bogusyogi/heardright
+revision: b60bff947f12ffa9d25e94ad27e8ff30db006a24
+license: user_owned_with_third_party_notices
+notice: |
+  Copyright (c) 2026 Damned Ventures LLC. All rights reserved.
+
+  Aggregated notice for the HeardRight engine/core/platform source vendored
+  at pinned commit b60bff947f12ffa9d25e94ad27e8ff30db006a24 into
+  vendor/heardright/ (CR-V2-B1-012) and adapted for CutRight. The upstream
+  engine crate declares license = "Proprietary" in its Cargo manifest; the
+  user-owned third-party-notices ledger row governs this vendored copy
+  (imports/v2/dispositions.json, source_id "heardright", disposition
+  adapt_with_notice). Upstream third-party component notices are preserved
+  verbatim under vendor/heardright/engine/legal/third-party/, including
+  notices for whisper.cpp, WhisperKit, ONNX Runtime, DirectML, WavLM,
+  SQLCipher, CC-BY-4.0 material, and font OFL notices. Model weights never
+  inherit this notice: every model asset requires its own licence row in
+  docs/legal/HEARDRIGHT-ASSET-LEDGER.md before entering a signed runtime
+  pack, and the unresolved rows in imports/v2/heardright-assets.json remain
+  blocked_unresolved.
