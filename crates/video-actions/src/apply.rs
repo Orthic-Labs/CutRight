@@ -182,6 +182,13 @@ impl StagedApply {
         let pointer_bytes = staged_revision_id.as_bytes();
         write_bytes_atomic(&active_pointer_path, pointer_bytes)?;
 
+        // Promote the staged revision into the active revision so subsequent
+        // applies / undo / redo calls can match `expected_revision` against
+        // the now-active revision id. The staged clone is implicitly
+        // consumed; the caller can reuse `staged` for the next batch
+        // without having to recapture the parent revision id.
+        staged.parent_revision_id = staged_revision_id.clone();
+
         Ok(ApplyOutcome::Applied {
             revision: committed,
             receipt,

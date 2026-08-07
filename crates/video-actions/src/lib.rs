@@ -18,6 +18,7 @@ pub mod action;
 pub mod apply;
 pub mod diff;
 pub mod revision;
+pub mod undo;
 pub mod validation;
 
 pub use action::{
@@ -30,6 +31,11 @@ pub use diff::{dry_run, DiffEntry, DiffError, DiffRange, SemanticDiff, StableDif
 pub use revision::{
     FailureCode, Receipt, ReceiptFailure, ReceiptStatus, Revision, RevisionError, StagedRevision,
     RECEIPT_SCHEMA, REVISION_SCHEMA,
+};
+pub use undo::{
+    inverse_batch_for, inverse_batch_for_with_original, inverse_of, inverse_of_with_original,
+    is_directly_invertible, non_reversible_reason, AppliedReceipt, InverseBatch, UndoError,
+    UndoOutcome, UndoRedoStack, INVERSE_BATCH_SCHEMA,
 };
 pub use validation::{
     validate_batch, DefaultValidator, ValidationContext, ValidationError, ValidationFailure,
