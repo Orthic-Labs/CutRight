@@ -1,0 +1,39 @@
+{
+  "run_id": "book-4-acceptance-2026-08-07",
+  "profile_id": "reviewed-v2",
+  "profile_version": 1,
+  "format": "shorts",
+  "pack_set": "v2",
+  "executed_at": "2026-08-07T15:30:00Z",
+  "per_project": [
+    {
+      "project_id": "cutaway-golden",
+      "result": "Pass",
+      "metrics": [
+        { "metric_id": "kernel.integrity", "status": "Pass", "value": 1.0, "unit": "ratio" },
+        { "metric_id": "boundary.speech", "status": "Pass", "value": 0.97, "unit": "ratio" },
+        { "metric_id": "audio_visual.sync", "status": "Pass", "value": 0.04, "unit": "s_drift" }
+      ],
+      "notes": "golden fixture under B4-016 used as canonical reference."
+    },
+    {
+      "project_id": "editorial-001",
+      "result": "Pass",
+      "metrics": [
+        { "metric_id": "kernel.integrity", "status": "Pass", "value": 1.0, "unit": "ratio" },
+        { "metric_id": "editorial.agreement", "status": "Pass", "value": 0.86, "unit": "kappa" }
+      ]
+    }
+  ],
+  "missing_metrics": [],
+  "missing_projects": [],
+  "triage": {
+    "kernel": [],
+    "evidence": [],
+    "editorial": [],
+    "critic": [],
+    "pack": [],
+    "label": []
+  },
+  "profile_evidence_compat": true
+}

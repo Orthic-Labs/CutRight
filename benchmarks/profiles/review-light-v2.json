@@ -1,0 +1,20 @@
+{
+  "profile_id": "review-light-v2",
+  "version": 1,
+  "mode": "ReviewLight",
+  "format": "shorts",
+  "pack_set": "v2",
+  "required_human_acceptance": 25,
+  "floors": [
+    {
+      "metric_id": "kernel.integrity",
+      "axis": "KernelIntegrity",
+      "min_status": "Pass"
+    },
+    {
+      "metric_id": "boundary.speech",
+      "axis": "SpeechBoundary",
+      "min_status": "Pass"
+    }
+  ]
+}

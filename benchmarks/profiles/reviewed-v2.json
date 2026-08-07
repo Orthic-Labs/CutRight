@@ -1,0 +1,30 @@
+{
+  "profile_id": "reviewed-v2",
+  "version": 1,
+  "mode": "Reviewed",
+  "format": "shorts",
+  "pack_set": "v2",
+  "required_human_acceptance": 0,
+  "floors": [
+    {
+      "metric_id": "kernel.integrity",
+      "axis": "KernelIntegrity",
+      "min_status": "Pass"
+    },
+    {
+      "metric_id": "kernel.atomicity",
+      "axis": "KernelIntegrity",
+      "min_status": "Pass"
+    },
+    {
+      "metric_id": "boundary.speech",
+      "axis": "SpeechBoundary",
+      "min_status": "Pass"
+    },
+    {
+      "metric_id": "audio_visual.sync",
+      "axis": "AudioVisual",
+      "min_status": "Pass"
+    }
+  ]
+}

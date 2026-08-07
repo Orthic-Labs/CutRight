@@ -1,0 +1,25 @@
+{
+  "profile_id": "autonomous-v2",
+  "version": 1,
+  "mode": "Autonomous",
+  "format": "shorts",
+  "pack_set": "v2",
+  "required_human_acceptance": 100,
+  "floors": [
+    {
+      "metric_id": "kernel.integrity",
+      "axis": "KernelIntegrity",
+      "min_status": "Pass"
+    },
+    {
+      "metric_id": "boundary.speech",
+      "axis": "SpeechBoundary",
+      "min_status": "Pass"
+    },
+    {
+      "metric_id": "editorial.agreement",
+      "axis": "Editorial",
+      "min_status": "Pass"
+    }
+  ]
+}
