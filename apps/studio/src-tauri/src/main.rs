@@ -6,6 +6,7 @@ mod decision_store;
 mod pack_commands;
 mod privacy_settings;
 mod project_identity;
+mod project_index;
 mod project_scope;
 mod relink_history;
 mod settings;
