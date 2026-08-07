@@ -1,0 +1,36 @@
+{
+  "schema_version": "v1",
+  "report_id": "0000000000000000000000000000000000000000000000000000000000000001",
+  "project_instance_id": "1111111111111111111111111111111111111111111111111111111111111111",
+  "mode": "dry_run",
+  "actions": [
+    {
+      "kind": "rebuild_index",
+      "classification": "automatic",
+      "outcome": "success",
+      "subject": "project-index",
+      "details": {"scanned": 12, "rebuilt": 1}
+    },
+    {
+      "kind": "remove_abandoned_staging",
+      "classification": "automatic",
+      "outcome": "success",
+      "subject": "staging://stale-xyz",
+      "details": {"age_seconds": 604800}
+    },
+    {
+      "kind": "restore_canonical",
+      "classification": "manual",
+      "outcome": "deferred_to_user",
+      "subject": "source://asset-hash-mismatch",
+      "details": {"reason": "source mismatch"}
+    }
+  ],
+  "summary": {
+    "automatic_count": 2,
+    "manual_count": 1,
+    "failures": 0
+  },
+  "idempotent": true,
+  "performed_at": "2026-08-07T00:00:00Z"
+}

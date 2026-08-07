@@ -1,0 +1,108 @@
+{
+  "schema": "cutright.brand_card/v2",
+  "brand_card_id": "brand-orthic-v3",
+  "brand_card_revision": 3,
+  "venture_id": "orthic-labs",
+  "voice": {
+    "tone": "Direct, technical, no hype",
+    "register": "editorial",
+    "taboo_terms": ["game-changing", "revolutionary"],
+    "signature_phrases": ["Make the right cut."],
+    "examples": ["Short, declarative, sourced.", "No fluff, no padding."]
+  },
+  "visual_tokens": {
+    "primary_color": "#0F1B2D",
+    "secondary_color": "#1F3A66",
+    "accent_color": "#FF8C42",
+    "surface_color": "#F4F1ED",
+    "ink_color": "#0A0F18",
+    "gradients": [
+      {
+        "name": "primary_fade",
+        "stops": [
+          { "color": "#0F1B2D", "at": 0.0 },
+          { "color": "#1F3A66", "at": 1.0 }
+        ]
+      }
+    ],
+    "textures": ["paper_grain_fine"]
+  },
+  "typography": {
+    "primary_font_stack": ["Inter", "system-ui"],
+    "secondary_font_stack": ["IBM Plex Mono", "ui-monospace"],
+    "mono_font_stack": ["IBM Plex Mono", "ui-monospace"],
+    "weights": ["400", "500", "700"],
+    "scale": { "body": 18, "display": 64, "caption": 14 }
+  },
+  "palette": {
+    "roles": {
+      "background": "#F4F1ED",
+      "foreground": "#0A0F18",
+      "muted": "#5A6473",
+      "highlight": "#FF8C42"
+    },
+    "semantic_tokens": { "success": "#1E7F4F", "warning": "#C28A00", "error": "#B0281F" }
+  },
+  "marks": {
+    "primary": {
+      "hash": "1111111111111111111111111111111111111111111111111111111111111111",
+      "format": "svg",
+      "width": 256,
+      "height": 256,
+      "locked": true
+    },
+    "secondary": {
+      "hash": "2222222222222222222222222222222222222222222222222222222222222222",
+      "format": "svg",
+      "width": 128,
+      "height": 128,
+      "locked": true
+    },
+    "clearspace": { "margin_x": 0.05, "margin_y": 0.05 }
+  },
+  "motion_language": {
+    "entrance": "exponential_reveal",
+    "exit": "exponential_leave",
+    "loop": "no_loop_static_visible",
+    "easing": { "standard": "cubic-bezier(0.2, 0.7, 0.2, 1)", "expressive": "expo-out" },
+    "durations_ms": { "fast": 120, "base": 240, "slow": 480 }
+  },
+  "audio_identity": {
+    "signature_sound": {
+      "hash": "3333333333333333333333333333333333333333333333333333333333333333",
+      "format": "wav_pcm24",
+      "locked": true
+    },
+    "voice_print": {
+      "speaker_id": "speaker-host-001",
+      "evidence_id": "voice-track-0001"
+    },
+    "music_bed": {
+      "mood_tags": ["neutral_editorial"],
+      "tempo_bpm_range": { "min": 80, "max": 110 }
+    }
+  },
+  "restrictions": {
+    "colour_combinations_forbidden": [
+      { "foreground": "#F4F1ED", "background": "#FF8C42" }
+    ],
+    "logo_distortion_forbidden": ["stretch", "rotate"],
+    "voice_alteration_forbidden": ["pitch_shift", "formant_shift"]
+  },
+  "accessibility": {
+    "min_contrast_ratio": 4.5,
+    "captions_required": true,
+    "reduced_motion_alternative": true,
+    "color_blindness_safe": ["protanopia", "deuteranopia"]
+  },
+  "provenance": {
+    "created_at": "2026-08-01T00:00:00Z",
+    "creator": "Orthic Labs Brand Council",
+    "signed_creative_pack_id": "creative.pack.brand.v3",
+    "signed_creative_pack_revision": 3
+  },
+  "locked_assets": [
+    { "kind": "mark", "id": "mark-primary", "hash": "1111111111111111111111111111111111111111111111111111111111111111" },
+    { "kind": "signature_sound", "id": "audio-sig-001", "hash": "3333333333333333333333333333333333333333333333333333333333333333" }
+  ]
+}

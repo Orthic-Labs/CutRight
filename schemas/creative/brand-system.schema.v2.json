@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/creative/brand-system.schema.v2.json",
+  "title": "CutRight v2 BrandSystem",
+  "description": "A versioned set of BrandCards plus the binding between them. Creation/evolution produces a new BrandSystem revision; locked assets from previous revisions remain immutable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "brand_system_id",
+    "brand_system_revision",
+    "venture_id",
+    "cards",
+    "binding",
+    "provenance"
+  ],
+  "properties": {
+    "schema": { "const": "cutright.brand_system/v2" },
+    "brand_system_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "brand_system_revision": { "type": "integer", "minimum": 1 },
+    "venture_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{2,127}$"
+    },
+    "cards": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "brand_card_id", "brand_card_revision"],
+        "properties": {
+          "role": { "enum": ["primary", "secondary", "exploration", "archived"] },
+          "brand_card_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+          "brand_card_revision": { "type": "integer", "minimum": 1 },
+          "is_default": { "type": "boolean" }
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_role", "locked_asset_inheritance"],
+      "properties": {
+        "default_role": { "enum": ["primary", "secondary", "exploration"] },
+        "locked_asset_inheritance": { "enum": ["inherit", "explicit_only"] },
+        "evolution_chain": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from_revision", "to_revision", "policy"],
+            "properties": {
+              "from_revision": { "type": "integer", "minimum": 1 },
+              "to_revision": { "type": "integer", "minimum": 2 },
+              "policy": { "enum": ["copy_locked", "drop_exploration"] }
+            }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created_at", "signed_creative_pack_id"],
+      "properties": {
+        "created_at": { "type": "string", "format": "date-time" },
+        "signed_creative_pack_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,128}$" },
+        "signed_creative_pack_revision": { "type": "integer", "minimum": 1 },
+        "creator": { "type": "string", "minLength": 1, "maxLength": 256 }
+      }
+    }
+  }
+}

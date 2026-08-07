@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/creative/style-direction.schema.v2.json",
+  "title": "CutRight v2 style direction",
+  "description": "A materially divergent style direction. Defines signature_mechanism, palette, typography, texture, composition, motion_language, audio_language and restrictions. Every token traces to a brand/source or to an explicit exploration entry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "style_direction_id",
+    "brand_card_id",
+    "brand_card_revision",
+    "signature_mechanism",
+    "palette",
+    "typography",
+    "texture",
+    "composition",
+    "motion_language",
+    "audio_language",
+    "restrictions",
+    "token_sources"
+  ],
+  "properties": {
+    "schema": { "const": "cutright.style_direction/v2" },
+    "style_direction_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "brand_card_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,128}$"
+    },
+    "brand_card_revision": { "type": "integer", "minimum": 1 },
+    "signature_mechanism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 1024 }
+      }
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary", "accent", "shadow", "highlight"],
+      "properties": {
+        "primary": { "type": "string", "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$" },
+        "accent": { "type": "string", "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$" },
+        "shadow": { "type": "string", "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$" },
+        "highlight": { "type": "string", "pattern": "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$" }
+      }
+    },
+    "typography": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_font_stack", "secondary_font_stack"],
+      "properties": {
+        "primary_font_stack": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+        },
+        "secondary_font_stack": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+        },
+        "scale_factor": { "type": "number", "minimum": 0.5, "maximum": 4.0 },
+        "weight_bias": { "enum": ["lighter", "base", "heavier"] }
+      }
+    },
+    "texture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface", "grain", "treatments"],
+      "properties": {
+        "surface": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "grain": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "treatments": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+        }
+      }
+    },
+    "composition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grid", "framing"],
+      "properties": {
+        "grid": { "enum": ["safe_thirds", "five_figure", "rule_of_thirds", "dynamic_grid", "anchored_center"] },
+        "framing": { "enum": ["tight", "medium", "wide", "establishing_then_tight"] },
+        "headroom": { "type": "number", "minimum": 0, "maximum": 1 },
+        "look_room": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "motion_language": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entrance", "exit", "loop"],
+      "properties": {
+        "entrance": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "exit": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "loop": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "easing": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "durations_ms": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fast", "base", "slow"],
+          "properties": {
+            "fast": { "type": "integer", "minimum": 1, "maximum": 10000 },
+            "base": { "type": "integer", "minimum": 1, "maximum": 30000 },
+            "slow": { "type": "integer", "minimum": 1, "maximum": 60000 }
+          }
+        }
+      }
+    },
+    "audio_language": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mix_philosophy"],
+      "properties": {
+        "mix_philosophy": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "ducking_db": { "type": "number", "minimum": -60, "maximum": 0 },
+        "transient_alignment": { "enum": ["strict", "soft", "none"] },
+        "reverb_throw_ms": { "type": "integer", "minimum": 0, "maximum": 5000 }
+      }
+    },
+    "restrictions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locked_marks_immutable", "locked_type_immutable", "locked_palette_immutable"],
+      "properties": {
+        "locked_marks_immutable": { "const": true },
+        "locked_type_immutable": { "const": true },
+        "locked_palette_immutable": { "const": true },
+        "extra_restrictions": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 256 } }
+      }
+    },
+    "token_sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["token", "source"],
+        "properties": {
+          "token": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "source": { "enum": ["brand_card", "explicit_exploration", "user_supplied"] },
+          "reference": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "rationale": { "type": "string", "maxLength": 1024 }
+        }
+      }
+    },
+    "selected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accepted_by", "accepted_at"],
+      "properties": {
+        "accepted_by": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "accepted_at": { "type": "string", "format": "date-time" },
+        "acceptance_role": { "enum": ["primary", "secondary", "exploration"] }
+      }
+    }
+  }
+}
