@@ -1,0 +1,24 @@
+[package]
+name = "video-sessions"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Lane P-C: project write locks, session bindings, frontmost-project guard.
+# Per `docs/architecture/V2-CRATE-DAG.md` this crate sits between `video-core`
+# (lower) and the `video-project` orchestrator (higher). It MUST NOT depend on
+# `video-actions`, `video-capabilities`, `video-project`, `video-cli`, or
+# `apps/studio`. Lane P-C owns the lock/binding surface.
+
+[dependencies]
+blake3.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+video-core = { path = "../video-core" }
+
+[dev-dependencies]
+tempfile = "3.23"
