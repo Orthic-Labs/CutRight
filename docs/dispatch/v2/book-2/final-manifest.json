@@ -1,0 +1,30 @@
+{
+  "book": 2,
+  "commit": "<filled-at-commit-time>",
+  "command": "CR-V2-B2-027",
+  "required_invariant": "all mutation surfaces use video-executor",
+  "ci": "forbidden",
+  "evidence": {
+    "final_gate": "docs/dispatch/v2/book-2/final-gate.md",
+    "gate_evidence": "docs/dispatch/v2/book-2/gate-evidence.md",
+    "focused_tests": "docs/dispatch/v2/book-2/focused-tests.md",
+    "mcp_adapter": "crates/video-agent/src/mcp.rs",
+    "tools_registry": "crates/video-agent/src/tools.rs",
+    "mcp_tests": "crates/video-agent/tests/mcp.rs",
+    "cross_surface_tests": "tests/v2/action_surfaces.rs",
+    "studio_contract": "apps/studio/src/action-contract.test.ts"
+  },
+  "exit_codes": {
+    "v2-capability-drift.sh": 0,
+    "check_crate_dag.py": 0,
+    "v2-repository-shape.sh": 0,
+    "gate.sh --with-qa": 0
+  },
+  "test_totals": {
+    "rust_focused": "see focused-tests.md",
+    "studio_focused": "see focused-tests.md"
+  },
+  "hashes": {
+    "registry": "see docs/dispatch/v2/source/capability-registry.json"
+  }
+}
