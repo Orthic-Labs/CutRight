@@ -1,0 +1,17 @@
+{
+  "schema": "cutright.studio.action_intent/v1",
+  "intent_id": "f1a7e2a0-1c40-4f3f-b1a1-7e9d4c4f2c11",
+  "kind": "timeline",
+  "risk": "medium",
+  "target": {
+    "kind": "clip",
+    "clip_id": "clip_000001"
+  },
+  "verb": "trim",
+  "params": {
+    "in_ms": 1200,
+    "out_ms": 4800
+  },
+  "evidence_refs": ["ev_clip_000001"],
+  "client_request_id": "req_001"
+}

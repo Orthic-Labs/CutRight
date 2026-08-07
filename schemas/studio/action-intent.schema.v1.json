@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "$id": "cutright.studio.action_intent/v1",
+  "title": "StudioActionIntent",
+  "description": "Frontend-authored action intent. The backend observes the current revision, builds a typed ActionBatch against it, performs dry-run, optionally requires confirmation, then executes and returns a persisted ActionResult. The UI patches from the persisted result, never from optimistic assumed success.",
+  "type": "object",
+  "required": ["schema", "intent_id", "kind", "target"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "cutright.studio.action_intent/v1"
+    },
+    "intent_id": {
+      "type": "string",
+      "description": "Frontend-issued UUID; the backend echoes it back in the ActionResult so a UI patch can correlate."
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "timeline",
+        "transcript",
+        "story",
+        "beats",
+        "design",
+        "motion_sound",
+        "selection",
+        "settings",
+        "qa"
+      ]
+    },
+    "risk": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "Backend policy decides if a confirmation modal is required."
+    },
+    "target": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["clip", "track", "beat", "take", "graphic", "caption", "effect", "asset", "transcript_word", "reframe_anchor", "project"]
+        },
+        "clip_id": { "type": "string" },
+        "track_id": { "type": "string" },
+        "beat_id": { "type": "string" },
+        "take_id": { "type": "string" },
+        "graphic_id": { "type": "string" },
+        "caption_id": { "type": "string" },
+        "effect_id": { "type": "string" },
+        "asset_id": { "type": "string" },
+        "word_id": { "type": "string" },
+        "anchor_id": { "type": "string" },
+        "project_id": { "type": "string" }
+      }
+    },
+    "verb": {
+      "type": "string",
+      "description": "Action verb (trim, split, move, restore, swap, enable, disable, edit_text, replace, accept, reject, request, change_crop, change_loudness, ...). The full vocabulary is generated from the capability registry."
+    },
+    "params": {
+      "type": "object",
+      "description": "Verb-specific parameters. The shape is per-verb and validated by the backend before execution.",
+      "additionalProperties": true
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Stable evidence IDs the user inspected before issuing the intent. Used to build the semantic-diff pre-image."
+    },
+    "client_request_id": {
+      "type": "string",
+      "description": "Idempotency key; identical intents within the same project return the same persisted ActionResult."
+    }
+  }
+}
