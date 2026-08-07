@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/release/update-manifest.schema.v1.json",
+  "title": "CutRight v2 update manifest (local-only)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "from_version",
+    "to_version",
+    "patch_plan",
+    "verified_locally"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cutright.update_manifest/v1"
+    },
+    "from_version": {
+      "type": "string"
+    },
+    "to_version": {
+      "type": "string"
+    },
+    "patch_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "step",
+          "reversible"
+        ],
+        "properties": {
+          "step": {
+            "type": "string"
+          },
+          "reversible": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "verified_locally": {
+      "type": "boolean"
+    },
+    "hosted_updater_required": {
+      "enum": [
+        false
+      ]
+    }
+  }
+}

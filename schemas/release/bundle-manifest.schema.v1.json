@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/release/bundle-manifest.schema.v1.json",
+  "title": "CutRight v2 bundle manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "bundle_id",
+    "version",
+    "base_app",
+    "packs",
+    "installer_types",
+    "target_specific",
+    "checksums"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cutright.bundle_manifest/v1"
+    },
+    "bundle_id": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "base_app": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 64
+        }
+      }
+    },
+    "packs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "pack_id",
+          "version",
+          "sha256",
+          "signature",
+          "license"
+        ],
+        "properties": {
+          "pack_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "minLength": 64
+          },
+          "signature": {
+            "type": "string"
+          },
+          "license": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "installer_types": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "macos_dmg",
+          "windows_msi",
+          "linux_appimage",
+          "linux_deb",
+          "source_tarball"
+        ]
+      }
+    },
+    "target_specific": {
+      "type": "object"
+    },
+    "checksums": {
+      "type": "object",
+      "required": [
+        "bundle_sha256"
+      ],
+      "properties": {
+        "bundle_sha256": {
+          "type": "string",
+          "minLength": 64
+        }
+      }
+    }
+  }
+}

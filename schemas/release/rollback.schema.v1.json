@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cutright.dev/schemas/release/rollback.schema.v1.json",
+  "title": "CutRight v2 rollback receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "rollback_id",
+    "from_version",
+    "to_version",
+    "backup_sha256"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cutright.rollback/v1"
+    },
+    "rollback_id": {
+      "type": "string"
+    },
+    "from_version": {
+      "type": "string"
+    },
+    "to_version": {
+      "type": "string"
+    },
+    "backup_sha256": {
+      "type": "string",
+      "minLength": 64
+    },
+    "verified": {
+      "type": "boolean"
+    }
+  }
+}
