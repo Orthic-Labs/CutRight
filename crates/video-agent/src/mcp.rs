@@ -208,6 +208,7 @@ impl ConnectionToken {
 
 /// The bound loopback adapter. Every method is sync + side-effect free
 /// except for the ActionExecutor callback, which is supplied by the caller.
+#[derive(Debug)]
 pub struct McpAdapter {
     config: McpAdapterConfig,
     connection: ConnectionToken,
