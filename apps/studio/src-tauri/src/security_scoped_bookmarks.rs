@@ -52,8 +52,8 @@ pub(crate) fn create_security_scoped_bookmark(path: String) -> Result<String, St
     #[cfg(target_os = "macos")]
     {
         let path = CString::new(path).map_err(|_| "bookmark_invalid_path")?;
-        return take_string(unsafe { cutright_bookmark_create(path.as_ptr()) })
-            .ok_or_else(|| "bookmark_create_failed".into());
+        take_string(unsafe { cutright_bookmark_create(path.as_ptr()) })
+            .ok_or_else(|| "bookmark_create_failed".into())
     }
     #[cfg(not(target_os = "macos"))]
     {

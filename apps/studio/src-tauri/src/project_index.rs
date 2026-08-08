@@ -14,9 +14,11 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+#[allow(dead_code)]
 const SCHEMA: &str = "cutright.studio.project_index/v1";
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum IndexError {
     Io(std::io::Error),
     Json(serde_json::Error),
@@ -57,6 +59,7 @@ impl From<serde_json::Error> for IndexError {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[allow(dead_code)]
 pub enum LaneId {
     RecordedFootage,
     Repurpose,
@@ -66,6 +69,7 @@ pub enum LaneId {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[allow(dead_code)]
 pub enum RunStatus {
     Idle,
     Running,
@@ -77,6 +81,7 @@ pub enum RunStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[allow(dead_code)]
 pub struct ProjectIndexRow {
     pub project_instance_id: String,
     pub package_path: String,
@@ -93,6 +98,7 @@ pub struct ProjectIndexRow {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct ProjectIndex {
     pub schema: String,
     pub version: u32,
@@ -114,12 +120,14 @@ impl Default for ProjectIndex {
 
 /// Resolve the canonical path of the project index file inside the app's
 /// local data directory. Pure function; no IO.
+#[allow(dead_code)]
 pub fn default_index_path(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("studio").join("project-index.v1.json")
 }
 
 /// Load the index from disk. If the file is missing or corrupt, an empty
 /// default index is returned. Deletion of the file is *not* an error.
+#[allow(dead_code)]
 pub fn load_or_default(path: &Path) -> Result<ProjectIndex, IndexError> {
     if !path.exists() {
         return Ok(ProjectIndex::default());
@@ -134,6 +142,7 @@ pub fn load_or_default(path: &Path) -> Result<ProjectIndex, IndexError> {
 
 /// Persist the index atomically (write to tmp, then rename). The parent
 /// directory is created on demand.
+#[allow(dead_code)]
 pub fn save(path: &Path, index: &ProjectIndex) -> Result<(), IndexError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
@@ -150,6 +159,7 @@ pub fn save(path: &Path, index: &ProjectIndex) -> Result<(), IndexError> {
 /// `run_status = Missing`) so the user can see them in the index even if
 /// the package is currently unmounted. Pass `history` to inject
 /// app-local recent rows that aren't currently registered.
+#[allow(dead_code)]
 pub fn rebuild(
     rows_in: Vec<ProjectIndexRow>,
     package_paths: &[String],
@@ -187,6 +197,7 @@ pub fn rebuild(
 
 /// Repair a single row by absolute package path. If the row is new, it is
 /// inserted at the top of the index.
+#[allow(dead_code)]
 pub fn repair(path: &Path, row: ProjectIndexRow) -> Result<ProjectIndex, IndexError> {
     let mut index = load_or_default(path)?;
     if let Some(existing) = index
@@ -204,6 +215,7 @@ pub fn repair(path: &Path, row: ProjectIndexRow) -> Result<ProjectIndex, IndexEr
 
 /// Remove a row from the index by project instance id. The underlying
 /// project package is untouched.
+#[allow(dead_code)]
 pub fn remove_from_list(
     path: &Path,
     project_instance_id: &str,
@@ -280,8 +292,8 @@ mod tests {
         let p = default_index_path(dir.path());
         let r1 = row("p1", "/a", "2026-08-07T10:00:00Z");
         let r2 = row("p2", "/b", "2026-08-07T11:00:00Z");
-        let mut idx = repair(&p, r1).unwrap();
-        idx = repair(&p, r2).unwrap();
+        repair(&p, r1).unwrap();
+        let idx = repair(&p, r2).unwrap();
         assert_eq!(idx.rows.len(), 2);
         let idx = remove_from_list(&p, "p1").unwrap();
         assert_eq!(idx.rows.len(), 1);
