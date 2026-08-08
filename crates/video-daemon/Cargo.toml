@@ -1,0 +1,16 @@
+[package]
+name = "video-daemon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+description = "CutRight per-user authenticated process host."
+
+[dependencies]
+libc = "0.2"
+thiserror.workspace = true
+video-protocol = { path = "../video-protocol" }
+
+[dev-dependencies]
+tempfile = "3.23"
