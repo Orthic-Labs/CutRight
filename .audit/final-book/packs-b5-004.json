@@ -1,0 +1,33 @@
+{
+  "task_id": "CR-F-B5-004",
+  "result": "local_director_unqualified",
+  "scope": {
+    "changed_files": 3,
+    "changed_lines": 97,
+    "ceiling": {"files": 8, "lines": 1400},
+    "ceiling_status": "pass"
+  },
+  "decision": {
+    "selected_model": "Qwen/Qwen3-4B",
+    "model_revision": "7c69a109fc3fa19c860be9dff46fc23299092018",
+    "runtime_revision": "6a32c29a746a2e44de463de647f9f6661eb5086b",
+    "model_payload_present": false,
+    "runtime_payload_present": false,
+    "offline_direction_available": false,
+    "failure_code": "local_director_unqualified"
+  },
+  "acceptance": {
+    "identity_bound": true,
+    "provenance_bound": true,
+    "license_bound": true,
+    "architecture_bound": false,
+    "hash_bound": false,
+    "readiness_claim": false,
+    "failure_is_typed": true
+  },
+  "exact_missing_inputs": [
+    "Qwen3-4B converted GGUF selected by editorial/tool-use qualification",
+    "llama.cpp runtime at pinned revision",
+    "clean-machine and memory qualification receipts"
+  ]
+}
