@@ -305,7 +305,7 @@ export function SettingsMode({ project }: { project: Snapshot }) {
 
       <section className="settings-section" aria-label="CutRight legal and updates">
         <h2>CutRight</h2>
-        <p className="settings-hint">{appInfo?.license ?? "MIT"} · {appInfo?.tier ?? "free"} · local/offline</p>
+        <p className="settings-hint">{appInfo?.license ?? "Proprietary"} · {appInfo?.tier ?? "free"} · local/offline</p>
         <dl className="facts-grid"><dt>Telemetry</dt><dd>{appInfo?.telemetry === false ? "off" : "—"}</dd><dt>Updates</dt><dd>{appInfo?.updates ?? "—"}</dd></dl>
       </section>
 

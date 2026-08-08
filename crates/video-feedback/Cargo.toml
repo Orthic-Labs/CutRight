@@ -2,7 +2,7 @@
 name = "video-feedback"
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
+license = "LicenseRef-Proprietary"
 authors = ["Orthic Labs"]
 publish = false
 description = "CutRight v2 feedback, preference, and autonomy crate"

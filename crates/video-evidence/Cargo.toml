@@ -11,7 +11,7 @@ name = "video-evidence"
 version = "0.1.0"
 edition = "2021"
 publish = false
-license = "MIT"
+license = "LicenseRef-Proprietary"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }

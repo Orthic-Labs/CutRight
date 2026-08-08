@@ -2,7 +2,7 @@
 name = "import-closure"
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
+license = "LicenseRef-Proprietary"
 authors = ["Orthic Labs"]
 description = "Transitive source-closure scanner for the CutRight v2 import programme."
 publish = false

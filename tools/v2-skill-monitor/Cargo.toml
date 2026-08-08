@@ -2,7 +2,7 @@
 name = "v2-skill-monitor"
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
+license = "LicenseRef-Proprietary"
 authors = ["Orthic Labs"]
 description = "Read-only CutRight v2 skill health monitor: reports typed healthy/degraded/failed states for the local skills tree without modifying it."
 publish = false

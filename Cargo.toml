@@ -24,7 +24,7 @@ members = [
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
+license = "LicenseRef-Proprietary"
 authors = ["Orthic Labs"]
 # These crates are internal members of one application, not a published
 # library set. Saying so explicitly prevents an accidental `cargo publish`

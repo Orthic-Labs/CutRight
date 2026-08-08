@@ -91,7 +91,7 @@ export async function call<T>(
     return next as T;
   }
   if (command === "read_variant_selection") return memorySelection as T;
-  if (command === "rightkit_app_info") return { schema_version: 1, app: "cutright", tier: "free", license: "MIT", offline: true, telemetry: false, updates: "disabled-until-configured" } as T;
+  if (command === "rightkit_app_info") return { schema_version: 1, app: "cutright", tier: "free", license: "Proprietary", offline: true, telemetry: false, updates: "disabled-until-configured" } as T;
   if (command === "rightkit_logs_write" || command === "rightkit_logs_clear") return undefined as T;
   if (command === "rightkit_logs_collect") return [] as T;
   if (command === "finish_read_variants") return {
