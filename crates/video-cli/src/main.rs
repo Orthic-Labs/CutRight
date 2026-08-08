@@ -1,4 +1,5 @@
 mod agent;
+mod agent_qualify;
 mod apply;
 mod capabilities;
 mod cli;
@@ -157,6 +158,7 @@ enum Outcome {
     Doctor(Value, DoctorOutcome),
     Receipts(Value, bool),
     CleanMachine(Value, bool),
+    Qualification(Value, bool),
 }
 
 fn run(cli: Cli) -> Result<Outcome, String> {
@@ -463,6 +465,12 @@ fn run_agent(command: AgentCommand) -> Result<Outcome, String> {
                 remove: true,
             })
             .map(Outcome::Value)
+        }
+        AgentCommand::Qualify(args) => {
+            if !args.all {
+                return Err("agent qualify requires --all".into());
+            }
+            agent_qualify::run_all().map(|(value, passed)| Outcome::Qualification(value, passed))
         }
     }
 }

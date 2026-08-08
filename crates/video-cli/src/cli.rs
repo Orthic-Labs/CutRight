@@ -124,6 +124,15 @@ pub enum AgentCommand {
     Integrate(AgentIntegrateArgs),
     Status(AgentStatusArgs),
     Remove(AgentRemoveArgs),
+    Qualify(AgentQualifyArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct AgentQualifyArgs {
+    #[arg(long)]
+    pub all: bool,
+    #[arg(long)]
+    pub json: bool,
 }
 
 #[derive(Debug, Args)]
