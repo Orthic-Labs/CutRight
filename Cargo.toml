@@ -19,6 +19,7 @@ members = [
   "crates/video-feedback",
   "crates/video-agent",
   "crates/video-editorial",
+  "crates/video-protocol",
 ]
 
 [workspace.package]
