@@ -121,6 +121,10 @@ trap on_exit EXIT
 echo "gate.sh: repo root = $ROOT"
 echo "gate.sh: mode = $([ "$WITH_QA" -eq 1 ] && echo 'default + QA' || echo 'default')"
 
+# --- 0. enforced crate dependency DAG ---------------------------------------
+run "crate DAG: python3 scripts/check-crate-dag.py" \
+  python3 scripts/check-crate-dag.py
+
 # --- 1. root cargo workspace -------------------------------------------------
 run "root: cargo fmt --all -- --check" \
   cargo fmt --all -- --check

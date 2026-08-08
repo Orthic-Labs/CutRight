@@ -183,3 +183,32 @@ _(source: .agent/understanding.json:architecture.dataFlow)_
 ## Status
 
 Generated from index signature `512d7cc08470e0de0f4afe4a921117e4`. Unchanged-repo rebuilds are byte-identical.
+
+## Enforced crate dependency DAG
+
+CR-F-B2-001 freezes this dependency direction, and `scripts/check-crate-dag.py`
+enforces it from every local Cargo path dependency before Rust checks run:
+
+```text
+Studio / videoctl / cutright-mcp
+              |
+        video-daemon
+              |
+        video-services
+              |
+        video-project
+              |
+ domain crates: video-actions, video-capabilities, video-core, video-editorial,
+ video-jobs, video-media, video-providers, video-runtime, video-security,
+ video-sessions, video-state
+```
+
+Lower crates cannot depend upward. In particular, `video-driver-host` may not
+depend on `video-project`, `video-state`, project storage, or `ActionExecutor`;
+`video-protocol` owns transport DTOs only and may not depend on project,
+state, actions, or services. The gate reports each violating edge by name.
+
+The Local Director remains an offline route: it plans from locally retrieved
+evidence and emits typed requests, while deterministic Rust services own
+arithmetic, media boundaries, project state, and mutations. No network or
+remote provider is required for this route.
