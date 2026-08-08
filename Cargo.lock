@@ -727,6 +727,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "video-driver-host"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "video-editorial"
 version = "0.1.0"
 dependencies = [

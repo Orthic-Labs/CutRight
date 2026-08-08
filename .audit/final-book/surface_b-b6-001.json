@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "dispatch_id": "cutright-lane-8-surface_b-2026-08-08",
+  "task_id": "CR-F-B6-001",
+  "result": "pass",
+  "commit_message": "CR-F-B6-001: import-the-bounded-coderight-driver-host-subset",
+  "scope": {
+    "changed_files": 5,
+    "changed_lines": 658,
+    "ceiling": {"files": 8, "lines": 1400},
+    "ceiling_status": "pass",
+    "paths": ["Cargo.lock", "Cargo.toml", "crates/video-driver-host/CUTRIGHT-ADAPTATION.md", "crates/video-driver-host/Cargo.toml", "crates/video-driver-host/src/lib.rs"]
+  },
+  "acceptance": {
+    "focused_tests": "pass: 5 video-driver-host tests",
+    "crate_dag": "pass",
+    "provider_routes": ["user-installed Claude Code", "user-installed Codex"],
+    "bundled_or_local_llm": "absent",
+    "dependency_boundary": "pass: no CodeRight checkout dependency and no forbidden crate edge",
+    "unknown_event_policy": "pass: Claude and Codex unknown events fail closed",
+    "resume_cursor": "pass: backwards cursor rejected",
+    "environment_boundary": "pass: denied ambient credential names are stripped"
+  },
+  "verification": {
+    "cargo_test": "pass",
+    "cargo_clippy_workspace_all_targets_d_warnings": "pass",
+    "cargo_fmt_all_check": "pass",
+    "compiler": "rustc 1.96.0",
+    "notes": "Focused checks used explicit pinned RUSTC because shared sccache held 1.97 artifacts."
+  },
+  "foreign_work": "video-agent edits remained unstaged and untouched"
+}

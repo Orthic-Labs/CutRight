@@ -21,6 +21,7 @@ members = [
   "crates/video-editorial",
   "crates/video-protocol",
   "crates/video-daemon",
+  "crates/video-driver-host",
 ]
 
 [workspace.package]
