@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { call } from "../lib/api";
 import { CredentialField } from "../components/CredentialField";
 import { SettingsDeleteConfirm } from "../components/SettingsDeleteConfirm";
+import { AgentPanel } from "../components/AgentPanel";
 import {
   isCloudSettingsValid,
   UPLOAD_POLICIES,
@@ -157,6 +158,7 @@ export function SettingsMode({ project }: { project: Snapshot }) {
 
   return (
     <div className="settings-mode">
+      <AgentPanel projectPath={project.project_path} />
       <section className="settings-section">
         <h2>Cloud analysis</h2>
         <p className="settings-hint">

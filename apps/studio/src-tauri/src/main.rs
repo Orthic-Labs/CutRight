@@ -1,5 +1,6 @@
 mod artifact_state;
 mod commands;
+mod daemon;
 mod decision_contract;
 mod decision_ledger;
 mod decision_store;
@@ -19,6 +20,7 @@ mod tests;
 
 fn main() {
     tauri::Builder::default()
+        .manage(daemon::AgentDaemonState::default())
         .manage(native_media::NativeMediaState::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
@@ -53,7 +55,13 @@ fn main() {
             native_media::native_media_render_caption,
             native_media::native_media_render_preview,
             native_media::native_media_audio_features,
-            native_media::native_media_cancel
+            native_media::native_media_cancel,
+            daemon::agent_routes,
+            daemon::agent_session_start,
+            daemon::agent_session_events,
+            daemon::agent_session_pause,
+            daemon::agent_session_resume,
+            daemon::agent_session_cancel
         ])
         .run(tauri::generate_context!())
         .expect("CutRight Studio failed to start");
