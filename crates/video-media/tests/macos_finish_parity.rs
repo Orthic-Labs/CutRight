@@ -34,7 +34,7 @@ fn timing_finish_parity_preserves_rational_duration_and_frame_count() {
         denominator: 1,
     };
     assert_eq!(
-        duration.numerator * frame_rate.denominator,
+        duration.numerator * i64::from(frame_rate.denominator),
         60 * frame_rate.numerator
     );
     assert_eq!(duration.numerator / duration.denominator as i64, 60);
