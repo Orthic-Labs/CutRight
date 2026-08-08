@@ -1,0 +1,11 @@
+{
+  "schema_version": "v2",
+  "sample": "anchored-product",
+  "assets": [
+    {
+      "path": "sources/product-photo-1.json",
+      "role": "descriptor",
+      "sha256": "5083524ab8a696b19a8e3fc219360766bd95d9947da7f4fbc06938afc6e9a4ac"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "talking-head-cam-a",
+  "kind": "video",
+  "duration_ms": 12000,
+  "rational_fps_num": 30000,
+  "rational_fps_den": 1001,
+  "resolution": {"w": 1080, "h": 1920},
+  "rights": "operator-owned",
+  "note": "Placeholder descriptor used by the v2 sample suite. The real media lives in the operator's offline fixture directory."
+}

@@ -122,7 +122,7 @@ def main(argv: list[str]) -> int:
     manifest = {
         "schema_version": "v2",
         "kind": "sample",
-        "samples_dir": str(root),
+        "samples_dir": ".",
         "external_runtime_dependencies": [],
         "offline_only": True,
         "samples": rows,

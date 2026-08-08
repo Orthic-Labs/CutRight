@@ -55,6 +55,25 @@ pub struct AudioFinish {
 
 pub struct NativeAudioEngine;
 
+/// Return offset required to place a cue transient on target, bounded to the
+/// contract's 50 ms alignment window.
+pub fn transient_offset_ms(transient_ms: i64, target_ms: i64) -> i64 {
+    let delta = target_ms - transient_ms;
+    if delta.abs() <= 50 {
+        delta
+    } else {
+        0
+    }
+}
+
+pub fn dry_wet_split(time_ms: i64, split_ms: i64) -> (f32, f32) {
+    if time_ms < split_ms {
+        (1.0, 0.0)
+    } else {
+        (0.0, 1.0)
+    }
+}
+
 impl NativeAudioEngine {
     pub fn finish(profile: &AudioProfile, cues: Vec<AudioCue>) -> Result<AudioFinish, AudioError> {
         if !(-24.0..=-13.0).contains(&profile.integrated_lufs) {

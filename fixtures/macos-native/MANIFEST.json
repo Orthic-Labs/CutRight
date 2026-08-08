@@ -1,0 +1,30 @@
+{
+  "schema": "cutright.macos-native-fixtures.v1",
+  "promotionReady": false,
+  "promotionBlocker": "Live media parity, performance, installed-app, & visual receipts have not run.",
+  "fixtures": [
+    {
+      "path": "apps/studio/design/shots/cutting-room-sources.png",
+      "sha256": "a5add4a1bbefe80c664076f7be5910b6606986f33b7dcc9fef3f68bee4cfa503",
+      "uses": ["vision", "preview"]
+    },
+    {
+      "path": "apps/studio/design/shots/screening-room-compare.png",
+      "sha256": "a2cec7124224f553e0997d98a3b907ef2feced130c7da5154d233079eebfe303",
+      "uses": ["vision", "preview"]
+    },
+    {
+      "path": "docs/artifacts/reduced-variant.png",
+      "sha256": "01dc1be0eedc990c203b35988765450766250f80cbd04817277494b8097cba90",
+      "uses": ["vision", "preview"]
+    }
+  ],
+  "requiredLiveCorpus": [
+    "constant-frame-rate video with audio",
+    "variable-frame-rate video",
+    "rotated video",
+    "HDR video",
+    "audio-only source",
+    "damaged or truncated media"
+  ]
+}

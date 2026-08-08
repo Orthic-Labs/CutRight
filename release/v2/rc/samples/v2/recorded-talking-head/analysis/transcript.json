@@ -1,0 +1,21 @@
+{
+  "schema_version": "v2",
+  "kind": "transcript",
+  "engine": "parakeet-tdt",
+  "engine_fingerprint": "speech-pack@parakeet-tdt-0.1.0",
+  "language": "en",
+  "tolerance": {
+    "wer_max": 0.20,
+    "timing_coverage_min": 0.95
+  },
+  "words": [
+    {"t0_ms": 0, "t1_ms": 320, "text": "Hi", "conf": 0.99},
+    {"t0_ms": 320, "t1_ms": 720, "text": "everyone", "conf": 0.99},
+    {"t0_ms": 720, "t1_ms": 1400, "text": "and", "conf": 0.99},
+    {"t0_ms": 1400, "t1_ms": 2000, "text": "welcome", "conf": 0.99},
+    {"t0_ms": 2000, "t1_ms": 2700, "text": "to", "conf": 0.99},
+    {"t0_ms": 2700, "t1_ms": 3300, "text": "the", "conf": 0.99},
+    {"t0_ms": 3300, "t1_ms": 4200, "text": "studio", "conf": 0.99}
+  ],
+  "fixture_hash": "unresolved"
+}

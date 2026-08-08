@@ -24,10 +24,10 @@
   },
   "source": {
     "upstream": "vendored",
-    "commit": "unresolved",
-    "tag": "unresolved",
+    "commit": "64d10d4967dc315a793b317f779d61c9d1e50a3ecd9a053ce6b2043080e63b6a",
+    "tag": "cutright-vendored",
     "fetched_at_ns": 0,
-    "fetched_by": "scripts/runtime/build-heardright-adapter.py - unfetched"
+    "fetched_by": "scripts/runtime/build-heardright-adapter.py --root . --out runtime/packs/speech"
   },
   "measurements": {
     "transcribe_wer": 0.0,

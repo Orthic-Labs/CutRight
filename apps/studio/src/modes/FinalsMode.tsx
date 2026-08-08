@@ -1,6 +1,8 @@
 import { asset, tc } from "../lib/api";
 import type { VariantSelection } from "../contracts/review";
 import type { Snapshot } from "../types";
+import { useRef } from "react";
+import { VariantAudition, type FinishVariant } from "../components/finish/VariantAudition";
 
 // Renders the FINALS viewer. Named `FinalsMode` (was `Finals` in main.tsx)
 // per REV2 §14.4's `modes/FinalsMode.tsx` — pure move.
@@ -11,6 +13,8 @@ export function FinalsMode({
   selection,
   selecting,
   onUseFinal,
+  onUseFinish,
+  currentCutHash,
 }: {
   finals: Snapshot["finals"];
   selected: string;
@@ -18,9 +22,24 @@ export function FinalsMode({
   selection: VariantSelection | null;
   selecting: string | null;
   onUseFinal: (preset: string) => void;
+  onUseFinish?: (variant: FinishVariant, lockedCutHash: string) => void;
+  currentCutHash: string;
 }) {
+  const lockedCutHash = useRef(currentCutHash).current;
+  const auditionVariants: FinishVariant[] = ["balanced", "pullback", "punch", "push", "editor-takeover"].map((id) => ({
+    id,
+    label: id.replace("-", " "),
+    sourceHashes: [lockedCutHash],
+  }));
   return (
     <div className="finals">
+      <VariantAudition
+        variants={auditionVariants}
+        lockedCutHash={lockedCutHash}
+        currentCutHash={currentCutHash}
+        selectedId={selection?.variant}
+        onCommit={(variant, hash) => (onUseFinish ? onUseFinish(variant, hash) : onUseFinal(variant.id))}
+      />
       {finals.map((final) => {
         const chosen = selection?.variant === final.preset;
         return (

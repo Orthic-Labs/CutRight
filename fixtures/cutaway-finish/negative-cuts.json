@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {"id": "fixed-db-not-speech", "reject": "requires_word_and_vad"},
+    {"id": "amplitude-only-silence", "reject": "requires_vad_region"},
+    {"id": "raw-asr-timestamps", "reject": "requires_forced_alignment"},
+    {"id": "cut-mutated-after-lock", "reject": "CUT_LOCK_CHANGED"},
+    {"id": "scale-below-one", "reject": "invalid_scale"},
+    {"id": "effect-leaks-outside-motion", "reject": "inactive_envelope"},
+    {"id": "sfx-file-start", "reject": "transient_alignment"},
+    {"id": "full-region-reverb", "reject": "dry_wet_split"},
+    {"id": "path-escape", "reject": "containment"},
+    {"id": "cancel-residue", "reject": "atomic_cleanup"}
+  ]
+}

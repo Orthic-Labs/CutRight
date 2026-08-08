@@ -926,14 +926,77 @@ mark.warn {
   font-size: 12px;
 }
 .finals {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
   gap: 16px;
-  align-items: center;
-  justify-content: center;
+  align-items: start;
   flex: 1;
   padding: 24px;
   background: #000;
   overflow: auto;
+}
+.variant-audition {
+  grid-column: 1 / -1;
+  min-width: 0;
+  color: var(--text);
+}
+.variant-audition > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.variant-audition h2,
+.variant-audition h3,
+.variant-audition p {
+  margin: 0;
+}
+.variant-audition header p,
+.variant-audition small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.variant-audition [role="listbox"] {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(104px, 1fr));
+  gap: 8px;
+  outline: none;
+}
+.variant-audition [role="option"] {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.variant-audition [role="option"] h3 {
+  font-size: 13px;
+}
+.variant-audition [role="option"].is-focused {
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--text);
+}
+.variant-audition [role="option"][aria-selected="true"] {
+  border-color: var(--approved);
+}
+.variant-placeholder,
+.variant-audition video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #292929, #101010);
+  color: var(--faint);
+  font-size: 10px;
+  object-fit: cover;
+}
+.variant-audition [role="status"] {
+  min-height: 18px;
+  margin-top: 8px;
+  color: var(--approved);
 }
 .final-card {
   min-width: 220px;
@@ -951,6 +1014,20 @@ mark.warn {
 .vertical .final-frame {
   width: 102px;
   height: 180px;
+}
+@media (max-width: 760px) {
+  .finals {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+  .variant-audition > header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .variant-audition [role="listbox"] {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
 }
 .final-frame video {
   width: 100%;
@@ -1194,9 +1271,29 @@ mark.warn {
   }
   .titlebar {
     padding-left: 14px;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    overflow: hidden;
   }
   .project-title {
     display: none;
+  }
+  .title-actions {
+    display: none;
+  }
+  .wordmark {
+    font-size: 15px;
+  }
+  .register-switch {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .register-switch button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .status-strip {
     overflow: auto;

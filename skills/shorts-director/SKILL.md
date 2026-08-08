@@ -1,3 +1,8 @@
+---
+name: shorts-director
+description: "Rank evidence-bound short candidates from recorded beats without inventing timestamps."
+---
+
 # shorts-director (Book 4 / B4-019)
 
 Discover and rank short-form clips from evidence-bound beats.

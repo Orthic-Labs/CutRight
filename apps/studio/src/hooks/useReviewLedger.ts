@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { call, qa } from "../lib/api";
+import { call, commitFinishVariant, qa } from "../lib/api";
 import { memoryDecisions, memoryMalformed } from "../fixtures/qa";
 import {
   buildSegmentFlagIntent,
@@ -214,6 +214,14 @@ export function useReviewLedger({
       setSelecting(null);
     }
   }
+  async function useFinish(
+    variant: { id: string; sourceHashes: readonly string[] },
+    lockedCutHash: string,
+  ) {
+    if (!snapshot) return;
+    await commitFinishVariant(variant.id, lockedCutHash, variant.sourceHashes);
+    setFinalPreset(variant.id);
+  }
   function segmentAtPlayhead(): string | null {
     const segments = activeVariant?.cut_plan?.segments ?? [];
     if (!segments.length) return null;
@@ -305,6 +313,7 @@ export function useReviewLedger({
     verifySources,
     relink,
     useFinal,
+    useFinish,
     commitSegment,
   };
 }

@@ -7,5 +7,5 @@
     }
   ],
   "schema_version": "v2",
-  "seal_target": "/Volumes/D/claude/cutright/release/v2/source"
+  "seal_target": "."
 }

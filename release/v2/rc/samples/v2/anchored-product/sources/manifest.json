@@ -1,0 +1,18 @@
+{
+  "schema_version": "v2",
+  "rights_cleared": true,
+  "rights_statement": "Operator-owned product photograph. Released for redistribution inside the v2 sample set.",
+  "external_runtime_dependencies": [],
+  "items": [
+    {
+      "id": "product-photo-1",
+      "kind": "image",
+      "rational_fps_num": 1,
+      "rational_fps_den": 1,
+      "resolution": {"w": 2048, "h": 2048},
+      "rights": "operator-owned",
+      "path": "sources/product-photo-1.json",
+      "note": "Static product photograph descriptor. The real media lives in the operator's offline fixture directory."
+    }
+  ]
+}

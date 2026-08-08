@@ -2,6 +2,11 @@
   "external_runtime_dependencies": [],
   "files": [
     {
+      "path": "SEAL.json",
+      "sha256": "98b117ece49bd05afead20dcccba3bf98f59f74684b601fb9bdad73194792f09",
+      "size": 910
+    },
+    {
       "path": "checksums/SHA256SUMS.template",
       "sha256": "b04d5aff949b864b61d1350c70d0a89e40d36fa6b7fc0adfbc02580a020073c1",
       "size": 26
@@ -38,6 +43,6 @@
     "signatures"
   ],
   "schema_version": "v2",
-  "staging": "/Volumes/D/claude/cutright/release/v2/staging",
+  "staging": ".",
   "target": "host"
 }

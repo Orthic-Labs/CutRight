@@ -1,0 +1,19 @@
+{
+  "schema_version": "v2",
+  "rights_cleared": true,
+  "rights_statement": "Original recording by the operator. Captured with explicit consent for redistribution inside the v2 sample set. No third-party music, voices, or stock footage included.",
+  "external_runtime_dependencies": [],
+  "items": [
+    {
+      "id": "talking-head-cam-a",
+      "kind": "video",
+      "duration_ms": 12000,
+      "rational_fps_num": 30000,
+      "rational_fps_den": 1001,
+      "resolution": {"w": 1080, "h": 1920},
+      "rights": "operator-owned",
+      "path": "sources/talking-head-cam-a.json",
+      "note": "Synthetic descriptor only; the real media lives in the operator's offline fixture directory and is referenced by id, never by absolute path."
+    }
+  ]
+}

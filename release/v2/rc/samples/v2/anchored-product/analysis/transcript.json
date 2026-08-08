@@ -1,0 +1,13 @@
+{
+  "schema_version": "v2",
+  "kind": "transcript",
+  "engine": "synthetic",
+  "engine_fingerprint": "image-only@anchored-product-0.1.0",
+  "language": "en",
+  "tolerance": {
+    "wer_max": 0.0,
+    "timing_coverage_min": 1.0
+  },
+  "words": [],
+  "fixture_hash": "unresolved"
+}

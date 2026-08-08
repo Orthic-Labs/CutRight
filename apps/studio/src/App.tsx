@@ -131,6 +131,7 @@ export function App() {
     verifySources,
     relink,
     useFinal,
+    useFinish,
     commitSegment,
   } = ledger;
 
@@ -299,6 +300,8 @@ export function App() {
                 selection={selection}
                 selecting={selecting}
                 onUseFinal={useFinal}
+                onUseFinish={useFinish}
+                currentCutHash={snapshot.project_revision ?? ""}
               />
             )}
             {mode === "qa" && (

@@ -18,7 +18,7 @@ Exit 0 iff there are zero release_code findings, 1 otherwise, 2 on
 self-test failure. Created by CR-V2-B1-026.
 
 Usage:
-  python3 scripts/gates/v2-standalone-source-audit.py --root . [--json OUT]
+  python3 scripts/gates/v2-standalone-source-audit.py --root . [--json OUT|--out OUT]
   python3 scripts/gates/v2-standalone-source-audit.py --self-test
 
 JSON report shape:
@@ -716,7 +716,7 @@ def main(argv: list[str]) -> int:
         elif argv[i] == "--root" and i + 1 < len(argv):
             root = Path(argv[i + 1]).resolve()
             i += 1
-        elif argv[i] == "--json" and i + 1 < len(argv):
+        elif argv[i] in {"--json", "--out"} and i + 1 < len(argv):
             json_out = argv[i + 1]
             i += 1
         else:

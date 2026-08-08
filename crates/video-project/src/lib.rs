@@ -26,13 +26,14 @@ mod ingest;
 mod io;
 pub mod legacy;
 mod lifecycle;
+pub mod locked_finish;
 mod package;
 mod preferences;
 mod project_init;
 mod qa;
 mod qa_probes;
 mod reframe;
-mod reframe_track;
+pub mod reframe_track;
 mod remap;
 mod rough_render;
 mod shorts;
@@ -76,6 +77,12 @@ pub use final_render::{render_final, render_master};
 pub use finish::{audio_finish, finish_validate, render_slot};
 pub use ingest::{ingest_sources, IngestResult, IngestedSource};
 pub use lifecycle::{clean_machine_sample, CleanMachineSampleReport, LifecycleResults};
+pub use locked_finish::FinishPlan as LockedFinishPlan;
+pub use locked_finish::{
+    compile_locked_cut, compile_locked_cut_from_evidence, deterministic_variants,
+    rank_asset_candidates, AssetCandidateScore, AuditionChoice, EditorTakeover, LockError,
+    LockedCut, RationalRate, RationalTime, VariantSpec, WordSafeSegment, WordSpan,
+};
 pub use package::package_social;
 pub use preferences::{
     recommend_preferences, AxisResult, DistributionEntry, FormatRecommendations,

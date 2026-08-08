@@ -64,12 +64,22 @@ pub fn render_native_effect_frame(
     for py in y0..y1 {
         for px in x0..x1 {
             let offset = ((py * frame.width + px) * 3) as usize;
-            let border = px - x0 < 6 || x1 - px <= 6 || py - y0 < 6 || y1 - py <= 6;
-            let color = if border {
-                [frame.accent_rgb.0, frame.accent_rgb.1, frame.accent_rgb.2]
+            let edge = (px - x0)
+                .min(x1.saturating_sub(px))
+                .min((py - y0).min(y1.saturating_sub(py)));
+            let blend = if edge < 6 {
+                255
             } else {
-                [20, 20, 22]
+                64 + (((px - x0) + (py - y0)) % 128) as u8
             };
+            let color = [
+                ((frame.accent_rgb.0 as u16 * blend as u16 + 20 * (255 - blend as u16)) / 255)
+                    as u8,
+                ((frame.accent_rgb.1 as u16 * blend as u16 + 20 * (255 - blend as u16)) / 255)
+                    as u8,
+                ((frame.accent_rgb.2 as u16 * blend as u16 + 22 * (255 - blend as u16)) / 255)
+                    as u8,
+            ];
             pixels[offset..offset + 3].copy_from_slice(&color);
         }
     }

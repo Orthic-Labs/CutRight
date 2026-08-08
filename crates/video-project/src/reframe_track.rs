@@ -96,6 +96,14 @@ pub struct OcrBox {
 pub struct TrackSample {
     pub output_ms: i64,
     pub source_id: String,
+    /// Index returned by the detector for this source frame. It is provenance
+    /// only: timing authority stays with Rust's output timeline.
+    #[serde(default)]
+    pub source_frame_index: Option<u64>,
+    /// Continuous Vision sequence identity. A source/track discontinuity
+    /// changes this id & resets native sequence state upstream.
+    #[serde(default)]
+    pub sequence_id: Option<String>,
     /// True at the first sample of a new edited segment (a hard cut the
     /// timeline already knows about) — see [`build_temporal_track`] for why
     /// this resets the smoother instead of being bound by it.
@@ -611,6 +619,8 @@ mod tests {
         TrackSample {
             output_ms: ms,
             source_id: "cam-a".into(),
+            source_frame_index: None,
+            sequence_id: None,
             shot_boundary: false,
             observations,
             ocr_boxes: Vec::new(),

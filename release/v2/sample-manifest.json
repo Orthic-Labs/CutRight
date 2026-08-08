@@ -104,6 +104,6 @@
       "tutorial_path": "README.md"
     }
   ],
-  "samples_dir": "/Volumes/D/claude/cutright/samples/v2",
+  "samples_dir": ".",
   "schema_version": "v2"
 }

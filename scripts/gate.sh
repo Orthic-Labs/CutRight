@@ -173,6 +173,10 @@ run "effects: pnpm --dir apps/effects build" \
 # --- 5. license/asset resolution --------------------------------------------
 run "license/asset resolution (scripts/resolve-license.sh)" \
   bash scripts/resolve-license.sh
+run "fixture seals: native" \
+  python3 scripts/gate-fixtures.py fixtures/macos-native/MANIFEST.json
+run "fixture seals: Cutaway/Finish" \
+  python3 scripts/gate-fixtures.py fixtures/cutaway-finish/MANIFEST.json
 
 # --- 5b. supply chain + dead code (skipped when the tool is absent) ----------
 # These were UNPROVEN for the whole hardening campaign because the tools were

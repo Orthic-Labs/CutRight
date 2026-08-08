@@ -5,6 +5,7 @@ mod color;
 mod effects;
 mod evidence;
 mod final_render;
+pub mod native;
 mod probe;
 mod process;
 mod reframe;
@@ -20,11 +21,12 @@ pub use audio::{extract_audio_f32, extract_audio_f32_with_receipt, AudioError};
 pub use audio_finish::{
     dialogue_chain_filter, duck_track_under_speech, ducking_filter, measure_loudness_and_clipping,
     measure_room_tone_step, process_dialogue_stem, process_dialogue_stem_with_receipt,
-    AudioFinishError, CompressorParams, DeEsserParams, DialogueChainParams, LoudnessMeasurement,
-    RoomToneStep,
+    route_audio_finish, AudioFinishError, AudioFinishRoute, CompressorParams, DeEsserParams,
+    DialogueChainParams, LoudnessMeasurement, RoomToneStep,
 };
 pub use captions::{
-    build_caption_document, render_preset_with_captions, render_preset_with_captions_and_reframe,
+    build_caption_document, render_caption_card_with_native_mode, render_preset_with_captions,
+    render_preset_with_captions_and_reframe,
     render_preset_with_captions_and_reframe_with_caption_receipt,
     render_preset_with_captions_and_reframe_with_receipt, render_subtitled, resolve_font_for_text,
     CaptionCueModel, CaptionDocument, CaptionFontDescriptor, CaptionFontNotice, CaptionPlatform,
@@ -42,17 +44,19 @@ pub use effects::{
 };
 pub use evidence::{compose_decision_evidence, extract_frame};
 pub use final_render::{
-    render_master, render_master_contact_sheet, render_to_preset, MasterRenderRequest,
+    render_locked_timeline, render_master, render_master_contact_sheet, render_to_preset,
+    FinishRenderRoute, MasterRenderRequest,
 };
 pub use probe::{probe, MediaMetadata, ProbeError};
 pub use reframe::ReframeAnchor;
 pub use rough_render::{
-    render_boundary_probe, render_segments, render_segments_with_receipt, render_source_segments,
-    RenderSegment, SourceRenderSegment,
+    render_boundary_probe, render_preview_frame_with_native_mode, render_segments,
+    render_segments_with_receipt, render_source_segments, RenderSegment, SourceRenderSegment,
 };
 pub use toolchain::{
-    resolve as resolve_toolchain, MediaCapabilities, MediaToolchain, PackId, PackResourceId,
-    PackResourceResolver, ResolverError, ToolchainError, VerifiedResource,
+    native_audio_evidence_with_mode, resolve as resolve_toolchain, MediaCapabilities,
+    MediaToolchain, PackId, PackResourceId, PackResourceResolver, ResolverError, ToolchainError,
+    VerifiedResource,
 };
 pub use waveform::{render_waveform, render_waveform_range};
 

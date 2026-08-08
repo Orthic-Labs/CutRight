@@ -82,6 +82,22 @@ pub struct LayoutToken {
 
 pub struct NativeTypographyEngine;
 
+pub fn exponential_bloom(progress: f64, start_blur: f64) -> f64 {
+    start_blur.max(0.0) * (1.0 - (-6.0 * progress.clamp(0.0, 1.0)).exp())
+}
+
+pub fn blur_to_sharp(progress: f64, start_blur: f64) -> f64 {
+    start_blur.max(0.0) * (1.0 - progress.clamp(0.0, 1.0))
+}
+
+pub fn upward_drift(progress: f64, rise_px: f64) -> f64 {
+    -rise_px * progress.clamp(0.0, 1.0)
+}
+
+pub fn authority_stagger(line: usize, stagger_ms: u64) -> u64 {
+    line as u64 * stagger_ms
+}
+
 impl NativeTypographyEngine {
     pub fn layout(
         doc: &CaptionDocument,

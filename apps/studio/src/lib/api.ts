@@ -91,6 +91,19 @@ export async function call<T>(
     return next as T;
   }
   if (command === "read_variant_selection") return memorySelection as T;
+  if (command === "rightkit_app_info") return { schema_version: 1, app: "cutright", tier: "free", license: "MIT", offline: true, telemetry: false, updates: "disabled-until-configured" } as T;
+  if (command === "rightkit_logs_write" || command === "rightkit_logs_clear") return undefined as T;
+  if (command === "rightkit_logs_collect") return [] as T;
+  if (command === "finish_read_variants") return {
+    variants: ["balanced", "pullback", "punch", "push", "editor-takeover"].map((id, index) => ({
+      id, label: id.replace("-", " "), preview_url: null, source_hashes: [`blake3:qa-${id}`], score: 1 - index * 0.05,
+    })),
+  } as T;
+  if (command === "finish_commit_variant") return {
+    variantId: String(args.variant_id),
+    lockedCutHash: String(args.locked_cut_hash),
+    sourceHashes: Array.isArray(args.source_hashes) ? args.source_hashes : [],
+  } as T;
   if (command === "read_cloud_settings") return memoryCloudSettings as T;
   if (command === "write_cloud_settings") {
     const next = {
@@ -124,6 +137,33 @@ export async function call<T>(
       error: null,
       note: "QA mock — not a real toolchain resolution",
     } as T;
+  if (command === "native_player_create") return 1 as T;
+  if (
+    command === "native_player_load" ||
+    command === "native_player_seek" ||
+    command === "native_player_play" ||
+    command === "native_player_pause" ||
+    command === "native_player_destroy" ||
+    command === "native_player_attach" || command === "native_player_resize" || command === "native_player_detach" ||
+    command === "native_player_set_rate" || command === "native_player_set_volume" || command === "release_security_scoped_bookmark"
+  )
+    return undefined as T;
+  if (command === "native_player_current_time") return 0 as T;
+  if (command === "native_player_duration") return 60 as T;
+  if (command === "native_media_capabilities") return { avFoundation: true, vision: true, caption: false, preview: false, audio: false, metal: false, osVersion: "qa", workerVersion: "qa", workerBlake3: "blake3:qa" } as T;
+  if (command === "native_media_inspect_asset") return { duration: { numerator: 60, denominator: 1 }, videoTracks: [], audioTracks: [] } as T;
+  if (command === "native_media_analyze_frames") return [] as T;
+  if (command === "native_media_render_caption" || command === "native_media_render_preview") return { outputPath: "/QA/native.png", width: 1, height: 1, colorSpace: "sRGB", renderer: "qa" } as T;
+  if (command === "native_media_audio_features") return { sampleRate: 48000, channelCount: 2, sampleCount: 0, rms: 0, peak: 0, zeroCrossingRate: 0, spectralFlux: 0, envelope: [], classification: null, classificationConfidence: null, classifierRevision: null } as T;
+  if (command === "native_media_cancel") return undefined as T;
+  if (command === "create_security_scoped_bookmark")
+    return `qa-bookmark:${String(args.path)}` as T;
+  if (command === "resolve_security_scoped_bookmark") {
+    const bookmark = String(args.bookmark);
+    if (!bookmark.startsWith("qa-bookmark:"))
+      throw new Error("bookmark_resolve_failed_or_stale");
+    return { token: 1, path: bookmark.slice("qa-bookmark:".length), stale: false, refreshedBookmark: null } as T;
+  }
   throw new Error(`QA mock has no ${command}`);
 }
 export const tc = (value = 0) => {
@@ -132,3 +172,22 @@ export const tc = (value = 0) => {
 };
 export const asset = (path?: string | null) =>
   path ? (qa ? path : convertFileSrc(path)) : undefined;
+
+export type FinishVariant = {
+  id: string;
+  label?: string;
+  preview_url?: string | null;
+  source_hashes: string[];
+  score?: number;
+};
+
+export async function readFinishVariants(interventionId: string): Promise<FinishVariant[]> {
+  const result = await call<{ variants: FinishVariant[] }>("finish_read_variants", { intervention_id: interventionId });
+  return result.variants.slice(0, 5);
+}
+
+export async function commitFinishVariant(variantId: string, lockedCutHash: string, sourceHashes: readonly string[] = []) {
+  return call<{ variantId: string; lockedCutHash: string; sourceHashes: string[] }>("finish_commit_variant", {
+    variant_id: variantId, locked_cut_hash: lockedCutHash, source_hashes: sourceHashes,
+  });
+}

@@ -17,8 +17,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import walk_files  # noqa: E402
 
 SIBLING = re.compile(r"(\.\./)+(heardright|claude|autoshorts|vox-director|palmier|workspace-capabilities)")
-ABSOLUTE_MACHINE = re.compile(r"(/Volumes/|/Users/|/home/|C:\\\\Users\\\\|file://)")
-TEXT_SUFFIXES = {".md", ".txt", ".json", ".yml", ".yaml", ".toml", ".py", ".js", ".ts", ".sh", ".rs", ".css", ".html"}
+ABSOLUTE_MACHINE = re.compile(r"(?:/Volumes/|/Users/|/home/|C:\\\\Users\\\\|file:///(?:Volumes|Users|home)/|file://[A-Za-z]:/)")
+TEXT_SUFFIXES = {".md", ".txt", ".json", ".yml", ".yaml", ".toml", ".py", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".sh", ".rs", ".css", ".html"}
 
 
 def main(argv: list[str]) -> int:

@@ -20,6 +20,78 @@ use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
 
 #[tauri::command]
+pub(crate) fn rightkit_app_info() -> serde_json::Value {
+    serde_json::json!({"schema_version":1,"app":"cutright","tier":"free","license":"MIT","offline":true,"telemetry":false,"updates":"disabled-until-configured"})
+}
+
+#[tauri::command]
+pub(crate) fn rightkit_logs_write(
+    path: String,
+    events: Vec<serde_json::Value>,
+) -> Result<(), String> {
+    let root = canonical_project_root(&path)?;
+    let store = rightkit_logs::JsonlStore::new(
+        root.join(".cutright-tools/rightkit-events.jsonl"),
+        1_048_576,
+    );
+    for event in events {
+        store.append_value(&event).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub(crate) fn rightkit_logs_collect(path: String) -> Result<Vec<serde_json::Value>, String> {
+    let root = canonical_project_root(&path)?;
+    let file = root.join(".cutright-tools/rightkit-events.jsonl");
+    if !file.exists() {
+        return Ok(vec![]);
+    }
+    std::fs::read_to_string(file)
+        .map_err(|e| e.to_string())
+        .map(|text| {
+            text.lines()
+                .filter_map(|line| serde_json::from_str(line).ok())
+                .collect()
+        })
+}
+
+#[tauri::command]
+pub(crate) fn rightkit_logs_clear(path: String) -> Result<(), String> {
+    let root = canonical_project_root(&path)?;
+    rightkit_logs::JsonlStore::new(
+        root.join(".cutright-tools/rightkit-events.jsonl"),
+        1_048_576,
+    )
+    .clear()
+    .map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod rightkit_tests {
+    use super::*;
+    #[test]
+    fn app_info_is_free_offline_cutright() {
+        let info = rightkit_app_info();
+        assert_eq!(info["app"], "cutright");
+        assert_eq!(info["tier"], "free");
+        assert_eq!(info["offline"], true);
+        assert_eq!(info["telemetry"], false);
+    }
+    #[test]
+    fn logs_write_collect_clear_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("project.json"), "{}").unwrap();
+        let path = dir.path().to_string_lossy().into_owned();
+        rightkit_logs_write(path.clone(), vec![serde_json::json!({"event":"opened"})]).unwrap();
+        let rows = rightkit_logs_collect(path.clone()).unwrap();
+        assert_eq!(rows.len(), 1);
+        rightkit_logs_clear(path.clone()).unwrap();
+        assert!(rightkit_logs_collect(path).unwrap().is_empty());
+    }
+}
+
+#[tauri::command]
 pub(crate) fn pick_project(app: AppHandle) -> Result<Option<String>, String> {
     let Some(path) = app.dialog().file().blocking_pick_folder() else {
         return Ok(None);
@@ -200,6 +272,61 @@ pub(crate) fn read_variant_selection(
 ) -> Result<Option<video_project::SelectionRecord>, String> {
     let root = canonical_project_root(&path)?;
     video_project::read_variant_selection(&root).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub(crate) fn finish_commit_variant(
+    path: String,
+    variant_id: String,
+    locked_cut_hash: String,
+    source_hashes: Vec<String>,
+) -> Result<serde_json::Value, String> {
+    const VARIANTS: [&str; 5] = ["balanced", "pullback", "punch", "push", "editor-takeover"];
+    let valid_hash = |value: &str| {
+        value.len() == 71
+            && value.starts_with("blake3:")
+            && value[7..].bytes().all(|byte| byte.is_ascii_hexdigit())
+    };
+    if !VARIANTS.contains(&variant_id.as_str())
+        || source_hashes.is_empty()
+        || source_hashes.iter().any(|hash| !valid_hash(hash))
+    {
+        return Err("finish variant requires a known id and source hashes".into());
+    }
+    let root = canonical_project_root(&path)?;
+    let current = project_revision(
+        &root,
+        &video_project::project_snapshot(&root).map_err(|e| e.to_string())?,
+    );
+    if current != locked_cut_hash {
+        return Err("stale_locked_cut".into());
+    }
+    let value = serde_json::json!({"schemaVersion":1,"variantId":variant_id,"lockedCutHash":locked_cut_hash,"sourceHashes":source_hashes});
+    let dir = root.join("finish");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let tmp = dir.join("selection.json.tmp");
+    let mut file = std::fs::File::create(&tmp).map_err(|e| e.to_string())?;
+    use std::io::Write as _;
+    file.write_all(&serde_json::to_vec_pretty(&value).map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())?;
+    file.sync_all().map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, dir.join("selection.json")).map_err(|e| e.to_string())?;
+    std::fs::File::open(&dir)
+        .and_then(|directory| directory.sync_all())
+        .map_err(|e| e.to_string())?;
+    Ok(value)
+}
+
+#[tauri::command]
+pub(crate) fn finish_read_selection(path: String) -> Result<Option<serde_json::Value>, String> {
+    let root = canonical_project_root(&path)?;
+    let file = root.join("finish/selection.json");
+    if !file.exists() {
+        return Ok(None);
+    }
+    serde_json::from_slice(&std::fs::read(file).map_err(|e| e.to_string())?)
+        .map(Some)
+        .map_err(|e| e.to_string())
 }
 
 /// Read this project's cloud-analysis settings (REV2 §15.6), or the

@@ -49,11 +49,10 @@ TERMINAL: Acceptance proven.
 - `specialists/carousel` — capture retyped to `cutright://skill/qa {"mode":"capture"}`; not vendored.
 - `specialists/demo-recorder` — depended on the workspace tools/demo runtime; not vendored.
 
-## Known upstream gap
+## Local editing route
 
-Upstream SKILL.md referenced `specialists/video-editor/SKILL.md`, but that directory is absent at
-the pinned corpus revision. The video-edit route is therefore reported as unavailable at the pin and
-is not fabricated here.
+Video editing routes to local `cutright://skill/content-video-editor`; Rust `videoctl` owns ingest,
+word-safe cuts, finish, QA, and export. This skill never invokes a sibling checkout.
 
 Read one branch. Freeze sources, rights, format, size, duration, text, & acceptance. Verify output
 through the QA skill. UI → cutright://skill/designer; prose → cutright://skill/writing;

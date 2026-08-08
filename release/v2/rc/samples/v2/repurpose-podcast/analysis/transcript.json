@@ -1,0 +1,20 @@
+{
+  "schema_version": "v2",
+  "kind": "transcript",
+  "engine": "parakeet-tdt",
+  "engine_fingerprint": "speech-pack@parakeet-tdt-0.1.0",
+  "language": "en",
+  "tolerance": {
+    "wer_max": 0.20,
+    "timing_coverage_min": 0.95
+  },
+  "words": [
+    {"t0_ms": 1000, "t1_ms": 1400, "text": "Today", "conf": 0.99},
+    {"t0_ms": 1400, "t1_ms": 1900, "text": "we", "conf": 0.99},
+    {"t0_ms": 1900, "t1_ms": 2500, "text": "are", "conf": 0.99},
+    {"t0_ms": 2500, "t1_ms": 3000, "text": "talking", "conf": 0.99},
+    {"t0_ms": 3000, "t1_ms": 3600, "text": "about", "conf": 0.99},
+    {"t0_ms": 3600, "t1_ms": 4000, "text": "editing", "conf": 0.99}
+  ],
+  "fixture_hash": "unresolved"
+}

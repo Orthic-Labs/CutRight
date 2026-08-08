@@ -12,11 +12,6 @@
       "support": "supported"
     },
     {
-      "id": "windows-x86_64",
-      "installer": "windows_msi",
-      "support": "supported"
-    },
-    {
       "id": "linux-x86_64-appimage",
       "installer": "linux_appimage",
       "support": "supported"
@@ -32,5 +27,5 @@
       "support": "source_build_only"
     }
   ],
-  "unsupported_targets": []
+  "unsupported_targets": ["windows-x86_64"]
 }

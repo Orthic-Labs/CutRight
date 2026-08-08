@@ -31,7 +31,7 @@
       "to": "byte:signatures/README.md"
     }
   ],
-  "generated_at": "2026-08-07T10:09:25.301393+00:00",
+  "generated_at": "2026-08-07T22:43:12.013647+00:00",
   "missing_edge_action": "release_block",
   "nodes": [
     {
@@ -73,5 +73,5 @@
   ],
   "provenance_id": "v2-rc-provenance-2026-08-07",
   "schema_version": 1,
-  "seal_target": "/Volumes/D/claude/cutright/release/v2/staging"
+  "seal_target": "."
 }

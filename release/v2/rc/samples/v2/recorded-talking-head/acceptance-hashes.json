@@ -1,0 +1,11 @@
+{
+  "schema_version": "v2",
+  "sample": "recorded-talking-head",
+  "assets": [
+    {
+      "path": "sources/talking-head-cam-a.json",
+      "role": "descriptor",
+      "sha256": "e0c41b4a259922dfb0e790e0aeaea5be0ebeb0ecbf2062f5194e7dc0b2a0b655"
+    }
+  ]
+}

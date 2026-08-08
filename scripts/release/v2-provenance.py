@@ -100,7 +100,7 @@ def cmd_provenance(args) -> int:
         )
     graph = {
         "schema_version": 1,
-        "seal_target": str(bundle),
+        "seal_target": ".",
         "provenance_id": "v2-rc-provenance-2026-08-07",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "nodes": nodes,

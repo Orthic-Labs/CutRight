@@ -22,6 +22,8 @@ pub enum CompositorError {
     Cycle(String),
     #[error("unknown node id: {0}")]
     UnknownNode(String),
+    #[error("duplicate node id: {0}")]
+    DuplicateNode(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -42,7 +44,7 @@ pub enum NodeKind {
     Output,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RenderNode {
     pub id: String,
     pub kind: NodeKind,
@@ -50,7 +52,7 @@ pub struct RenderNode {
     pub props: BTreeMap<String, String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RenderGraph {
     pub id: String,
     pub version: String,
@@ -73,7 +75,11 @@ impl NativeCompositor {
     }
 
     pub fn validate(graph: &RenderGraph) -> Result<(), CompositorError> {
+        let mut ids = std::collections::BTreeSet::new();
         for n in &graph.nodes {
+            if !ids.insert(n.id.clone()) {
+                return Err(CompositorError::DuplicateNode(n.id.clone()));
+            }
             let kind_str = format!("{:?}", n.kind).to_ascii_lowercase();
             if Self::forbidden_kinds().iter().any(|k| kind_str == *k) {
                 return Err(CompositorError::ForbiddenNode(n.id.clone()));

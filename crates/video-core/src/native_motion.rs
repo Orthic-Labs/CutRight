@@ -12,7 +12,6 @@
 //! minimal-but-compiling shape.
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -61,6 +60,29 @@ pub struct Placement {
 }
 
 pub struct NativeMotionEngine;
+
+/// Finish motion samples use normalized progress and never emit a scale below
+/// one (which would expose the source frame edge).
+pub fn pullback_scale(progress: f64) -> f64 {
+    1.3 - 0.3 * progress.clamp(0.0, 1.0)
+}
+
+pub fn punch_wave_scale(progress: f64, peak_scale: f64, peak: f64, width: f64) -> f64 {
+    let d = ((progress - peak).abs() / width.max(f64::EPSILON)).min(1.0);
+    1.0 + (peak_scale.max(1.0) - 1.0) * (1.0 - d)
+}
+
+pub fn biased_push_scale(progress: f64, start: f64, end: f64) -> f64 {
+    start.max(1.0) + (end.max(1.0) - start.max(1.0)) * progress.clamp(0.0, 1.0)
+}
+
+pub fn active_envelope(time: f64, start: f64, end: f64) -> f64 {
+    if time < start || time > end {
+        0.0
+    } else {
+        1.0
+    }
+}
 
 impl NativeMotionEngine {
     pub fn validate(clip: &MotionClip) -> Result<(), MotionError> {

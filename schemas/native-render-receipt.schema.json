@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cutright.local/schemas/native-render-receipt.schema.json",
+  "title": "CutRight native render receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "lockedCutSha256", "artifactSha256", "pixelSha256", "audioSha256", "duration", "renderedFrames", "audioFrames", "nodes"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "lockedCutSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "artifactSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "pixelSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "audioSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "duration": {"$ref": "#/$defs/rational"},
+    "renderedFrames": {"type": "integer", "minimum": 0},
+    "audioFrames": {"type": "integer", "minimum": 0},
+    "nodes": {"type": "array", "items": {"$ref": "#/$defs/node"}}
+  },
+  "$defs": {
+    "rational": {"type": "object", "additionalProperties": false, "required": ["numerator", "denominator"], "properties": {"numerator": {"type": "integer"}, "denominator": {"type": "integer", "minimum": 1}}},
+    "node": {"type": "object", "additionalProperties": false, "required": ["nodeId", "status"], "properties": {"nodeId": {"type": "string", "minLength": 1}, "status": {"enum": ["rendered", "skipped", "failed"]}, "frameHash": {"type": "string"}, "audioPeakOffsetMs": {"type": "number"}}}
+  }
+}

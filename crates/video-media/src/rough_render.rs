@@ -4,6 +4,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::native::{
+    MacMediaBackend, MacNativeMode, NativePreviewRequest, NativeRenderArtifact,
+    NativeRequestContext,
+};
 use crate::probe::probe_with_toolchain;
 use crate::process::{
     rec709_output_args, run_media_command, scaled_timeout, string_args, PREVIEW_RENDER_FLOOR,
@@ -272,6 +276,51 @@ pub fn render_boundary_probe(
     }
 }
 
+/// Explicit route for a native *preview frame* artifact. This is deliberately
+/// separate from `render_segments`/`render_boundary_probe`, which produce
+/// FFmpeg MP4 previews. `Shadow` preserves legacy output & asks callers to
+/// compare the separately-addressed native frame artifact.
+pub fn render_preview_frame_with_native_mode(
+    mode: MacNativeMode,
+    backend: Option<&dyn MacMediaBackend>,
+    context: &NativeRequestContext,
+    request: &NativePreviewRequest,
+    legacy: impl FnOnce() -> Result<(), RenderError>,
+) -> Result<Option<NativeRenderArtifact>, RenderError> {
+    match mode {
+        MacNativeMode::Legacy => {
+            legacy()?;
+            Ok(None)
+        }
+        MacNativeMode::Shadow => {
+            legacy()?;
+            let backend = backend.ok_or_else(|| {
+                RenderError::Failed(
+                    "native preview backend unavailable for shadow comparison".into(),
+                )
+            })?;
+            Ok(Some(
+                backend
+                    .render_preview(context, request)
+                    .map_err(native_preview_error)?,
+            ))
+        }
+        MacNativeMode::Native => {
+            let backend = backend
+                .ok_or_else(|| RenderError::Failed("native preview backend unavailable".into()))?;
+            Ok(Some(
+                backend
+                    .render_preview(context, request)
+                    .map_err(native_preview_error)?,
+            ))
+        }
+    }
+}
+
+fn native_preview_error(error: crate::native::NativeMediaError) -> RenderError {
+    RenderError::Failed(error.to_string())
+}
+
 pub(crate) struct SourceVideoFilter {
     pub(crate) filter: String,
     pub(crate) rec709_output: bool,
@@ -320,6 +369,31 @@ mod tests {
     use super::*;
     use std::process::Command;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn native_preview_shadow_requires_explicit_backend() {
+        let context = NativeRequestContext {
+            request_id: "preview-shadow".into(),
+            timeout: std::time::Duration::from_secs(1),
+        };
+        let result = render_preview_frame_with_native_mode(
+            MacNativeMode::Shadow,
+            None,
+            &context,
+            &NativePreviewRequest {
+                input_path: std::env::temp_dir().join("preview-input.png"),
+                output_path: std::env::temp_dir().join("preview-output.png"),
+                crop_x: None,
+                crop_y: None,
+                crop_width: None,
+                crop_height: None,
+                rotation_degrees: None,
+                allowed_roots: vec![std::env::temp_dir()],
+            },
+            || Ok(()),
+        );
+        assert!(matches!(result, Err(RenderError::Failed(message)) if message.contains("shadow")));
+    }
 
     #[test]
     fn boundary_probe_renders_a_short_av_edit() {

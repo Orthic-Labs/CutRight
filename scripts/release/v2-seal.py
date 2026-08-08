@@ -131,7 +131,7 @@ def _verify_and_mark(root: Path, seal_path: Path, count: int) -> bool:
         marked = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
         _write_atomic(bundled, marked.encode("utf-8"))
         rebuilt = _build_manifest(root, seal_path)
-        rebuilt["seal_target"] = str(root)
+        rebuilt["seal_target"] = "."
         _write_atomic(seal_path, (json.dumps(rebuilt, indent=2, sort_keys=True) + "\n").encode("utf-8"))
         if _verify_items(root, _read_json(seal_path)) is None:
             raise ValueError("reverification failed")
@@ -159,7 +159,7 @@ def cmd_seal(args) -> int:
     if not root.is_dir():
         raise FileNotFoundError(f"bundle directory not found: {root}")
     manifest = _build_manifest(root, out)
-    manifest["seal_target"] = str(root)
+    manifest["seal_target"] = "."
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(manifest, indent=2, sort_keys=True))
     return 0
@@ -179,7 +179,7 @@ def cmd_legacy_seal(args) -> int:
         exported_manifest.write_bytes(bundled_manifest.read_bytes())
     seal_path = root / "SEAL.json"
     manifest = _build_manifest(root, seal_path)
-    manifest["seal_target"] = str(root)
+    manifest["seal_target"] = "."
     seal_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return 0
 
@@ -214,7 +214,9 @@ def cmd_verify_provenance(args) -> int:
         prov = _read_json(prov_path)
         if not isinstance(prov, dict):
             raise ValueError("provenance must be an object")
-        seal_target = Path(prov.get("seal_target") or bundle)
+        seal_target = Path(prov.get("seal_target") or ".")
+        if not seal_target.is_absolute():
+            seal_target = bundle / seal_target
         seal = _read_json(Path(args.seal or seal_target / "SEAL.json"))
         count = _verify_items(bundle, seal)
     except (OSError, ValueError, UnicodeError, TypeError):

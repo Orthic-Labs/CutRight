@@ -1,3 +1,8 @@
+---
+name: editorial-director
+description: "Propose evidence-bound editorial beat order without emitting raw timestamps."
+---
+
 # Editorial Director Skill
 
 Book 4 lane C — B4-017 contract.

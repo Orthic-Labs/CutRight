@@ -1,0 +1,21 @@
+{
+  "schema_version": "v2",
+  "lane": "speech",
+  "title": "Repurpose podcast",
+  "description": "Long-form podcast audio reduced to short vertical clips. The speech lane exercises the transcript authority, beat detection, and clip selection without requiring a camera source.",
+  "format_key": {
+    "content_type": "repurpose_podcast",
+    "platform": "reels",
+    "variant": "v1"
+  },
+  "expected_stages": [
+    "media_probe",
+    "speech_transcribe",
+    "beat_detect",
+    "clip_select",
+    "native_render",
+    "ready_review"
+  ],
+  "review_mode": "reviewed",
+  "external_runtime_dependencies": []
+}

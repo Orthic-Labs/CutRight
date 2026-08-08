@@ -12,6 +12,10 @@ use crate::color::{
     color_filter_chain, verify_output_color_metadata, ColorCorrection, ColorSpaceKind, CreativeLut,
     ExpectedColorMetadata, ShotMatchTarget,
 };
+use crate::native::{
+    MacMediaBackend, MacNativeMode, NativeRequestContext, NativeTimelineRenderRequest,
+    NativeTimelineRenderResult,
+};
 use crate::probe::probe_with_toolchain;
 use crate::process::{
     duration_scaled_timeout_with_toolchain, rec709_output_args, run_media_command, string_args,
@@ -21,6 +25,47 @@ use crate::process::{
 use crate::reframe::{reframe_filter, ReframeAnchor};
 use crate::toolchain::{self, MediaToolchain};
 use crate::RenderError;
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum FinishRenderRoute {
+    Legacy,
+    Shadow(NativeTimelineRenderResult),
+    Native(NativeTimelineRenderResult),
+}
+
+/// Explicit final-render strangler. Native mode never falls back; shadow
+/// preserves legacy authority while returning native comparison evidence.
+pub fn render_locked_timeline(
+    backend: Option<&dyn MacMediaBackend>,
+    context: &NativeRequestContext,
+    request: &NativeTimelineRenderRequest,
+    legacy: impl FnOnce() -> Result<(), RenderError>,
+) -> Result<FinishRenderRoute, RenderError> {
+    match request.mode {
+        MacNativeMode::Legacy => {
+            legacy()?;
+            Ok(FinishRenderRoute::Legacy)
+        }
+        MacNativeMode::Shadow => {
+            legacy()?;
+            let backend = backend.ok_or_else(|| {
+                RenderError::Failed("native timeline backend unavailable for shadow receipt".into())
+            })?;
+            backend
+                .render_timeline(context, request)
+                .map(FinishRenderRoute::Shadow)
+                .map_err(|error| RenderError::Failed(error.to_string()))
+        }
+        MacNativeMode::Native => {
+            let backend = backend
+                .ok_or_else(|| RenderError::Failed("native timeline backend unavailable".into()))?;
+            backend
+                .render_timeline(context, request)
+                .map(FinishRenderRoute::Native)
+                .map_err(|error| RenderError::Failed(error.to_string()))
+        }
+    }
+}
 
 pub fn render_to_preset(
     input: &Path,
@@ -283,4 +328,64 @@ pub fn render_master_contact_sheet(
         rows,
         &toolchain,
     )
+}
+
+#[cfg(test)]
+mod route_tests {
+    use super::*;
+    use std::cell::Cell;
+    use std::time::Duration;
+
+    fn request(mode: MacNativeMode) -> NativeTimelineRenderRequest {
+        serde_json::from_value(serde_json::json!({
+            "schemaVersion": 1,
+            "lockedCutSha256": "0".repeat(64),
+            "graph": {"schemaVersion":1,"sourcePath":"/tmp/source.mov","duration":{"numerator":1,"denominator":1},"assets":{},"nodes":[]},
+            "outputPath": "/tmp/output.mp4",
+            "allowedRoots": ["/tmp"],
+            "video": {"width":64,"height":64,"frameRateNum":30,"frameRateDen":1},
+            "audio": {"sampleRate":48000,"channels":2},
+            "mode": mode
+        }))
+        .unwrap()
+    }
+
+    fn context() -> NativeRequestContext {
+        NativeRequestContext {
+            request_id: "route".into(),
+            timeout: Duration::from_secs(1),
+        }
+    }
+
+    #[test]
+    fn final_modes_never_hide_native_fallback() {
+        let legacy_ran = Cell::new(false);
+        assert_eq!(
+            render_locked_timeline(None, &context(), &request(MacNativeMode::Legacy), || {
+                legacy_ran.set(true);
+                Ok(())
+            })
+            .unwrap(),
+            FinishRenderRoute::Legacy
+        );
+        assert!(legacy_ran.get());
+
+        legacy_ran.set(false);
+        let shadow =
+            render_locked_timeline(None, &context(), &request(MacNativeMode::Shadow), || {
+                legacy_ran.set(true);
+                Ok(())
+            });
+        assert!(shadow.is_err());
+        assert!(legacy_ran.get());
+
+        legacy_ran.set(false);
+        let native =
+            render_locked_timeline(None, &context(), &request(MacNativeMode::Native), || {
+                legacy_ran.set(true);
+                Ok(())
+            });
+        assert!(native.is_err());
+        assert!(!legacy_ran.get());
+    }
 }

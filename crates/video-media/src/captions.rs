@@ -19,6 +19,10 @@ use serde::{Deserialize, Serialize};
 use video_core::Word;
 
 use crate::final_render::{measured_loudnorm_filter, preset_video_filter};
+use crate::native::{
+    MacMediaBackend, MacNativeMode, NativeCaptionRequest, NativeRenderArtifact,
+    NativeRequestContext,
+};
 use crate::probe::probe_with_toolchain;
 use crate::process::{
     duration_scaled_timeout_with_toolchain, rec709_output_args, run_caption_card_worker,
@@ -829,9 +833,80 @@ fn caption_card_worker() -> Result<PathBuf, RenderError> {
     )?)
 }
 
+/// Explicit opt-in route for one caption card. Existing delivery render APIs
+/// do not call this: FFmpeg remains final-render authority. In `Shadow` mode
+/// callers must supply an isolated native output path, then compare it with
+/// their legacy artifact before promotion.
+pub fn render_caption_card_with_native_mode(
+    mode: MacNativeMode,
+    backend: Option<&dyn MacMediaBackend>,
+    context: &NativeRequestContext,
+    request: &NativeCaptionRequest,
+    legacy: impl FnOnce() -> Result<(), RenderError>,
+) -> Result<Option<NativeRenderArtifact>, RenderError> {
+    match mode {
+        MacNativeMode::Legacy => {
+            legacy()?;
+            Ok(None)
+        }
+        MacNativeMode::Shadow => {
+            legacy()?;
+            let backend = backend.ok_or_else(|| {
+                RenderError::CaptionFailed(
+                    "native caption backend unavailable for shadow comparison".into(),
+                )
+            })?;
+            Ok(Some(
+                backend
+                    .render_caption(context, request)
+                    .map_err(native_caption_error)?,
+            ))
+        }
+        MacNativeMode::Native => {
+            let backend = backend.ok_or_else(|| {
+                RenderError::CaptionFailed("native caption backend unavailable".into())
+            })?;
+            Ok(Some(
+                backend
+                    .render_caption(context, request)
+                    .map_err(native_caption_error)?,
+            ))
+        }
+    }
+}
+
+fn native_caption_error(error: crate::native::NativeMediaError) -> RenderError {
+    RenderError::CaptionFailed(error.to_string())
+}
+
 #[cfg(test)]
 mod caption_model_tests {
     use super::*;
+
+    #[test]
+    fn native_caption_shadow_requires_explicit_backend() {
+        let context = NativeRequestContext {
+            request_id: "caption-shadow".into(),
+            timeout: std::time::Duration::from_secs(1),
+        };
+        let result = render_caption_card_with_native_mode(
+            MacNativeMode::Shadow,
+            None,
+            &context,
+            &NativeCaptionRequest {
+                output_path: std::env::temp_dir().join("caption-shadow.png"),
+                width: 1,
+                height: 1,
+                text: "caption".into(),
+                vertical: false,
+                allowed_roots: vec![std::env::temp_dir()],
+            },
+            || Ok(()),
+        );
+        assert!(
+            matches!(result, Err(RenderError::CaptionFailed(message)) if message.contains("shadow"))
+        );
+    }
 
     fn word(id: &str, text: &str, start_ms: i64, end_ms: i64) -> Word {
         Word {

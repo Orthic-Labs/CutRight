@@ -1,0 +1,15 @@
+{
+  "schema_version": "v2",
+  "rights_cleared": true,
+  "rights_statement": "Synthetic script authored for the v2 sample set. No third-party assets. No recorded media.",
+  "external_runtime_dependencies": [],
+  "items": [
+    {
+      "id": "explainer-script-1",
+      "kind": "text",
+      "rights": "operator-owned",
+      "path": "sources/explainer-script-1.json",
+      "note": "Synthetic script for a 20-second explainer."
+    }
+  ]
+}

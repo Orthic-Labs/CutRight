@@ -19,8 +19,36 @@ use thiserror::Error;
 
 use video_core::process_runner::ProcessRunError;
 
+use crate::native::MacNativeMode;
 use crate::process::{duration_scaled_timeout, run_media_command, string_args};
 use crate::toolchain::ToolchainError;
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum AudioFinishRoute<T> {
+    Legacy,
+    Shadow(T),
+    Native(T),
+}
+
+/// Route one audio finish without hidden fallback. Shadow preserves legacy
+/// output & returns native evidence; native failures remain typed failures.
+pub fn route_audio_finish<T>(
+    mode: MacNativeMode,
+    legacy: impl FnOnce() -> Result<(), AudioFinishError>,
+    native: impl FnOnce() -> Result<T, AudioFinishError>,
+) -> Result<AudioFinishRoute<T>, AudioFinishError> {
+    match mode {
+        MacNativeMode::Legacy => {
+            legacy()?;
+            Ok(AudioFinishRoute::Legacy)
+        }
+        MacNativeMode::Shadow => {
+            legacy()?;
+            native().map(AudioFinishRoute::Shadow)
+        }
+        MacNativeMode::Native => native().map(AudioFinishRoute::Native),
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum AudioFinishError {
@@ -412,6 +440,59 @@ mod tests {
             },
             limiter_ceiling_dbtp: -1.0,
         }
+    }
+
+    #[test]
+    fn audio_modes_preserve_legacy_shadow_and_native_authority() {
+        let legacy = std::cell::Cell::new(0);
+        let native = std::cell::Cell::new(0);
+        assert_eq!(
+            route_audio_finish(
+                MacNativeMode::Legacy,
+                || {
+                    legacy.set(legacy.get() + 1);
+                    Ok(())
+                },
+                || {
+                    native.set(native.get() + 1);
+                    Ok(7)
+                }
+            )
+            .unwrap(),
+            AudioFinishRoute::Legacy
+        );
+        assert_eq!(
+            route_audio_finish(
+                MacNativeMode::Shadow,
+                || {
+                    legacy.set(legacy.get() + 1);
+                    Ok(())
+                },
+                || {
+                    native.set(native.get() + 1);
+                    Ok(7)
+                }
+            )
+            .unwrap(),
+            AudioFinishRoute::Shadow(7)
+        );
+        assert_eq!(
+            route_audio_finish(
+                MacNativeMode::Native,
+                || {
+                    legacy.set(legacy.get() + 1);
+                    Ok(())
+                },
+                || {
+                    native.set(native.get() + 1);
+                    Ok(7)
+                }
+            )
+            .unwrap(),
+            AudioFinishRoute::Native(7)
+        );
+        assert_eq!(legacy.get(), 2);
+        assert_eq!(native.get(), 2);
     }
 
     #[test]

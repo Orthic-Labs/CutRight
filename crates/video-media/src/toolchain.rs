@@ -13,6 +13,44 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use crate::native::{
+    MacMediaBackend, MacNativeMode, NativeAudioFeatures, NativeAudioRequest, NativeMediaError,
+    NativeRequestContext,
+};
+
+/// Explicit evidence-only audio route. It does not alter any edit policy or
+/// FFmpeg command: callers retain legacy signal evidence in `Legacy` and
+/// `Shadow`; `Shadow` must compare its native result before promotion.
+pub fn native_audio_evidence_with_mode(
+    mode: MacNativeMode,
+    backend: Option<&dyn MacMediaBackend>,
+    context: &NativeRequestContext,
+    request: &NativeAudioRequest,
+    legacy: impl FnOnce() -> Result<(), NativeMediaError>,
+) -> Result<Option<NativeAudioFeatures>, NativeMediaError> {
+    match mode {
+        MacNativeMode::Legacy => {
+            legacy()?;
+            Ok(None)
+        }
+        MacNativeMode::Shadow => {
+            legacy()?;
+            let backend = backend.ok_or_else(|| {
+                NativeMediaError::Unsupported(
+                    "native audio backend unavailable for shadow comparison".into(),
+                )
+            })?;
+            Ok(Some(backend.audio_features(context, request)?))
+        }
+        MacNativeMode::Native => {
+            let backend = backend.ok_or_else(|| {
+                NativeMediaError::Unsupported("native audio backend unavailable".into())
+            })?;
+            Ok(Some(backend.audio_features(context, request)?))
+        }
+    }
+}
+
 /// Encoder/filter capabilities probed once per resolved toolchain and
 /// reused by every render path that needs to know about them, instead of
 /// spawning a fresh `ffmpeg -encoders`/`-filters` process per call site.
@@ -258,6 +296,29 @@ fn list_contains(ffmpeg: &Path, flag: &str, name: &str) -> Result<bool, Toolchai
 mod tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn native_audio_shadow_requires_explicit_backend() {
+        let context = NativeRequestContext {
+            request_id: "audio-shadow".into(),
+            timeout: std::time::Duration::from_secs(1),
+        };
+        let result = native_audio_evidence_with_mode(
+            MacNativeMode::Shadow,
+            None,
+            &context,
+            &NativeAudioRequest {
+                source_path: std::env::temp_dir().join("audio-shadow.wav"),
+                start_seconds: None,
+                duration_seconds: None,
+                allowed_roots: vec![std::env::temp_dir()],
+            },
+            || Ok(()),
+        );
+        assert!(
+            matches!(result, Err(NativeMediaError::Unsupported(message)) if message.contains("shadow"))
+        );
+    }
     use std::os::unix::fs::PermissionsExt;
 
     fn unique_dir(label: &str) -> PathBuf {

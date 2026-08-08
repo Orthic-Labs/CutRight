@@ -8,6 +8,7 @@ pub mod creative_plan;
 pub mod creative_skill_resolver;
 pub mod creative_skill_runtime;
 pub mod designer_service;
+pub mod finish_graph;
 pub mod finish_plan;
 pub mod job_plane_integration;
 pub mod models;
@@ -15,6 +16,7 @@ pub mod native_audio;
 pub mod native_compositor;
 pub mod native_effect_renderer;
 pub mod native_motion;
+pub mod native_receipt;
 pub mod native_typography;
 pub mod package_plan;
 pub mod process_runner;
@@ -45,11 +47,17 @@ pub use creative_skill_runtime::{
     RUNTIME_VERSION as CREATIVE_SKILL_RUNTIME_VERSION,
 };
 pub use designer_service::{AssetRequest, AssetReview, DesignerError, DesignerService};
+pub use finish_graph::{
+    FinishGraphError, FinishGraphNode, FinishNode, FinishRenderGraph, GraphTime,
+};
 pub use finish_plan::{CompiledFinishPlan, CompiledFinishPlanCompiler, CompiledFinishPlanError};
 pub use job_plane_integration::{
     CreativeJob, CreativeJobKind, JobHandle, JobPlaneIntegration, JobPlaneIntegrationError,
 };
-pub use native_audio::{AudioCue, AudioError, AudioFinish, AudioProfile, NativeAudioEngine};
+pub use native_audio::{
+    dry_wet_split, transient_offset_ms, AudioCue, AudioError, AudioFinish, AudioProfile,
+    NativeAudioEngine,
+};
 pub use native_compositor::{
     CompositeCommand, CompositorError, NativeCompositor, NodeKind, RenderGraph, RenderNode,
 };
@@ -57,11 +65,16 @@ pub use native_effect_renderer::{
     render_native_effect_frame, NativeEffectFrame, NativeEffectRenderError,
 };
 pub use native_motion::{
-    MotionBeat, MotionClip, MotionError, NativeMotionEngine, Placement, Reframe,
+    active_envelope, biased_push_scale, pullback_scale, punch_wave_scale, MotionBeat, MotionClip,
+    MotionError, NativeMotionEngine, Placement, Reframe,
+};
+pub use native_receipt::{
+    NativeRationalTime as ReceiptRationalTime, NativeRenderReceipt, NodeReceipt,
 };
 pub use native_typography::{
-    CaptionDocument, CaptionLayout, CaptionToken, LayoutToken, NativeTypographyEngine,
-    TypographyError, TypographyProfile,
+    authority_stagger, blur_to_sharp, exponential_bloom, upward_drift, CaptionDocument,
+    CaptionLayout, CaptionToken, LayoutToken, NativeTypographyEngine, TypographyError,
+    TypographyProfile,
 };
 pub use package_plan::{
     BrandKitRef, PackageAsset, PackageAssetError, PackagePlan, PackagePlanService, Thumbnail,

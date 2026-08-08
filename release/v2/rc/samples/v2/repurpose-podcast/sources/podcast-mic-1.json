@@ -1,0 +1,9 @@
+{
+  "id": "podcast-mic-1",
+  "kind": "audio",
+  "duration_ms": 3600000,
+  "sample_rate": 48000,
+  "channels": 2,
+  "rights": "operator-owned",
+  "note": "Placeholder descriptor for a 60-minute podcast episode. The real media lives in the operator's offline fixture directory."
+}

@@ -35,6 +35,10 @@ use std::time::{Duration, Instant};
 use video_core::process_runner::{ManagedChild, ProcessSpec};
 use video_core::{models::SCHEMA_VERSION, SourceManifest, Timeline, TimelineSegment, Transcript};
 use video_media::extract_frame;
+use video_media::native::{
+    AnalyzeFramesRequest, MacMediaBackend, MacMediaWorker, MacNativeMode, NativeFrameAnalysis,
+    NativeFrameRequest, NativeRationalTime, NativeRequestContext,
+};
 
 /// Target spacing between samples within one segment. This is a target, not
 /// a guarantee: [`effective_sample_interval_ms`] widens it as needed so the
@@ -97,6 +101,84 @@ struct VisionFrameResponse {
     saliency: Option<VisionDetectionBox>,
 }
 
+#[derive(Debug, Clone)]
+struct ReframeFrameSample {
+    output_ms: i64,
+    source_ms: i64,
+    offset: i64,
+    frame: PathBuf,
+    source_frame_index: i32,
+    sequence_id: String,
+}
+
+fn parse_native_vision_mode(value: Option<&str>) -> Result<MacNativeMode, ProjectError> {
+    match value.unwrap_or("legacy") {
+        "legacy" => Ok(MacNativeMode::Legacy),
+        "shadow" => Ok(MacNativeMode::Shadow),
+        "native" => Ok(MacNativeMode::Native),
+        value => Err(ProjectError::InvalidState(format!(
+            "CUTRIGHT_MACOS_NATIVE must be legacy, shadow, or native; got {value}"
+        ))),
+    }
+}
+
+fn native_vision_mode_from_env() -> Result<MacNativeMode, ProjectError> {
+    parse_native_vision_mode(std::env::var("CUTRIGHT_MACOS_NATIVE").ok().as_deref())
+}
+
+fn native_vision_response(analysis: NativeFrameAnalysis) -> VisionFrameResponse {
+    VisionFrameResponse {
+        faces: analysis
+            .faces
+            .into_iter()
+            .map(|box_| VisionDetectionBox {
+                center_x: box_.center_x,
+                center_y: box_.center_y,
+                area: box_.area,
+                confidence: box_.confidence,
+            })
+            .collect(),
+        bodies: analysis
+            .bodies
+            .into_iter()
+            .map(|box_| VisionDetectionBox {
+                center_x: box_.center_x,
+                center_y: box_.center_y,
+                area: box_.area,
+                confidence: box_.confidence,
+            })
+            .collect(),
+        ocr_boxes: analysis
+            .ocr_boxes
+            .into_iter()
+            .map(|box_| VisionOcrBox {
+                x0: box_.x0,
+                y0: box_.y0,
+                x1: box_.x1,
+                y1: box_.y1,
+                confidence: box_.confidence,
+            })
+            .collect(),
+        saliency: analysis.saliency.map(|box_| VisionDetectionBox {
+            center_x: box_.center_x,
+            center_y: box_.center_y,
+            area: box_.area,
+            confidence: box_.confidence,
+        }),
+    }
+}
+
+fn vision_discrepancy(
+    legacy: &VisionFrameResponse,
+    native: &VisionFrameResponse,
+) -> serde_json::Value {
+    serde_json::json!({
+        "legacy": { "faces": legacy.faces.len(), "bodies": legacy.bodies.len(), "ocr_boxes": legacy.ocr_boxes.len(), "saliency": legacy.saliency.is_some() },
+        "native": { "faces": native.faces.len(), "bodies": native.bodies.len(), "ocr_boxes": native.ocr_boxes.len(), "saliency": native.saliency.is_some() },
+        "equal_counts": legacy.faces.len() == native.faces.len() && legacy.bodies.len() == native.bodies.len() && legacy.ocr_boxes.len() == native.ocr_boxes.len() && legacy.saliency.is_some() == native.saliency.is_some(),
+    })
+}
+
 /// A human-authored override for an exact output-time range, optionally
 /// dropped at `analysis/reframe/<variant>/manual-anchors.json`. When present
 /// it silently takes precedence over every detector for any sample whose
@@ -138,7 +220,32 @@ pub fn reframe_plan(
     let plan_path = variant_reframe_path(project_path, &variant);
     let track_path = project_path.join(format!("analysis/reframe/{variant}/reframe-track.json"));
     if !dry_run {
-        let worker = vision_anchor_worker()?;
+        let native_mode = native_vision_mode_from_env()?;
+        let worker = if native_mode == MacNativeMode::Native {
+            None
+        } else {
+            Some(vision_anchor_worker()?)
+        };
+        let mut shadow_discrepancies = Vec::new();
+        let native_worker = if native_mode == MacNativeMode::Legacy {
+            None
+        } else {
+            match MacMediaWorker::new() {
+                Ok(worker) => Some(worker),
+                Err(error) if native_mode == MacNativeMode::Shadow => {
+                    shadow_discrepancies.push(serde_json::json!({
+                        "native_error": { "kind": "unsupported", "message": error.to_string() },
+                        "returned_backend": "legacy",
+                    }));
+                    None
+                }
+                Err(error) => {
+                    return Err(ProjectError::InvalidState(format!(
+                        "native vision unsupported: {error}"
+                    )))
+                }
+            }
+        };
         let sample_interval_ms = effective_sample_interval_ms(timeline_segments);
         let transcripts = load_transcripts(project_path).unwrap_or_default();
         let manual_anchors: Vec<ManualAnchor> = read_json_if_file(
@@ -162,6 +269,7 @@ pub fn reframe_plan(
                         segment.id
                     ))
                 })?;
+            let mut frame_samples = Vec::new();
             for offset in sample_offsets_for_segment(segment, sample_interval_ms) {
                 let output_ms = segment.output_start_ms + offset;
                 let source_ms = segment.source_start_ms
@@ -171,7 +279,98 @@ pub fn reframe_plan(
                 let frame =
                     project_path.join(format!("cache/frames/reframe-{}-{offset}.jpg", segment.id));
                 extract_frame(Path::new(&source.path), source_ms, &frame)?;
-                let vision = run_vision_worker(&worker, &frame)?;
+                frame_samples.push(ReframeFrameSample {
+                    output_ms,
+                    source_ms,
+                    offset,
+                    frame,
+                    source_frame_index: samples.len() as i32 + frame_samples.len() as i32,
+                    sequence_id: format!("{}:{}", segment.source_id, segment.id),
+                });
+            }
+
+            let legacy_vision = match worker.as_ref() {
+                Some(worker) => frame_samples
+                    .iter()
+                    .map(|sample| run_vision_worker(worker, &sample.frame))
+                    .collect::<Result<Vec<_>, _>>()?,
+                None => Vec::new(),
+            };
+            let native_vision = match native_worker.as_ref() {
+                Some(worker) => {
+                    let request = AnalyzeFramesRequest {
+                        frames: frame_samples
+                            .iter()
+                            .map(|sample| NativeFrameRequest {
+                                source_path: sample.frame.clone(),
+                                source_frame_index: sample.source_frame_index,
+                                timestamp: NativeRationalTime {
+                                    numerator: sample.source_ms,
+                                    denominator: 1_000,
+                                },
+                                sequence_id: Some(sample.sequence_id.clone()),
+                                orientation: Some("up".into()),
+                            })
+                            .collect(),
+                        allowed_roots: vec![project_path.join("cache/frames")],
+                    };
+                    let context = NativeRequestContext {
+                        request_id: format!("reframe:{}:{}", variant, segment.id),
+                        timeout: VISION_WORKER_TIMEOUT,
+                    };
+                    match worker.analyze_frames(&context, &request) {
+                        Ok(observations) if observations.len() == frame_samples.len() => {
+                            observations
+                                .into_iter()
+                                .map(native_vision_response)
+                                .map(Some)
+                                .collect::<Vec<_>>()
+                        }
+                        Ok(observations) => {
+                            return Err(ProjectError::InvalidState(format!(
+                                "native vision returned {} observations for {} requested frames",
+                                observations.len(),
+                                frame_samples.len()
+                            )))
+                        }
+                        Err(error) if native_mode == MacNativeMode::Shadow => {
+                            shadow_discrepancies.push(serde_json::json!({
+                                "segment_id": segment.id, "source_id": segment.source_id,
+                                "native_error": { "kind": "unsupported_or_failed", "message": error.to_string() },
+                                "returned_backend": "legacy",
+                            }));
+                            (0..frame_samples.len()).map(|_| None).collect()
+                        }
+                        Err(error) => {
+                            return Err(ProjectError::InvalidState(format!(
+                                "native vision unsupported: {error}"
+                            )))
+                        }
+                    }
+                }
+                None if native_mode == MacNativeMode::Shadow => {
+                    (0..frame_samples.len()).map(|_| None).collect()
+                }
+                None => Vec::new(),
+            };
+            for (index, sample) in frame_samples.iter().enumerate() {
+                let vision = match native_mode {
+                    MacNativeMode::Legacy => &legacy_vision[index],
+                    MacNativeMode::Native => native_vision[index].as_ref().ok_or_else(|| {
+                        ProjectError::InvalidState("native vision returned no observation".into())
+                    })?,
+                    MacNativeMode::Shadow => {
+                        if let Some(native) = native_vision[index].as_ref() {
+                            shadow_discrepancies.push(serde_json::json!({
+                                "segment_id": segment.id, "source_id": segment.source_id,
+                                "output_ms": sample.output_ms, "source_ms": sample.source_ms,
+                                "frame": relative_artifact_path(project_path, &sample.frame),
+                                "comparison": vision_discrepancy(&legacy_vision[index], native),
+                            }));
+                        }
+                        &legacy_vision[index]
+                    }
+                };
 
                 let mut observations = Vec::new();
                 for face in &vision.faces {
@@ -204,7 +403,7 @@ pub fn reframe_plan(
                 if let Some(active_speaker) = active_speaker_observation(
                     &transcripts,
                     &segment.source_id,
-                    source_ms,
+                    sample.source_ms,
                     &vision.faces,
                     &mut speaker_positions,
                 ) {
@@ -225,19 +424,38 @@ pub fn reframe_plan(
                 let manual_anchor = manual_anchors
                     .iter()
                     .find(|anchor| {
-                        output_ms >= anchor.output_start_ms && output_ms < anchor.output_end_ms
+                        sample.output_ms >= anchor.output_start_ms
+                            && sample.output_ms < anchor.output_end_ms
                     })
                     .map(|anchor| (anchor.center_x, anchor.center_y));
 
                 samples.push(TrackSample {
-                    output_ms,
+                    output_ms: sample.output_ms,
                     source_id: segment.source_id.clone(),
-                    shot_boundary: offset == 0,
+                    source_frame_index: Some(sample.source_frame_index as u64),
+                    sequence_id: Some(sample.sequence_id.clone()),
+                    shot_boundary: sample.offset == 0,
                     observations,
                     ocr_boxes,
                     manual_anchor,
                 });
             }
+        }
+
+        let shadow_path = project_path.join(format!(
+            "analysis/reframe/{variant}/native-vision-shadow.json"
+        ));
+        let shadow_discrepancy_count = shadow_discrepancies.len();
+        if native_mode == MacNativeMode::Shadow {
+            write_json_atomic(
+                &shadow_path,
+                &serde_json::json!({
+                    "schema_version": SCHEMA_VERSION,
+                    "backend": "shadow",
+                    "returned_backend": "legacy",
+                    "discrepancies": shadow_discrepancies,
+                }),
+            )?;
         }
 
         let track = build_temporal_track(
@@ -294,8 +512,14 @@ pub fn reframe_plan(
         write_json_atomic(&plan_path, &plan)?;
 
         let mut toolchains = BTreeMap::new();
-        if let Ok(worker_hash) = hash_file(&worker) {
-            toolchains.insert("vision_anchor_worker".to_string(), worker_hash);
+        if let Some(worker) = worker.as_ref() {
+            if let Ok(worker_hash) = hash_file(worker) {
+                toolchains.insert("vision_anchor_worker".to_string(), worker_hash);
+            }
+        }
+        let mut receipt_outputs = vec![plan_path.as_path(), track_path.as_path()];
+        if native_mode == MacNativeMode::Shadow {
+            receipt_outputs.push(shadow_path.as_path());
         }
         receipts::write_stage_receipt(
             &receipts::receipt_path_for(&plan_path),
@@ -305,9 +529,11 @@ pub fn reframe_plan(
                 "variant": variant,
                 "target_aspect": "9:16",
                 "sample_interval_ms": sample_interval_ms,
+                "native_mode": format!("{:?}", native_mode).to_lowercase(),
+                "shadow_discrepancy_count": shadow_discrepancy_count,
             }),
             toolchains,
-            &[plan_path.as_path(), track_path.as_path()],
+            &receipt_outputs,
         )?;
     }
     Ok(PipelineArtifact {
@@ -553,6 +779,19 @@ fn vision_worker_env_allow() -> Vec<(String, String)> {
 mod tests {
     use super::*;
     use crate::init_project;
+
+    #[test]
+    fn native_vision_mode_defaults_to_legacy_and_rejects_unknown_values() {
+        assert_eq!(
+            parse_native_vision_mode(None).unwrap(),
+            MacNativeMode::Legacy
+        );
+        assert_eq!(
+            parse_native_vision_mode(Some("shadow")).unwrap(),
+            MacNativeMode::Shadow
+        );
+        assert!(parse_native_vision_mode(Some("auto")).is_err());
+    }
 
     /// REV2 plan §6.1 regression: `reframe_plan` must write to the exact
     /// same variant-scoped path a later read for that variant resolves to

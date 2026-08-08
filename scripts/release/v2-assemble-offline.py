@@ -96,7 +96,7 @@ def main(argv: list[str]) -> int:
     manifest = {
         "schema_version": "v2",
         "target": args.target,
-        "staging": str(staging),
+        "staging": ".",
         "layout": list(LAYOUT_DIRS),
         "files": files,
         "external_runtime_dependencies": [],

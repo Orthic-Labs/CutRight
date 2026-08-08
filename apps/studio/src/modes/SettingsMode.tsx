@@ -47,6 +47,7 @@ export function SettingsMode({ project }: { project: Snapshot }) {
   const [envPresent, setEnvPresent] = useState<boolean | null>(null);
   const [checkingEnv, setCheckingEnv] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [appInfo, setAppInfo] = useState<{ license: string; tier: string; offline: boolean; telemetry: boolean; updates: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,12 +56,14 @@ export function SettingsMode({ project }: { project: Snapshot }) {
     Promise.all([
       call<CloudSettings>("read_cloud_settings", { path: project.project_path }),
       call<EngineStatus>("read_engine_status"),
+      call<typeof appInfo>("rightkit_app_info"),
     ])
-      .then(([cloud, status]) => {
+      .then(([cloud, status, info]) => {
         if (cancelled) return;
         setSettings(cloud);
         setDraft(cloud);
         setEngine(status);
+        setAppInfo(info);
       })
       .catch((reason) => {
         if (!cancelled) setError(String(reason));
@@ -298,6 +301,12 @@ export function SettingsMode({ project }: { project: Snapshot }) {
           {saved && <span className="badge approved">✓ saved</span>}
         </div>
         {error && <p className="bad settings-error">{error}</p>}
+      </section>
+
+      <section className="settings-section" aria-label="CutRight legal and updates">
+        <h2>CutRight</h2>
+        <p className="settings-hint">{appInfo?.license ?? "MIT"} · {appInfo?.tier ?? "free"} · local/offline</p>
+        <dl className="facts-grid"><dt>Telemetry</dt><dd>{appInfo?.telemetry === false ? "off" : "—"}</dd><dt>Updates</dt><dd>{appInfo?.updates ?? "—"}</dd></dl>
       </section>
 
       <section className="settings-section">

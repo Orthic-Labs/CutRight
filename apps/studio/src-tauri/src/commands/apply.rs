@@ -20,9 +20,7 @@
 use std::path::PathBuf;
 
 use video_capabilities::RegistryDocument;
-use video_project::{
-    ActionBatch, ActionExecutor, ExecutorReport, ACTION_BATCH_SCHEMA,
-};
+use video_project::{ActionBatch, ActionExecutor, ExecutorReport, ACTION_BATCH_SCHEMA};
 use video_sessions::{ProjectId, SessionGuard};
 
 use crate::project_scope::canonical_project_root;
@@ -65,9 +63,7 @@ fn resolve_registry_path() -> PathBuf {
         .and_then(|p| p.parent());
     let path = repo_root
         .map(|p| p.join("docs/dispatch/v2/source/capability-registry.json"))
-        .unwrap_or_else(|| {
-            PathBuf::from("docs/dispatch/v2/source/capability-registry.json")
-        });
+        .unwrap_or_else(|| PathBuf::from("docs/dispatch/v2/source/capability-registry.json"));
     if path.is_file() {
         path
     } else {
@@ -141,17 +137,18 @@ mod tests {
 
     fn init_project(root: &std::path::Path) {
         fs::create_dir_all(root).unwrap();
-        fs::write(root.join("project.json"), r#"{"project_id":"project-test"}"#).unwrap();
+        fs::write(
+            root.join("project.json"),
+            r#"{"project_id":"project-test"}"#,
+        )
+        .unwrap();
     }
 
     fn load_canonical_registry() -> video_capabilities::CapabilityRegistry {
         let path = resolve_registry_path();
         RegistryDocument::load(&path)
             .unwrap_or_else(|error| {
-                panic!(
-                    "canonical registry missing at {}: {error}",
-                    path.display()
-                )
+                panic!("canonical registry missing at {}: {error}", path.display())
             })
             .into_registry()
     }

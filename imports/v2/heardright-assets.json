@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "root": "/Volumes/D/claude/cutright/vendor/heardright",
+  "root": "vendor/heardright",
   "asset_count": 1,
   "policy": "Every asset needs an explicit licence row in imports/v2/dispositions.json before entering a signed pack; assets never inherit a repository licence.",
   "assets": [

@@ -3,12 +3,17 @@
 //! together against a shared project fixture. Moved out of `main.rs` per
 //! REV2 §14.5 — pure move, no behavior change.
 
-use crate::commands::{read_decisions, read_variant_selection, select_variant};
+use crate::commands::{
+    finish_commit_variant, finish_read_selection, read_decisions, read_variant_selection,
+    select_variant,
+};
 use crate::decision_contract::{
     apply_intent, build_record, replay, DecisionIntent, DecisionVerdict, RecordStatus,
     ReviewReason, ReviewTarget, SCHEMA_VERSION,
 };
-use crate::project_scope::{blake3_of, canonical_project_root, grant_project_assets};
+use crate::project_scope::{
+    blake3_of, canonical_project_root, grant_project_assets, project_revision,
+};
 use crate::source_integrity::relink_source;
 use chrono::Utc;
 use std::fs;
@@ -30,7 +35,7 @@ fn project() -> PathBuf {
     fs::create_dir_all(root.join("qa")).unwrap();
     fs::write(
         root.join("project.json"),
-        r#"{"project_id":"project-test"}"#,
+        r#"{"schema_version":1,"project_id":"project-test","kind":"video","created_at":"2026-08-08T00:00:00Z","review_mode":"reviewed","source_policy":"immutable","outputs":[]}"#,
     )
     .unwrap();
     fs::write(root.join("render/rough-cuts/natural.mp4"), b"natural-bytes").unwrap();
@@ -421,6 +426,40 @@ fn select_variant_rejects_an_invalid_or_missing_rough_cut() {
     fs::remove_file(root.join("render/rough-cuts/tight.mp4")).unwrap();
     let error = select_variant(root.to_string_lossy().into_owned(), "tight".into()).unwrap_err();
     assert!(error.contains("tight"), "got: {error}");
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn finish_variant_commit_is_hash_bound_atomic_and_stale_safe() {
+    let root = project();
+    let snapshot = video_project::project_snapshot(&root).unwrap();
+    let revision = project_revision(&root, &snapshot);
+    let value = finish_commit_variant(
+        root.to_string_lossy().into_owned(),
+        "pullback".into(),
+        revision.clone(),
+        vec![revision.clone()],
+    )
+    .unwrap();
+    assert_eq!(value["variantId"], "pullback");
+    assert_eq!(value["lockedCutHash"], revision);
+    assert!(!root.join("finish/selection.json.tmp").exists());
+    assert_eq!(
+        finish_read_selection(root.to_string_lossy().into_owned())
+            .unwrap()
+            .unwrap()["variantId"],
+        "pullback"
+    );
+
+    fs::write(root.join("qa/report.json"), br#"{"status":"changed"}"#).unwrap();
+    let error = finish_commit_variant(
+        root.to_string_lossy().into_owned(),
+        "push".into(),
+        revision.clone(),
+        vec![revision],
+    )
+    .unwrap_err();
+    assert_eq!(error, "stale_locked_cut");
     fs::remove_dir_all(root).unwrap();
 }
 

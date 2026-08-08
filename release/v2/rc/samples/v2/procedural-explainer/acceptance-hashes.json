@@ -1,0 +1,11 @@
+{
+  "schema_version": "v2",
+  "sample": "procedural-explainer",
+  "assets": [
+    {
+      "path": "sources/explainer-script-1.json",
+      "role": "descriptor",
+      "sha256": "26e92e7ee27099be33c416640a46192af29d99c65d4f9f706ebcfa272ecd0d04"
+    }
+  ]
+}

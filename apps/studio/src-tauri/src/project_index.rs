@@ -204,7 +204,10 @@ pub fn repair(path: &Path, row: ProjectIndexRow) -> Result<ProjectIndex, IndexEr
 
 /// Remove a row from the index by project instance id. The underlying
 /// project package is untouched.
-pub fn remove_from_list(path: &Path, project_instance_id: &str) -> Result<ProjectIndex, IndexError> {
+pub fn remove_from_list(
+    path: &Path,
+    project_instance_id: &str,
+) -> Result<ProjectIndex, IndexError> {
     let mut index = load_or_default(path)?;
     index
         .rows
@@ -252,8 +255,11 @@ mod tests {
         ];
         let idx = rebuild(rows, &["/a".into()], Vec::new());
         assert_eq!(idx.rows.len(), 2);
-        let by_path: BTreeMap<&str, &ProjectIndexRow> =
-            idx.rows.iter().map(|r| (r.package_path.as_str(), r)).collect();
+        let by_path: BTreeMap<&str, &ProjectIndexRow> = idx
+            .rows
+            .iter()
+            .map(|r| (r.package_path.as_str(), r))
+            .collect();
         assert_eq!(by_path["/a"].run_status, RunStatus::Ready);
         assert_eq!(by_path["/b"].run_status, RunStatus::Missing);
     }
