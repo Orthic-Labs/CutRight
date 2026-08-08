@@ -33,6 +33,10 @@ the human component names and operational flow. Raw file and symbol nodes are in
 
 CutRight is a local agentic video editing engine: Rust workspace (video-core/video-media/video-providers/video-project/video-cli) wiring a JSON-only videoctl control plane to a Tauri 2 Studio shell (React 19 + Rust core). Sources are immutable BLAKE3-registered media; transcription is provided by CutRight's own Parakeet TDT engine — built from vendored HeardRight source, resolved only from signed CutRight packs — over a JSON-line protocol, with an independent word-edge verifier; renders are produced by FFmpeg/zimg caption-card pipelines with macOS-side Swift sidecars. The Studio IPC surface is 9 commands and videoctl exposes ~25 subcommands, of which init/migrate/ingest/transcribe/bench/analyze/reframe/evidence/edit(render)/render.final/qa/select paths are wired.
 
+## Final-output encoder decision (CR-F-B8-004)
+
+Final delivery remains Rust-owned FFmpeg `libx264` plus AAC, selected by each YouTube/Reels color profile; this is the deterministic release path. `h264_videotoolbox` remains limited to rough/preview renders, while archival/master output uses software `prores_ks` plus PCM. The macOS Swift sidecar supplies native media inspection, captions, previews, and timeline transforms, but never replaces final-output encoding.
+
 ## System workflow
 
 ```mermaid
