@@ -25,7 +25,10 @@ ALLOWED = {
     "video-runtime": {"video-core"},
     "video-jobs": {"video-core"},
     "video-editorial": {"video-benchmarks"},
-    "video-services": {"video-core", "video-jobs", "video-runtime", "video-state"},
+    "video-services": {
+        "video-capabilities", "video-core", "video-jobs", "video-project",
+        "video-runtime", "video-sessions", "video-state",
+    },
     "video-project": {
         "video-actions", "video-capabilities", "video-core", "video-editorial",
         "video-jobs", "video-media", "video-providers", "video-runtime",
@@ -33,7 +36,7 @@ ALLOWED = {
     },
     "video-cli": {"video-capabilities", "video-core", "video-project", "video-providers", "video-sessions"},
     "video-agent": {"video-actions", "video-capabilities", "video-project", "video-sessions"},
-    "video-daemon": {"video-services"},
+    "video-daemon": {"video-protocol", "video-services"},
     "cutright-mcp": {"video-daemon"},
     "video-driver-host": set(),
     "video-protocol": set(),
