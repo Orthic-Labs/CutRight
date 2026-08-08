@@ -25,6 +25,9 @@ allow = [
 # A dependency whose license cargo-deny cannot determine with at least this
 # much confidence is a finding, not a pass.
 confidence-threshold = 0.9
+# CutRight workspace crates are private (`publish = false`); audit only
+# third-party licenses while preserving advisories, bans, and source checks.
+private = { ignore = true }
 
 [advisories]
 # RustSec advisories: fail on anything unhandled. Do not add ignores without
