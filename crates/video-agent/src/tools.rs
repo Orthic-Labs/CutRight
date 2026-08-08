@@ -61,7 +61,8 @@ impl McpToolRegistry {
 
     /// Insert a descriptor; overwrites if the id is already present.
     pub fn insert(&mut self, descriptor: ToolDescriptor) {
-        self.tools.insert(descriptor.capability_id.clone(), descriptor);
+        self.tools
+            .insert(descriptor.capability_id.clone(), descriptor);
     }
 
     /// Look up a tool by id.
@@ -86,7 +87,9 @@ impl McpToolRegistry {
 
     /// Build a registry from a JSON envelope produced by
     /// `video_capabilities::codegen::render_mcp_tool_registry`.
-    pub fn from_generated_envelope(envelope: &serde_json::Value) -> Result<Self, serde_json::Error> {
+    pub fn from_generated_envelope(
+        envelope: &serde_json::Value,
+    ) -> Result<Self, serde_json::Error> {
         let parsed: GeneratedEnvelope = serde_json::from_value(envelope.clone())?;
         let mut out = Self::new();
         for (_, entry) in parsed.tools {
@@ -156,8 +159,16 @@ mod tests {
     #[test]
     fn round_trip_envelope() {
         let mut reg = McpToolRegistry::new();
-        reg.insert(descriptor("timeline.cut", ToolKind::Mutation, "pset.editorial_engine"));
-        reg.insert(descriptor("evidence.read", ToolKind::Read, "pset.evidence_read_only"));
+        reg.insert(descriptor(
+            "timeline.cut",
+            ToolKind::Mutation,
+            "pset.editorial_engine",
+        ));
+        reg.insert(descriptor(
+            "evidence.read",
+            ToolKind::Read,
+            "pset.evidence_read_only",
+        ));
         let value = serde_json::to_value(&reg).unwrap();
         let parsed = McpToolRegistry::from_generated_envelope(&value).unwrap();
         assert_eq!(parsed.len(), 2);
