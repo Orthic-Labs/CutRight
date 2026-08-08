@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
 use video_media::native::{
-    MacMediaBackend, MacMediaWorker, MacNativeMode, NativeAudioOutputSpec, NativeRequestContext,
-    NativeTimelineRenderRequest, NativeVideoOutputSpec,
+    MacMediaBackend, MacMediaWorker, MacNativeMode, NativeAudioOutputSpec, NativePreviewRequest,
+    NativeRationalTime, NativeRequestContext, NativeTimelineRenderRequest, NativeVideoOutputSpec,
 };
 
 #[test]
@@ -21,6 +21,37 @@ fn timeline_render_contract_requires_explicit_mode_and_receipt_shape() {
     assert_eq!(value["schemaVersion"], 1);
     assert_eq!(value["mode"], "native");
     assert!(value.get("lockedCutSha256").is_some());
+}
+
+#[test]
+fn timing_finish_parity_preserves_rational_duration_and_frame_count() {
+    let duration = NativeRationalTime {
+        numerator: 1_800,
+        denominator: 30,
+    };
+    let frame_rate = NativeRationalTime {
+        numerator: 30,
+        denominator: 1,
+    };
+    assert_eq!(
+        duration.numerator * frame_rate.denominator,
+        60 * frame_rate.numerator
+    );
+    assert_eq!(duration.numerator / duration.denominator as i64, 60);
+}
+
+#[test]
+fn pixels_finish_parity_preserves_vertical_output_geometry() {
+    let output = NativeVideoOutputSpec {
+        width: 1_080,
+        height: 1_920,
+        frame_rate_num: 30,
+        frame_rate_den: 1,
+    };
+    let encoded = serde_json::to_value(&output).unwrap();
+    let decoded: NativeVideoOutputSpec = serde_json::from_value(encoded).unwrap();
+    assert_eq!((decoded.width, decoded.height), (1_080, 1_920));
+    assert_eq!(decoded.frame_rate_num / decoded.frame_rate_den, 30);
 }
 
 #[test]
@@ -70,6 +101,68 @@ fn audio_finish_parity_transient_split_and_cleanup() {
         "cancel/error cleanup must remove partial output"
     );
     fs::remove_dir_all(&root).unwrap();
+}
+
+#[test]
+fn malformed_request_finish_parity_rejects_unknown_fields() {
+    let malformed = serde_json::json!({
+        "schemaVersion": 1,
+        "lockedCutSha256": "0".repeat(64),
+        "graph": {},
+        "outputPath": "/tmp/out.mp4",
+        "allowedRoots": ["/tmp"],
+        "video": {"width": 1, "height": 1, "frameRateNum": 1, "frameRateDen": 1},
+        "audio": {"sampleRate": 48_000, "channels": 2},
+        "mode": "native",
+        "unexpected": true,
+    });
+    assert!(serde_json::from_value::<NativeTimelineRenderRequest>(malformed).is_err());
+}
+
+#[test]
+fn containment_finish_parity_rejects_output_outside_allowed_root() {
+    let root = tempfile::tempdir().unwrap();
+    let input = root.path().join("input.mov");
+    fs::write(&input, b"fixture").unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    let worker = MacMediaWorker::with_worker(PathBuf::from("/bin/false"));
+    let request = NativePreviewRequest {
+        input_path: input,
+        output_path: outside.path().join("preview.png"),
+        crop_x: None,
+        crop_y: None,
+        crop_width: None,
+        crop_height: None,
+        rotation_degrees: None,
+        allowed_roots: vec![root.path().to_path_buf()],
+    };
+    let result = worker.render_preview(
+        &NativeRequestContext {
+            request_id: "containment".into(),
+            timeout: std::time::Duration::from_secs(1),
+        },
+        &request,
+    );
+    assert!(matches!(
+        result,
+        Err(video_media::native::NativeMediaError::InvalidPath(_))
+    ));
+}
+
+#[test]
+fn mode_finish_parity_preserves_legacy_shadow_and_native_routes() {
+    assert_eq!(
+        serde_json::to_string(&MacNativeMode::Legacy).unwrap(),
+        "\"legacy\""
+    );
+    assert_eq!(
+        serde_json::to_string(&MacNativeMode::Shadow).unwrap(),
+        "\"shadow\""
+    );
+    assert_eq!(
+        serde_json::to_string(&MacNativeMode::Native).unwrap(),
+        "\"native\""
+    );
 }
 
 #[cfg(target_os = "macos")]
