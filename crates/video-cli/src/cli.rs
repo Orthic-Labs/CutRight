@@ -112,6 +112,52 @@ pub enum Command {
         #[command(flatten)]
         args: ApplyArgs,
     },
+    /// Register or inspect CutRight's provider-native MCP entry.
+    Agent {
+        #[command(subcommand)]
+        command: AgentCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum AgentCommand {
+    Integrate(AgentIntegrateArgs),
+    Status(AgentStatusArgs),
+    Remove(AgentRemoveArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct AgentIntegrateArgs {
+    #[arg(long)]
+    pub provider: String,
+    #[arg(long)]
+    pub config: PathBuf,
+    #[arg(long)]
+    pub binary: PathBuf,
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct AgentStatusArgs {
+    #[arg(long, default_value = "claude-code")]
+    pub provider: String,
+    #[arg(long)]
+    pub config: Option<PathBuf>,
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct AgentRemoveArgs {
+    #[arg(long)]
+    pub provider: String,
+    #[arg(long)]
+    pub config: PathBuf,
+    #[arg(long)]
+    pub binary: PathBuf,
+    #[arg(long)]
+    pub json: bool,
 }
 
 #[derive(Debug, Args)]

@@ -1,12 +1,12 @@
 //! Provider MCP registration with exact snapshots and bounded semantic diffs.
 
 use std::collections::BTreeSet;
+use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use thiserror::Error;
 
 const OWNED_SERVER: &str = "cutright";
 
@@ -34,22 +34,45 @@ impl Provider {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug)]
 pub enum IntegrationError {
-    #[error("unsupported provider: {0}")]
     UnsupportedProvider(String),
-    #[error("provider configuration must be a JSON object")]
     InvalidConfig,
-    #[error("provider configuration has no mcpServers object")]
     MissingServers,
-    #[error("owned CutRight server entry is missing")]
-    MissingOwnedEntry,
-    #[error("provider CLI failed: {0}")]
     ProviderCommand(String),
-    #[error("I/O error: {0}")]
-    Io(#[from] std::io::Error),
-    #[error("JSON error: {0}")]
-    Json(#[from] serde_json::Error),
+    Io(std::io::Error),
+    Json(serde_json::Error),
+}
+
+impl fmt::Display for IntegrationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnsupportedProvider(value) => write!(formatter, "unsupported provider: {value}"),
+            Self::InvalidConfig => {
+                write!(formatter, "provider configuration must be a JSON object")
+            }
+            Self::MissingServers => {
+                write!(formatter, "provider configuration has no mcpServers object")
+            }
+            Self::ProviderCommand(value) => write!(formatter, "provider CLI failed: {value}"),
+            Self::Io(error) => write!(formatter, "I/O error: {error}"),
+            Self::Json(error) => write!(formatter, "JSON error: {error}"),
+        }
+    }
+}
+
+impl std::error::Error for IntegrationError {}
+
+impl From<std::io::Error> for IntegrationError {
+    fn from(error: std::io::Error) -> Self {
+        Self::Io(error)
+    }
+}
+
+impl From<serde_json::Error> for IntegrationError {
+    fn from(error: serde_json::Error) -> Self {
+        Self::Json(error)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,6 +91,7 @@ impl ConfigSnapshot {
         })
     }
 
+    #[allow(dead_code)]
     pub fn restore(&self) -> Result<(), IntegrationError> {
         fs::write(&self.path, &self.bytes)?;
         Ok(())
@@ -128,7 +152,10 @@ pub fn owned_entry(binary: &Path) -> Value {
 }
 
 pub fn add_owned_entry(config: &Value, binary: &Path) -> Result<Value, IntegrationError> {
-    let mut root = config.as_object().cloned().ok_or(IntegrationError::InvalidConfig)?;
+    let mut root = config
+        .as_object()
+        .cloned()
+        .ok_or(IntegrationError::InvalidConfig)?;
     let mut servers = servers(config)?.clone();
     servers.insert(OWNED_SERVER.into(), owned_entry(binary));
     root.insert("mcpServers".into(), Value::Object(servers));
@@ -136,7 +163,10 @@ pub fn add_owned_entry(config: &Value, binary: &Path) -> Result<Value, Integrati
 }
 
 pub fn remove_owned_entry(config: &Value) -> Result<Value, IntegrationError> {
-    let mut root = config.as_object().cloned().ok_or(IntegrationError::InvalidConfig)?;
+    let mut root = config
+        .as_object()
+        .cloned()
+        .ok_or(IntegrationError::InvalidConfig)?;
     let mut servers = servers(config)?.clone();
     servers.remove(OWNED_SERVER);
     root.insert("mcpServers".into(), Value::Object(servers));
@@ -149,4 +179,3 @@ fn servers(config: &Value) -> Result<&Map<String, Value>, IntegrationError> {
         .and_then(Value::as_object)
         .ok_or(IntegrationError::MissingServers)
 }
-

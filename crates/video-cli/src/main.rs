@@ -1,3 +1,4 @@
+mod agent;
 mod apply;
 mod capabilities;
 mod cli;
@@ -5,8 +6,8 @@ mod doctor;
 
 use clap::Parser;
 use cli::{
-    AnalyzeCommand, BenchCommand, CleanMachineSampleArgs, Cli, CloudCommand, Command, EditCommand,
-    EvidenceCommand, ExportCommand, FinishCommand, PackageCommand, PreferencesCommand,
+    AgentCommand, AnalyzeCommand, BenchCommand, CleanMachineSampleArgs, Cli, CloudCommand, Command,
+    EditCommand, EvidenceCommand, ExportCommand, FinishCommand, PackageCommand, PreferencesCommand,
     ProjectCommand, ReceiptsCommand, ReframeCommand, RenderCommand, ReviewCommand, ShortsCommand,
     SlotCommand, TranscriptCommand,
 };
@@ -166,6 +167,7 @@ fn run(cli: Cli) -> Result<Outcome, String> {
             Ok(Outcome::Doctor(report, outcome))
         }
         Command::CleanMachineSample(args) => clean_machine_sample(args),
+        Command::Agent { command } => run_agent(command),
         Command::Project {
             command: ProjectCommand::Init { folder },
         } => video_project::init_project(&folder, cli.dry_run)
@@ -422,9 +424,51 @@ fn command_name(command: &Command) -> String {
         Command::Capabilities { .. } => "capabilities list",
         Command::CleanMachineSample(_) => "clean-machine-sample",
         Command::Apply { .. } => "apply",
+        Command::Agent { .. } => "agent",
         Command::Doctor(_) | Command::Project { .. } => "unknown",
     }
     .to_string()
+}
+
+fn run_agent(command: AgentCommand) -> Result<Outcome, String> {
+    match command {
+        AgentCommand::Integrate(args) => {
+            let provider = video_cli_provider(&args.provider)?;
+            agent::run(agent::AgentCommand {
+                provider,
+                binary: args.binary,
+                config: args.config,
+                remove: false,
+            })
+            .map(Outcome::Value)
+        }
+        AgentCommand::Status(args) => {
+            let provider = video_cli_provider(&args.provider)?;
+            match args.config {
+                Some(config) => agent::status(provider, &config).map(Outcome::Value),
+                None => Ok(Outcome::Value(json!({
+                    "event": "agent.status",
+                    "provider": provider,
+                    "registered": false,
+                    "status": "unconfigured"
+                }))),
+            }
+        }
+        AgentCommand::Remove(args) => {
+            let provider = video_cli_provider(&args.provider)?;
+            agent::run(agent::AgentCommand {
+                provider,
+                binary: args.binary,
+                config: args.config,
+                remove: true,
+            })
+            .map(Outcome::Value)
+        }
+    }
+}
+
+fn video_cli_provider(value: &str) -> Result<agent::Provider, String> {
+    agent::Provider::parse(value).map_err(|error| error.to_string())
 }
 
 fn clean_machine_sample(args: CleanMachineSampleArgs) -> Result<Outcome, String> {

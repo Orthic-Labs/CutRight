@@ -9,9 +9,9 @@ use serde_json::{json, Value};
 #[path = "../../video-runtime/src/agent_integration.rs"]
 mod agent_integration;
 
+pub use agent_integration::Provider;
 use agent_integration::{
-    add_owned_entry, remove_owned_entry, ConfigSnapshot, IntegrationError, Provider,
-    SemanticDiff,
+    add_owned_entry, remove_owned_entry, ConfigSnapshot, IntegrationError, SemanticDiff,
 };
 
 const SERVER_NAME: &str = "cutright";
@@ -26,7 +26,8 @@ pub struct AgentCommand {
 
 pub fn run(command: AgentCommand) -> Result<Value, String> {
     let snapshot = ConfigSnapshot::capture(&command.config).map_err(|error| error.to_string())?;
-    let before: Value = serde_json::from_slice(snapshot.exact_bytes()).map_err(|error| error.to_string())?;
+    let before: Value =
+        serde_json::from_slice(snapshot.exact_bytes()).map_err(|error| error.to_string())?;
     let after = if command.remove {
         remove_owned_entry(&before)
     } else {
@@ -41,8 +42,11 @@ pub fn run(command: AgentCommand) -> Result<Value, String> {
     let cli = resolve_cli(command.provider)?;
     let operation = if command.remove { "remove" } else { "add" };
     let native = native_mcp_command(&cli, operation, &command.binary, command.remove)?;
-    fs::write(&command.config, serde_json::to_vec_pretty(&after).map_err(|error| error.to_string())?)
-        .map_err(|error| error.to_string())?;
+    fs::write(
+        &command.config,
+        serde_json::to_vec_pretty(&after).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| error.to_string())?;
     Ok(json!({
         "event": format!("agent.{operation}"),
         "provider": command.provider,
@@ -57,7 +61,8 @@ pub fn run(command: AgentCommand) -> Result<Value, String> {
 
 pub fn status(provider: Provider, config: &Path) -> Result<Value, String> {
     let snapshot = ConfigSnapshot::capture(config).map_err(|error| error.to_string())?;
-    let value: Value = serde_json::from_slice(snapshot.exact_bytes()).map_err(|error| error.to_string())?;
+    let value: Value =
+        serde_json::from_slice(snapshot.exact_bytes()).map_err(|error| error.to_string())?;
     let servers = value.get("mcpServers").and_then(Value::as_object);
     Ok(json!({
         "event": "agent.status",
@@ -79,7 +84,8 @@ fn resolve_cli(provider: Provider) -> Result<PathBuf, String> {
         }
         return Err(format!("{variable} must name an absolute installed CLI"));
     }
-    which(provider.command_name()).ok_or_else(|| format!("installed {} CLI not found", provider.command_name()))
+    which(provider.command_name())
+        .ok_or_else(|| format!("installed {} CLI not found", provider.command_name()))
 }
 
 fn which(name: &str) -> Option<PathBuf> {
@@ -102,7 +108,9 @@ fn native_mcp_command(
         command.args(["--transport", "stdio", "--"]);
         command.arg(binary);
     }
-    let output = command.output().map_err(|error| IntegrationError::ProviderCommand(error.to_string()).to_string())?;
+    let output = command
+        .output()
+        .map_err(|error| IntegrationError::ProviderCommand(error.to_string()).to_string())?;
     if !output.status.success() {
         return Err(IntegrationError::ProviderCommand(
             String::from_utf8_lossy(&output.stderr).trim().to_string(),
