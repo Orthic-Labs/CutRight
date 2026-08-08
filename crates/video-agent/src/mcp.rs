@@ -28,7 +28,7 @@ use video_sessions::{
     SessionGuardError, SessionId, SessionOrigin,
 };
 
-use crate::tools::{McpToolRegistry, ToolDescriptor};
+use crate::tools::McpToolRegistry;
 
 /// Loopback adapter configuration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -287,7 +287,7 @@ impl McpAdapter {
         if tool.is_mutation() && &binding.project_id != frontmost_project {
             return Err(McpError::FrontmostProjectMismatch {
                 frontmost: frontmost_project.to_string(),
-                requesting: binding.project_id().to_string(),
+                requesting: binding.project_id.to_string(),
             });
         }
 
@@ -420,16 +420,14 @@ impl ActionReadBody {
 /// deterministic fingerprint plus a process counter so multiple accepts in
 /// the same millisecond produce distinct tokens (no real RNG dependency).
 pub fn generate_ephemeral_token() -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
     use std::sync::atomic::{AtomicU64, Ordering};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let fp = blake3::hash(format!("mcp-token::{n}").as_bytes());
-    let mut out = String::with_capacity(64);
-    out.push_str("mcp_");
-    for byte in fp.as_bytes().iter().take(24) {
-        out.push_str(&format!("{byte:02x}"));
-    }
-    out
+    let mut hasher = DefaultHasher::new();
+    format!("mcp-token::{n}").hash(&mut hasher);
+    format!("mcp_{:016x}_{n:016x}", hasher.finish())
 }
 
 /// Helper used by the Studio to build a session binding that has the
@@ -439,7 +437,9 @@ pub fn binding_for(
     revision: &ActiveRevisionId,
     permission_set: &PermissionSetId,
 ) -> SessionBinding {
-    let session = SessionId(format!("session:{}", project.as_str()));
+    let session: SessionId =
+        serde_json::from_value(serde_json::json!(format!("session:{}", project.as_str())))
+            .expect("session id JSON is a string");
     SessionBinding::new(
         session,
         project.clone(),
@@ -508,7 +508,8 @@ pub fn write_stdio_frame<W: Write, T: Serialize>(
     let length = u32::try_from(payload.len()).expect("stdio frame limit fits in u32");
     writer.write_all(&length.to_be_bytes())?;
     writer.write_all(&payload)?;
-    writer.flush()?
+    writer.flush()?;
+    Ok(())
 }
 
 /// JSON-RPC request carried by the CutRight stdio adapter.
@@ -560,7 +561,7 @@ struct StdioTask {
 }
 
 /// Bound identity used by protocol resources and task projections.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StdioBinding {
     /// Stable project identifier.
     pub project_id: String,
@@ -605,7 +606,7 @@ impl StdioMcpServer {
     /// JSON-RPC, while every request has a protocol-only response.
     pub fn handle(&mut self, request: StdioRequest) -> Option<StdioResponse> {
         if request.jsonrpc != "2.0" {
-            return Self::error(request.id, -32600, "invalid_request", None);
+            return Some(Self::error(request.id, -32600, "invalid_request", None));
         }
         let id = request.id.clone();
         let response = match request.method.as_str() {
