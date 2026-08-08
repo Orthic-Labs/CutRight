@@ -100,6 +100,9 @@ fn main() {
             .expect("Swift compiler has toolchain layout")
             .join("lib/swift/macosx");
         println!("cargo:rustc-link-search=native={}", swift_runtime.display());
+        // Swift's dynamic runtime is outside app bundle; keep both universal
+        // slices launchable under native arm64 & Rosetta x86_64.
+        println!("cargo:rustc-link-arg=-Wl,-rpath,/usr/lib/swift");
         println!("cargo:rustc-link-lib=static=CutRightPlayer");
         for framework in ["AVFoundation", "AppKit", "Foundation", "CoreMedia"] {
             println!("cargo:rustc-link-lib=framework={framework}");
