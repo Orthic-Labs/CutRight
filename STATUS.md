@@ -11,20 +11,19 @@ in git history at the parent of `fix(status): rewrite STATUS.md as
 v2-anchored as-built status`.
 
 ```yaml
-as_of_commit: <filled at v2 RC seal>
+as_of_commit: 7777df7da2a537dd6cd4fc5c9b02a2cb73d99bf4
 dispatch_package: CutRight-v2 standalone implementation dispatch (frozen 2026-08-06)
 dispatch_status: pass
 task_count: 189
 task_status: 189/189 done (1 multi-commit split, 1 orchestrator variance logged)
 post_execution_fixes: 3 (video-agent registration, video-jobs DAG, video-agent MCP IPv6)
 audit_cleanup_fixes: 8 (this audit round)
-head: <filled at v2 RC seal>
+head: 7777df7da2a537dd6cd4fc5c9b02a2cb73d99bf4
 quality_gate: source readiness checks pass; full build gate deferred to build phase
 clean_machine_proof: harness implemented; fresh-user qualification deferred to build phase
 ci: none                                          # scripts/gate.sh is the contract
 known_blockers:
   - fresh_os_user_proof_pending                    # requires build-phase execution on a fresh OS user
-  - clean_candidate_commit_pending                 # current repaired source remains an uncommitted worktree
   - signed_target_qualification_pending            # requires build, seal, and target qualification
 ```
 
