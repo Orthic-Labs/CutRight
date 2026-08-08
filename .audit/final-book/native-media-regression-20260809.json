@@ -1,0 +1,51 @@
+{
+  "schema": "cutright.native-media-regression.v1",
+  "dispatchId": "cutright-lane-6-native-2026-08-08",
+  "taskId": "SEAL-B1-004",
+  "recordedAt": "2026-08-09",
+  "baselineHead": "fc3ba298cc96e896d909322da91d9115cc898ded",
+  "status": "diagnosed_no_source_fix",
+  "rootCause": "Ten library media tests generate fixtures through bare ffmpeg lookup; removing Homebrew media paths makes those fixture spawns fail with ENOENT. This is an environment PATH gap, not a supported-dev-FFmpeg codec defect.",
+  "counterfactual": {
+    "mediaPathRemoved": {
+      "command": "env PATH=<current PATH with /opt/homebrew entries removed> RUSTC_WRAPPER=/opt/homebrew/bin/sccache cargo test -p video-media --lib -- --nocapture",
+      "result": "fail: 53 passed, 10 failed",
+      "failures": "audio_finish fixture generation x5; captions fixture generation x2; evidence fixture generation x1; rough_render fixture generation/probe x2"
+    },
+    "mediaAndNodePathsRemoved": {
+      "command": "env PATH=<current PATH with /opt/homebrew and workspace Node entries removed> RUSTC_WRAPPER=/opt/homebrew/bin/sccache /Volumes/D/adrdsouza-cargo-home-20260726/bin/cargo test -p video-media --lib -- --nocapture",
+      "result": "fail: 52 passed, 11 failed",
+      "additionalFailure": "effects Remotion preview: no Node executable found"
+    },
+    "supportedDevPath": {
+      "command": "env PATH=/opt/homebrew/bin:<pinned Rust/Node/system paths> cargo test -p video-media --lib -- --nocapture",
+      "result": "pass: 63 passed, 0 failed"
+    }
+  },
+  "toolchain": {
+    "ffmpeg": "/opt/homebrew/bin/ffmpeg",
+    "ffprobe": "/opt/homebrew/bin/ffprobe",
+    "version": "8.1.2",
+    "ffmpegSha256": "dad4b30b36a1a999bfa4b6ffbde138bd17ee496c69e12eef638227dff2c6415c",
+    "ffprobeSha256": "cfeefcc9207eb3fa424679228fe3848db2921b15537d26c1ccc4a7a61de95d00",
+    "capabilities": ["libx264", "libx264rgb", "png", "h264_videotoolbox", "lut3d", "colortemperature"],
+    "optionalMissing": ["zscale", "subtitles/libass"],
+    "CUTRIGHT_FFMPEG": "unset",
+    "developmentEnvironment": "PATH-resolved Homebrew pair; release must use signed media pack"
+  },
+  "checks": {
+    "cargoTestVideoMedia": "pass: 63 unit, 8 finish-parity, 1 native-parity, 7 protocol; 1 declared Swift-worker test ignored",
+    "cargoFmtAllCheck": "pass",
+    "cargoClippyWorkspaceAllTargetsDenyWarnings": "pass",
+    "noLargeBinaries": "known reserved exception only: runtime/packs/speech/bin/models/parakeet-tdt-v3/encoder.int8.onnx (622.0 MB)",
+    "sourceFilesChanged": 0,
+    "sourceLinesChanged": 0,
+    "forge": "unavailable: no callable Forge assess/checkpoint/verify/close tool in session",
+    "cortex": "degraded: stale graph, ledger mismatch; not used as evidence"
+  },
+  "handoff": {
+    "requiredMediaPath": "/opt/homebrew/bin before system paths",
+    "node": "workspace Node remains on PATH",
+    "releaseBoundary": "do not use CUTRIGHT_FFMPEG or PATH lookup for release qualification"
+  }
+}
