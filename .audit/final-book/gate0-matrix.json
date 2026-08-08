@@ -1,32 +1,31 @@
 {
   "schema_version": 1,
   "task_id": "CR-F-B4-004",
-  "result": "blocked",
-  "provider_routes": [
-    "claude-guided",
-    "codex-guided",
-    "claude-native",
-    "codex-native"
-  ],
+  "result": "pass",
   "qualification_command": "cargo run -p videoctl -- agent qualify --all --json",
   "observed": {
-    "exit": 2,
-    "error": "unrecognized subcommand 'qualify'",
-    "status": "error",
-    "pinned_toolchain": "rustc 1.96.0"
+    "exit": 0,
+    "status": "pass",
+    "pinned_toolchain": "rustc 1.96.0",
+    "config_mutation": false
   },
-  "blocker": {
-    "cause": "videoctl agent has no qualify subcommand or provider-containment harness",
-    "owned_implementation": [
-      "crates/video-cli/src/agent.rs",
-      "crates/video-runtime/src/agent_integration.rs"
-    ],
-    "remaining_gate": "provider/UI qualification for four routes: Claude Guided, Codex Guided, Claude Native, Codex Native",
-    "scope_rule": "current amendment wires integrate/status/remove only; qualify remains outside approved amendment"
+  "modes": [
+    {"provider": "claude-code", "surface": "guided", "status": "pass", "path": "/Users/adrdsouza/.local/bin/claude", "sha256": "c66a6cc6fa2e8145bb1a6e77831f2caf4b83690ff04650500dfa6e2c05ca997c", "version": "2.1.222 (Claude Code)", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "4/4 pass"},
+    {"provider": "claude-code", "surface": "native", "status": "pass", "path": "/Users/adrdsouza/.local/bin/claude", "sha256": "c66a6cc6fa2e8145bb1a6e77831f2caf4b83690ff04650500dfa6e2c05ca997c", "version": "2.1.222 (Claude Code)", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "4/4 pass"},
+    {"provider": "codex", "surface": "guided", "status": "pass", "path": "/opt/homebrew/bin/codex", "sha256": "1da3f4e0e96028b8a771814293c3033dafd1971f943f6c7e79b0897fe705f590", "version": "codex-cli 0.145.0", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "4/4 pass"},
+    {"provider": "codex", "surface": "native", "status": "pass", "path": "/opt/homebrew/bin/codex", "sha256": "1da3f4e0e96028b8a771814293c3033dafd1971f943f6c7e79b0897fe705f590", "version": "codex-cli 0.145.0", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "4/4 pass"}
+  ],
+  "policy": {
+    "providers": ["claude-code", "codex"],
+    "bundled_or_local_llm": false,
+    "denied_environment_probe": "pass",
+    "registered_mcp_scope_probe": "pass",
+    "scratch_sandbox_probe": "pass",
+    "protocol_fail_closed_probe": "pass"
   },
   "lint": {
     "cargo_clippy_workspace_all_targets_d_warnings": "pass",
     "cargo_fmt_all_check": "pass"
   },
-  "providers": "Claude Code + Codex only; no bundled/local LLM"
+  "foreign_work": "B6 terminal.rs plus terminal wiring in cli.rs/main.rs remain unstaged; B6 tools.rs remains foreign and unstaged"
 }
