@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "dispatch_id": "cutright-lane-8-surface_b-2026-08-08",
+  "task_id": "CR-F-B6-004",
+  "result": "checkpoint_foreign_clippy_gate",
+  "commit_message": "CR-F-B6-004: add-the-daemon-owned-native-cli-terminal",
+  "scope": {
+    "changed_files_text": 2,
+    "changed_lines_text": 229,
+    "ceiling": {"files": 8, "lines": 1400},
+    "ceiling_status": "pass",
+    "owned_paths": ["crates/video-daemon/src/terminal_sessions.rs", "crates/video-cli/src/terminal.rs"]
+  },
+  "acceptance": {
+    "daemon_terminal": "pass: daemon-owned session ring, process group, dimensions, attach token, exit state",
+    "detach": "pass: detach changes display attachment only",
+    "terminal_bytes": "pass: presentation-only; no ANSI state inference",
+    "sandbox": "pass: scratch-only, project package/raw media/unregistered MCP denied",
+    "fake_success": "pass: structured receipt required",
+    "attach_command": "pass: videoctl agent terminal attach contract",
+    "bundled_or_local_llm": "absent"
+  },
+  "verification": {
+    "cargo_test_p_video_daemon": "pass: 3 daemon tests",
+    "cargo_fmt_all_check": "pass",
+    "cargo_clippy_workspace_all_targets_d_warnings": "blocked by foreign video-agent edits: 11 errors in crates/video-agent/src/mcp.rs",
+    "compiler": "rustc 1.96.0"
+  },
+  "foreign_work": "video-agent edits remained unstaged and untouched; re-run workspace clippy after foreign handoff"
+}
