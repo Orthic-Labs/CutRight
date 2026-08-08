@@ -1,6 +1,6 @@
 //! Deterministic job execution with cooperative cancellation and receipts.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -117,7 +117,7 @@ where
     F: Fn(&StageContext) -> Result<StageOutput, StageCallbackError> + ?Sized,
     H: FnMut(&mut JobRecord) -> Result<(), RunnerError>,
 {
-    let order = dag.topological_order().map_err(RunnerError::from)?;
+    let mut order: VecDeque<_> = dag.topological_order().map_err(RunnerError::from)?.into();
     let empty_order = order.is_empty();
     let recovery = recover_in_place(job);
     if !recovery.resumed_stages.is_empty() || !recovery.invalidated_stages.is_empty() {
@@ -128,7 +128,7 @@ where
             stage_id: stage_id.clone(),
         });
     }
-    for stage_id in order {
+    while let Some(stage_id) = order.pop_front() {
         if token.is_cancelled() {
             cancel_remaining(job, &stage_id, None)?;
             hook(job)?;
@@ -275,6 +275,7 @@ where
                     Some(error),
                 )?;
                 hook(job)?;
+                order.push_front(stage_id);
             }
             Err(StageCallbackError::Retryable(error))
             | Err(StageCallbackError::Permanent(error)) => {

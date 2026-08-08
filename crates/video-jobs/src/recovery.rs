@@ -113,14 +113,35 @@ pub fn recover_in_place(job: &mut JobRecord) -> RecoveryReport {
 mod tests {
     use super::*;
     use crate::runner::job_record_from_dag;
-    use crate::JobDag;
+    use crate::{JobDag, ResourceBudget, StageSpec};
 
     #[test]
     fn running_stage_is_recoverable_without_invented_success() {
-        let dag = JobDag::new("j".into(), "restart".into(), vec![]).unwrap();
+        let dag = JobDag::new(
+            "j".into(),
+            "restart".into(),
+            vec![StageSpec {
+                id: "a".into(),
+                kind: "noop".into(),
+                dependencies: vec![],
+                parameters: serde_json::json!({}),
+                resources: ResourceBudget::default(),
+                max_attempts: 0,
+            }],
+        )
+        .unwrap();
         let mut job = job_record_from_dag(&dag, "j");
+        let stage = job.stages.get_mut("a").unwrap();
+        stage.transition(StageState::Ready).unwrap();
+        stage.transition(StageState::Running).unwrap();
+
         let report = recover_in_place(&mut job);
-        assert_eq!(report.classification, RestartClassification::Fresh);
+        assert_eq!(
+            report.classification,
+            RestartClassification::ResumeCheckpoint
+        );
+        assert_eq!(report.resumed_stages, vec!["a"]);
+        assert_eq!(job.stages["a"].state, StageState::Ready);
         assert!(job.receipts.is_empty());
     }
 }
