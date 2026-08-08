@@ -210,7 +210,7 @@ pub fn compile_draft(draft: &EditorialPlanDraft) -> Result<EditorialPlan, DraftV
         escalations: vec![],
         requested_mode: review_mode,
         effective_mode: review_mode,
-        rationale: vec!["compiled from validated EditorialPlanDraft".into()],
+        rationale: vec!["compiled from validated provider draft".into()],
     };
 
     Ok(EditorialPlan {
