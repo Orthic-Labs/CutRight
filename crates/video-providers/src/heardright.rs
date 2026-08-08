@@ -27,7 +27,6 @@
 //! - no model download or network fallback of any kind.
 
 use serde_json::Value;
-use std::env;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -172,16 +171,18 @@ pub(crate) struct Session {
 
 impl Session {
     fn spawn(engine: &std::path::Path) -> Result<Self, ProviderError> {
-        // HeardRight owns model discovery, runtime loading, and platform
-        // backend choice. CutRight passes no model-directory paths; the
-        // HR_ASR_BACKEND value is a policy hint, not an internal model
-        // location. The environment is an explicit allow-list (§10.1): only
-        // PATH (needed to resolve any dynamic libraries/tools HeardRight
-        // itself shells out to) and the one policy hint are passed through.
-        let mut env_allow = vec![("HR_ASR_BACKEND".to_string(), "parakeet-tdt".to_string())];
-        if let Ok(path) = env::var("PATH") {
-            env_allow.push(("PATH".to_string(), path));
-        }
+        // The signed pack owns engine + models. Pass only pack-relative model
+        // roots and fixed backend policy; no PATH, download, or user location.
+        let pack_bin = engine.parent().unwrap_or_else(|| std::path::Path::new("."));
+        let models = pack_bin.join("models/parakeet-tdt-v3");
+        let env_allow = vec![
+            ("HR_ASR_BACKEND".to_string(), "parakeet-tdt".to_string()),
+            ("HR_ASR_COREML".to_string(), "0".to_string()),
+            (
+                "HR_MODELS_DIR".to_string(),
+                models.to_string_lossy().into_owned(),
+            ),
+        ];
         let spec = ProcessSpec {
             executable: engine.to_path_buf(),
             args: Vec::new(),
