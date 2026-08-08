@@ -5,6 +5,19 @@
     "offline": true,
     "path_lookup": false
   },
+  "status": "blocked_unresolved_payload",
+  "payload_contract": {
+    "engine": "bin/heardright-engine",
+    "parakeet_manifest": "../../manifests/parakeet.model.json",
+    "silero_manifest": "../../manifests/silero-vad.model.json",
+    "required_parakeet_assets": ["encoder", "decoder", "joiner", "tokenizer", "vocabulary"],
+    "required_silero_asset": "silero_vad_16k_op15.onnx"
+  },
+  "provenance": {
+    "source_manifest": "runtime/manifests/speech-engine.source.json",
+    "adapter_root": "vendor/heardright/cutright-adapter",
+    "resolution": "relative-to-installed-binary"
+  },
   "capabilities": [
     "speech.transcribe",
     "speech.vad",

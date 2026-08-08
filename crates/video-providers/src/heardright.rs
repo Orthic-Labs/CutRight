@@ -142,15 +142,22 @@ fn unique_id(prefix: &str) -> String {
 
 /// Resolve the HeardRight engine location (§9.3, v2 standalone boundary).
 ///
-/// The speech engine ships inside the signed CutRight speech runtime pack.
-/// Release code never resolves it through environment overrides,
-/// installed-location probing, or bare-name lookup: until the pack is
-/// materialized this returns the typed
-/// [`ProviderError::RuntimePackNotInstalled`] degraded state. The pack
-/// installer constructs a session from the pack-provided engine path
-/// explicitly via [`HeardRightClient::with_engine`].
+/// Resolve the engine only from a pack directory relative to this binary.
+/// No environment override, sibling checkout, PATH lookup, or download is
+/// permitted. Missing or non-file payloads remain a typed degraded state.
 pub fn discover_engine() -> Result<PathBuf, ProviderError> {
-    Err(ProviderError::RuntimePackNotInstalled)
+    let executable = std::env::current_exe().map_err(ProviderError::Start)?;
+    let Some(bundle_root) = executable.parent() else {
+        return Err(ProviderError::RuntimePackNotInstalled);
+    };
+    let candidates = [
+        bundle_root.join("packs/speech/bin/heardright-engine"),
+        bundle_root.join("../packs/speech/bin/heardright-engine"),
+    ];
+    candidates
+        .into_iter()
+        .find(|path| path.is_file())
+        .ok_or(ProviderError::RuntimePackNotInstalled)
 }
 
 /// One supervised HeardRight engine session: spawn, handshake, and a

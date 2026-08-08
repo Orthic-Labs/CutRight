@@ -1,0 +1,42 @@
+{
+  "task_id": "CR-F-B5-001",
+  "commit": "HEAD",
+  "scope": {
+    "owned_paths": [
+      "vendor/heardright/cutright-adapter/",
+      "runtime/packs/speech/",
+      "crates/video-runtime/src/speech.rs",
+      "crates/video-providers/src/heardright.rs",
+      ".audit/final-book/packs-*"
+    ],
+    "changed_paths": [
+      "crates/video-providers/src/heardright.rs",
+      "runtime/packs/speech/PACK.json",
+      ".audit/final-book/packs-b5-001.json"
+    ],
+    "changed_files": 3,
+    "changed_lines": 78,
+    "ceiling": {"files": 8, "lines": 1400}
+  },
+  "result": "blocked_unresolved_payload",
+  "completed": [
+    "Added relative-to-installed-binary engine lookup with no PATH, environment, sibling, or network fallback.",
+    "Recorded speech payload contract and provenance in PACK.json.",
+    "Validated PACK.json syntax, rustfmt for changed Rust file, and manifest scripts."
+  ],
+  "acceptance": {
+    "command": "cargo run -p videoctl -- doctor --json",
+    "status": "not_run",
+    "reason": "cargo-guard denied Cargo execution before process start; prior doctor preflight also failed on incompatible cached crates (rustc 1.96 artifact vs rustc 1.97.1).",
+    "three_real_clip_transcriptions": "blocked",
+    "blocker": "No engine payload is present at runtime/packs/speech/bin/heardright-engine; Parakeet required asset hashes/licenses and source commit remain unresolved; exact Silero ONNX hash is absent."
+  },
+  "verification": {
+    "pack_json": "pass",
+    "parakeet_manifest": "blocked_unresolved_assets",
+    "silero_manifest": "pass",
+    "rustfmt_changed_file": "pass",
+    "cargo_clippy": "not_run_cargo_guard",
+    "cargo_fmt_check": "not_run_cargo_guard"
+  }
+}
