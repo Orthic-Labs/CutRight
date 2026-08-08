@@ -25,6 +25,175 @@ pub const DENIED_ENV_VARS: &[&str] = &[
     "CODERIGHT_DRIVER_INSTANCE_SECRET",
 ];
 
+pub const CUTRIGHT_MCP_SERVER_NAME: &str = "cutright";
+pub const ENVIRONMENT_POLICY_VERSION: &str = "cutright-provider-env-v1";
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CapabilityLease {
+    pub project_id: String,
+    pub revision: String,
+    pub capability: String,
+    pub expires_at_unix_ms: u64,
+}
+
+impl CapabilityLease {
+    pub fn new(
+        project_id: impl Into<String>,
+        revision: impl Into<String>,
+        capability: impl Into<String>,
+        expires_at_unix_ms: u64,
+    ) -> Result<Self, DriverHostError> {
+        let lease = Self {
+            project_id: project_id.into(),
+            revision: revision.into(),
+            capability: capability.into(),
+            expires_at_unix_ms,
+        };
+        if lease.project_id.is_empty() || lease.revision.is_empty() || lease.capability.is_empty() {
+            return Err(DriverHostError::InvalidLaunch(
+                "lease scope fields must not be empty".into(),
+            ));
+        }
+        Ok(lease)
+    }
+    pub fn permits(
+        &self,
+        project_id: &str,
+        revision: &str,
+        capability: &str,
+        now_unix_ms: u64,
+    ) -> bool {
+        self.project_id == project_id
+            && self.revision == revision
+            && self.capability == capability
+            && now_unix_ms < self.expires_at_unix_ms
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CutrightOperation {
+    InspectSource,
+    ReadTranscript,
+    DraftEditorialPlan,
+    ApplyEditorialPlan,
+    RenderArtifact,
+}
+
+impl CutrightOperation {
+    pub const fn requires_approval(self) -> bool {
+        matches!(self, Self::ApplyEditorialPlan | Self::RenderArtifact)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OperationRequest {
+    pub operation: CutrightOperation,
+    pub media_handle: String,
+    pub project_id: String,
+    pub revision: String,
+    pub lease: CapabilityLease,
+}
+
+impl OperationRequest {
+    pub fn validate(&self, now_unix_ms: u64) -> Result<(), DriverHostError> {
+        if self.media_handle.is_empty()
+            || self.media_handle.contains('/')
+            || self.media_handle.contains('\\')
+        {
+            return Err(DriverHostError::InvalidLaunch(
+                "operations accept media handles, not filesystem paths".into(),
+            ));
+        }
+        if !self.lease.permits(
+            &self.project_id,
+            &self.revision,
+            "cutright.editorial",
+            now_unix_ms,
+        ) {
+            return Err(DriverHostError::Resume(
+                "lease is not bound to this project and revision".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EnvironmentPolicy {
+    pub version: String,
+    pub allowed_names: BTreeSet<String>,
+    pub denied_names: BTreeSet<String>,
+}
+
+impl Default for EnvironmentPolicy {
+    fn default() -> Self {
+        Self {
+            version: ENVIRONMENT_POLICY_VERSION.into(),
+            allowed_names: ["LANG", "LC_ALL", "PATH", "HOME", "TMPDIR"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
+            denied_names: denied_env_vars(),
+        }
+    }
+}
+
+impl EnvironmentPolicy {
+    pub fn for_driver(driver: DriverKind) -> Self {
+        let mut policy = Self::default();
+        policy.allowed_names.insert(
+            match driver {
+                DriverKind::Claude => "ANTHROPIC_AUTH_TOKEN",
+                DriverKind::Codex => "OPENAI_ORG_ID",
+            }
+            .into(),
+        );
+        policy
+    }
+    pub fn sanitize(
+        &self,
+        parent: &BTreeMap<String, String>,
+        explicit: &BTreeMap<String, String>,
+    ) -> BTreeMap<String, String> {
+        let mut clean = BTreeMap::new();
+        for name in &self.allowed_names {
+            if let Some(value) = explicit.get(name).or_else(|| parent.get(name)) {
+                clean.insert(name.clone(), value.clone());
+            }
+        }
+        clean.retain(|name, _| !self.denied_names.contains(name));
+        clean
+    }
+    pub fn receipt(&self) -> EnvironmentPolicyReceipt {
+        EnvironmentPolicyReceipt {
+            version: self.version.clone(),
+            allowed_name_hashes: self
+                .allowed_names
+                .iter()
+                .map(|name| {
+                    (
+                        name.clone(),
+                        blake3::hash(name.as_bytes()).to_hex().to_string(),
+                    )
+                })
+                .collect(),
+            denied_name_hashes: self
+                .denied_names
+                .iter()
+                .map(|name| blake3::hash(name.as_bytes()).to_hex().to_string())
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EnvironmentPolicyReceipt {
+    pub version: String,
+    pub allowed_name_hashes: BTreeMap<String, String>,
+    pub denied_name_hashes: BTreeSet<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DriverKind {
@@ -604,5 +773,40 @@ mod tests {
         assert!(routes
             .iter()
             .all(|route| route.user_installed && !route.bundled_runtime));
+    }
+
+    #[test]
+    fn lease_is_bound_to_project_revision_and_expiry() {
+        let lease = CapabilityLease::new("p1", "r2", "cutright.editorial", 10).unwrap();
+        assert!(lease.permits("p1", "r2", "cutright.editorial", 9));
+        assert!(!lease.permits("p2", "r2", "cutright.editorial", 9));
+        assert!(!lease.permits("p1", "r2", "cutright.editorial", 10));
+    }
+
+    #[test]
+    fn environment_policy_drops_parent_secrets_and_keeps_provider_login_surface() {
+        let policy = EnvironmentPolicy::for_driver(DriverKind::Claude);
+        let parent = BTreeMap::from([
+            (String::from("ANTHROPIC_API_KEY"), String::from("secret")),
+            (String::from("LANG"), String::from("en_US.UTF-8")),
+        ]);
+        let clean = policy.sanitize(&parent, &BTreeMap::new());
+        assert!(!clean.contains_key("ANTHROPIC_API_KEY"));
+        assert_eq!(clean.get("LANG").map(String::as_str), Some("en_US.UTF-8"));
+    }
+
+    #[test]
+    fn operation_requests_reject_paths_and_wrong_scope() {
+        let lease = CapabilityLease::new("p1", "r1", "cutright.editorial", 99).unwrap();
+        let mut request = OperationRequest {
+            operation: CutrightOperation::ReadTranscript,
+            media_handle: "/tmp/raw.mov".into(),
+            project_id: "p1".into(),
+            revision: "r1".into(),
+            lease,
+        };
+        assert!(request.validate(1).is_err());
+        request.media_handle = "media:source-1".into();
+        assert!(request.validate(1).is_ok());
     }
 }

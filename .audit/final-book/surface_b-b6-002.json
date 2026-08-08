@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "dispatch_id": "cutright-lane-8-surface_b-2026-08-08",
+  "task_id": "CR-F-B6-002",
+  "result": "pass",
+  "commit_message": "CR-F-B6-002: apply-cutright-identity-leases-and-environment-policy",
+  "scope": {
+    "changed_files_text": 1,
+    "changed_lines_text": 204,
+    "ceiling": {"files": 8, "lines": 1400},
+    "ceiling_status": "pass",
+    "owned_paths": ["crates/video-driver-host/src/lib.rs"]
+  },
+  "acceptance": {
+    "cutright_identity": "pass: CUTRIGHT_MCP_SERVER_NAME is cutright",
+    "project_revision_lease": "pass: wrong project, revision, capability, or expiry rejected",
+    "media_handle_boundary": "pass: filesystem paths rejected",
+    "environment_sentinel": "pass: parent credential-shaped values are omitted",
+    "provider_login_surface": "pass: only version-qualified provider auth name is allowed",
+    "receipt_privacy": "pass: policy receipt stores name hashes, never values",
+    "bundled_or_local_llm": "absent"
+  },
+  "verification": {
+    "focused_tests": "pass: 8 video-driver-host tests",
+    "cargo_clippy_workspace_all_targets_d_warnings": "pass",
+    "cargo_fmt_all_check": "pass",
+    "compiler": "rustc 1.96.0"
+  },
+  "foreign_work": "video-agent edits remained unstaged and untouched"
+}
