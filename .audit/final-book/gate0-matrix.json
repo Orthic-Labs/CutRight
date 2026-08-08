@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "task_id": "CR-F-B4-004",
+  "result": "blocked",
+  "provider_routes": [
+    "claude-guided",
+    "codex-guided",
+    "claude-native",
+    "codex-native"
+  ],
+  "qualification_command": "cargo run -p videoctl -- agent qualify --all --json",
+  "observed": {
+    "exit": 2,
+    "error": "unrecognized subcommand 'agent'",
+    "status": "error",
+    "pinned_toolchain": "rustc 1.96.0"
+  },
+  "blocker": {
+    "cause": "videoctl CLI has no Agent subcommand wiring",
+    "owned_implementation": [
+      "crates/video-cli/src/agent.rs",
+      "crates/video-runtime/src/agent_integration.rs"
+    ],
+    "required_unowned_wiring": [
+      "crates/video-cli/src/main.rs",
+      "crates/video-cli/src/cli.rs",
+      "crates/video-cli/Cargo.toml"
+    ],
+    "scope_rule": "B4 lane exclusive paths forbid edits to required wiring paths"
+  },
+  "lint": {
+    "cargo_clippy_workspace_all_targets_d_warnings": "pass",
+    "cargo_fmt_all_check": "pass"
+  },
+  "providers": "Claude Code + Codex only; no bundled/local LLM"
+}
