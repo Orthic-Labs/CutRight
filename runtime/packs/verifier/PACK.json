@@ -1,0 +1,50 @@
+{
+  "schema": "cutright.pack_manifest/v1",
+  "pack_id": "verifier",
+  "version": "1.0.0",
+  "status": "qualified",
+  "target": {
+    "platform": "macos",
+    "arch": "universal",
+    "min_version": "13.0"
+  },
+  "role": "independent-word-edge-verifier",
+  "resolution": "relative-to-installed-binary",
+  "development_override": "CUTRIGHT_WHISPERX_PYTHON",
+  "release_python": false,
+  "runtime": {
+    "engine": "bin/cutright-verifier",
+    "framework": "Speech.framework",
+    "requires_on_device_recognition": true,
+    "network": false,
+    "timeout_seconds": 600
+  },
+  "files": [
+    {
+      "path": "bin/cutright-verifier",
+      "bytes": 160160,
+      "sha256": "4e7da6d0e5771b0a4f569df07110e0337b4a62183046b9dce148c8d9dffc4044",
+      "license": "LicenseRef-Proprietary"
+    },
+    {
+      "path": "src/main.swift",
+      "bytes": 2612,
+      "sha256": "7534aa6e8233584e1c995d0fe1111f99eed14ad6518a86c29d5556dc4be9f212",
+      "license": "LicenseRef-Proprietary"
+    },
+    {
+      "path": "LICENSE-NOTICE.txt",
+      "sha256": "d6d038951beee2af16312916faa930e2366f22a3c1e976645661689a139c6f02",
+      "license": "LicenseRef-Proprietary"
+    }
+  ],
+  "contract": {
+    "output": "[{s:seconds,e:seconds,w:text}]",
+    "empty_or_unavailable": "verifier unavailable; destructive word-edge cuts remain blocked"
+  },
+  "build": {
+    "compiler": "Apple Swift 6.3.3",
+    "command": "swiftc -O -target <arch>-apple-macosx13.0 -framework Speech src/main.swift; lipo arm64 x86_64",
+    "network": false
+  }
+}

@@ -1,0 +1,6 @@
+CutRight verifier adapter is LicenseRef-Proprietary, Copyright Orthic Labs.
+
+Speech recognition uses Apple's system Speech framework in required
+on-device mode. No Apple model or framework bytes are redistributed.
+Source: https://developer.apple.com/documentation/speech
+
