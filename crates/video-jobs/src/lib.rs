@@ -6,6 +6,7 @@
 
 pub mod autonomous;
 pub mod dag;
+pub mod recovery;
 pub mod runner;
 pub mod store;
 
@@ -15,5 +16,13 @@ pub use autonomous::{
     AutonomousEscalation, AutonomousRunInputs, AutonomousRunOutcome,
 };
 pub use dag::{DagError, JobDag, ResourceBudget, StageSpec};
-pub use runner::{job_record_from_dag, run, CancellationToken, RunnerError, RunnerOutcome};
-pub use store::{AttemptOutcome, AttemptRecord, JobRecord, StageRecord, StageState, StoreError};
+pub use recovery::{classify_restart, recover_in_place, RecoveryReport, RestartClassification};
+pub use runner::{
+    job_record_from_dag, run, run_persisted, run_with_callback, CancellationHandle,
+    CancellationToken, RunnerError, RunnerOutcome, StageCallbackError, StageContext, StageOutput,
+};
+pub use store::{
+    AttemptOutcome, AttemptRecord, CheckpointRecord, InputRequired, JobEvent, JobRecord,
+    ProjectJobStore, StageReceipt, StageRecord, StageState, StoreError, TerminalLoser,
+    TerminalRace, TerminalWinner,
+};
