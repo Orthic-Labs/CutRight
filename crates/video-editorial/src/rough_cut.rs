@@ -4,57 +4,16 @@
 //! contract. It selects only explicitly ordered beats and leaves source-media
 //! validation to the project kernel that owns candidates and timestamps.
 
-use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct SemanticEditorialPlan {
-    pub schema_version: u32,
-    pub beats: Vec<SemanticBeat>,
-    pub order: Vec<String>,
-    pub chronological_status: ChronologicalStatus,
-    #[serde(default)]
-    pub review_flags: Vec<ReviewFlag>,
-    #[serde(default)]
-    pub escalations: Vec<EditorialEscalation>,
-}
+pub use crate::draft::{
+    BeatEvidence, ChronologicalStatus, DraftEscalation as EditorialEscalation,
+    EditorialBeatDraft as SemanticBeat, EditorialPlanDraft, ReviewFlag,
+};
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct SemanticBeat {
-    pub beat_id: String,
-    pub label: String,
-    pub selected_take: String,
-    pub confidence: f64,
-    pub evidence: Vec<BeatEvidence>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct BeatEvidence {
-    pub source_range: [i64; 2],
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ChronologicalStatus {
-    Truthful,
-    TruthfulWithDisclosedReorder,
-    FalseChronologyBlocked,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct ReviewFlag {
-    pub flag: String,
-    #[serde(default)]
-    pub evidence_refs: Vec<String>,
-}
-
-/// A schema-v2 escalation that can explicitly block downstream cutting.
-/// Unrecognised escalation fields intentionally remain irrelevant to rough
-/// cut selection; `blocking` is the contract this reader must honor.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct EditorialEscalation {
-    pub blocking: bool,
-}
+/// Compatibility name for legacy rough-cut readers. This is a transient
+/// alias to the provider draft, never a persisted model.
+pub type SemanticEditorialPlan = EditorialPlanDraft;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelectedBeat {
@@ -91,7 +50,7 @@ impl std::fmt::Display for SemanticSelectionError {
 
 impl std::error::Error for SemanticSelectionError {}
 
-impl SemanticEditorialPlan {
+impl EditorialPlanDraft {
     /// Select a stable red-thread order only when supplied evidence is usable.
     /// A selected beat never arises from text inference or a candidate label.
     pub fn select_beats(&self) -> Result<Vec<SelectedBeat>, SemanticSelectionError> {
@@ -164,33 +123,49 @@ impl SemanticEditorialPlan {
 mod tests {
     use super::*;
 
-    fn plan() -> SemanticEditorialPlan {
-        SemanticEditorialPlan {
+    fn plan() -> EditorialPlanDraft {
+        EditorialPlanDraft {
+            schema: "cutright.agent.editorial_plan_draft/v1".into(),
             schema_version: 2,
+            plan_id: "plan-1".into(),
+            source_revision: "source-1".into(),
+            evidence_graph_revision: "evidence-1".into(),
+            policy_version: "1.0".into(),
             beats: vec![
                 SemanticBeat {
                     beat_id: "hook".into(),
                     label: "hook".into(),
                     selected_take: "take-1".into(),
+                    alternates: vec![],
                     confidence: 0.9,
                     evidence: vec![BeatEvidence {
                         source_range: [100, 400],
+                        word_ids: vec![],
+                        frame_refs: vec![],
                     }],
+                    notes: None,
                 },
                 SemanticBeat {
                     beat_id: "payoff".into(),
                     label: "payoff".into(),
                     selected_take: "take-2".into(),
+                    alternates: vec![],
                     confidence: 0.8,
                     evidence: vec![BeatEvidence {
                         source_range: [500, 900],
+                        word_ids: vec![],
+                        frame_refs: vec![],
                     }],
+                    notes: None,
                 },
             ],
             order: vec!["hook".into(), "payoff".into()],
+            reorder_logs: vec![],
+            escalations: vec![],
+            drop_reasons: vec![],
             chronological_status: ChronologicalStatus::Truthful,
             review_flags: vec![],
-            escalations: vec![],
+            review_mode: None,
         }
     }
 
@@ -225,8 +200,10 @@ mod tests {
     #[test]
     fn blocking_escalation_requires_manual_review() {
         let mut plan = plan();
-        plan.escalations
-            .push(EditorialEscalation { blocking: true });
+        plan.escalations.push(EditorialEscalation {
+            blocking: true,
+            ..Default::default()
+        });
         assert_eq!(
             plan.select_beats(),
             Err(SemanticSelectionError::ReviewRequired(
