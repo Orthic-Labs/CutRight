@@ -717,6 +717,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "video-daemon"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "tempfile",
+ "thiserror",
+ "video-protocol",
+]
+
+[[package]]
 name = "video-editorial"
 version = "0.1.0"
 dependencies = [
@@ -786,6 +796,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "video-protocol"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "video-providers"
 version = "0.1.0"
 dependencies = [
@@ -839,9 +858,12 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "video-capabilities",
  "video-core",
  "video-jobs",
+ "video-project",
  "video-runtime",
+ "video-sessions",
  "video-state",
 ]
 

@@ -12,6 +12,9 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 video-core = { path = "../video-core" }
+video-capabilities = { path = "../video-capabilities" }
 video-jobs = { path = "../video-jobs" }
+video-project = { path = "../video-project" }
 video-runtime = { path = "../video-runtime" }
 video-state = { path = "../video-state" }
+video-sessions = { path = "../video-sessions" }
