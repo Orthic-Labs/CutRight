@@ -52,18 +52,6 @@ fn clear_env() {
     std::env::remove_var("CUTRIGHT_HEARDRIGHT_HANDSHAKE_TIMEOUT_SECS");
 }
 
-#[test]
-fn discover_without_a_runtime_pack_reports_the_typed_degraded_state() {
-    // With no signed speech runtime pack materialized, discovery returns the
-    // typed degraded state rather than resolving any external binary.
-    let error =
-        HeardRightProvider::discover().expect_err("discovery must report the missing runtime pack");
-    assert!(
-        matches!(error, ProviderError::RuntimePackNotInstalled),
-        "expected RuntimePackNotInstalled, got {error:?}"
-    );
-}
-
 const HANDSHAKE_REPLY: &str = "printf '{\"schema_name\":\"session_handshake_result\",\"protocol_major\":1,\"protocol_minor\":0,\"engine_version\":\"fake-engine/1.0\",\"request_id\":\"%s\",\"payload\":{\"capabilities\":[]}}\\n' \"$rid\"";
 
 fn vad_request(root: &Path) -> VadRequest {

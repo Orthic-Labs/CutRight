@@ -28,7 +28,7 @@
 
 use serde_json::Value;
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::Mutex;
@@ -149,6 +149,10 @@ pub fn discover_engine() -> Result<PathBuf, ProviderError> {
     let Some(bundle_root) = executable.parent() else {
         return Err(ProviderError::RuntimePackNotInstalled);
     };
+    discover_engine_from_bundle_root(bundle_root)
+}
+
+fn discover_engine_from_bundle_root(bundle_root: &Path) -> Result<PathBuf, ProviderError> {
     let candidates = [
         bundle_root.join("packs/speech/bin/heardright-engine"),
         bundle_root.join("../packs/speech/bin/heardright-engine"),
@@ -545,5 +549,23 @@ impl HeardRightClient {
             }
             Err(other) => Err(other),
         }
+    }
+}
+
+#[cfg(test)]
+mod discovery_tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn missing_runtime_pack_reports_the_typed_degraded_state() {
+        let root = std::env::temp_dir().join(unique_id("cutright-heardright-discovery"));
+        fs::create_dir_all(&root).expect("create isolated bundle root");
+
+        let error = discover_engine_from_bundle_root(&root)
+            .expect_err("isolated bundle root must report missing runtime pack");
+        assert!(matches!(error, ProviderError::RuntimePackNotInstalled));
+
+        fs::remove_dir_all(root).expect("remove isolated bundle root");
     }
 }
