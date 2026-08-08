@@ -140,7 +140,7 @@ mod tests {
     #[test]
     fn rejects_unknown_profile() {
         let svc = SocialService::new();
-        let err = svc.check_duration("unknown", 1000).err().expect("err");
+        let err = svc.check_duration("unknown", 1000).expect_err("err");
         assert!(matches!(err, SocialError::UnknownProfile(_)));
     }
 
@@ -148,10 +148,7 @@ mod tests {
     fn rejects_over_max_duration() {
         let mut svc = SocialService::new();
         svc.load_profile(test_profile());
-        let err = svc
-            .check_duration("ig.reels.v1", 95_000)
-            .err()
-            .expect("err");
+        let err = svc.check_duration("ig.reels.v1", 95_000).expect_err("err");
         assert!(matches!(err, SocialError::ConstraintViolated(_)));
     }
 
@@ -159,7 +156,7 @@ mod tests {
     fn rejects_restricted_tag() {
         let mut svc = SocialService::new();
         svc.load_profile(test_profile());
-        let err = svc.check_tag("ig.reels.v1", "#spam").err().expect("err");
+        let err = svc.check_tag("ig.reels.v1", "#spam").expect_err("err");
         assert!(matches!(err, SocialError::ConstraintViolated(_)));
         svc.check_tag("ig.reels.v1", "#vibes").expect("ok");
     }

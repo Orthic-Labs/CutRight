@@ -32,10 +32,9 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::action::Action;
-use crate::diff::{dry_run, DiffEntry, SemanticDiff, StableDiffKey, DRY_RUN_SCHEMA};
+use crate::diff::{dry_run, SemanticDiff, DRY_RUN_SCHEMA};
 use crate::revision::{
-    FailureCode, Receipt, ReceiptFailure, ReceiptStatus, Revision, RevisionError, RECEIPT_SCHEMA,
-    REVISION_SCHEMA,
+    FailureCode, Receipt, ReceiptFailure, Revision, RevisionError, RECEIPT_SCHEMA, REVISION_SCHEMA,
 };
 use crate::validation::ValidationFailure;
 
@@ -190,7 +189,7 @@ impl StagedApply {
         staged.parent_revision_id = staged_revision_id.clone();
 
         Ok(ApplyOutcome::Applied {
-            revision: committed,
+            revision: Box::new(committed),
             receipt,
         })
     }
@@ -228,7 +227,7 @@ impl StagedApply {
         let receipt = Receipt::dry_run(
             batch_id,
             &diff.planned_revision,
-            &make_receipt_id(batch_id, &diff.planned_revision),
+            make_receipt_id(batch_id, &diff.planned_revision),
         );
         Ok(DryRunOutcome { diff, receipt })
     }
@@ -306,7 +305,7 @@ pub enum ApplyOutcome {
     /// Apply succeeded end-to-end.
     Applied {
         /// The committed [`Revision`].
-        revision: Revision,
+        revision: Box<Revision>,
         /// The [`Receipt`] that was written.
         receipt: Receipt,
     },
@@ -355,7 +354,7 @@ impl DryRunOutcome {
     /// caller doesn't have to deal with two error types.
     pub fn failed(batch_id: impl Into<String>, failures: Vec<ReceiptFailure>) -> Self {
         let batch_id = batch_id.into();
-        let receipt = Receipt::failed("", &make_receipt_id(&batch_id, "dry_run"), failures);
+        let receipt = Receipt::failed("", make_receipt_id(&batch_id, "dry_run"), failures);
         Self {
             diff: SemanticDiff {
                 schema: DRY_RUN_SCHEMA.to_string(),
@@ -451,10 +450,7 @@ fn map_diff_err_to_apply(err: crate::diff::DiffError) -> ApplyError {
 fn write_bytes_atomic(path: &Path, bytes: &[u8]) -> Result<(), ApplyError> {
     let parent = path.parent().ok_or_else(|| ApplyError::Io {
         stage: "resolve parent directory",
-        source: std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("{} has no parent directory", path.display()),
-        ),
+        source: std::io::Error::other(format!("{} has no parent directory", path.display())),
     })?;
     fs::create_dir_all(parent).map_err(|source| ApplyError::Io {
         stage: "create parent directory",
@@ -465,10 +461,7 @@ fn write_bytes_atomic(path: &Path, bytes: &[u8]) -> Result<(), ApplyError> {
         .and_then(|s| s.to_str())
         .ok_or_else(|| ApplyError::Io {
             stage: "resolve file name",
-            source: std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("{} has no file name", path.display()),
-            ),
+            source: std::io::Error::other(format!("{} has no file name", path.display())),
         })?;
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -525,19 +518,6 @@ fn current_time_ns() -> i64 {
         .unwrap_or(0)
 }
 
-/// Default duration we use when the active revision doesn't carry one.
-/// Stays inside `i64` and is comfortably below the validation overflow
-/// bound so tests can use it.
-const DEFAULT_DURATION_NS: i64 = 10_000_000_000;
-
-fn active_duration_ns(active: &Revision) -> i64 {
-    // Revisions don't carry a duration in the v1 schema; the orchestrator
-    // is responsible for tracking the project timeline length. For the
-    // standalone lane-P-A apply pipeline we use a conservative default
-    // that is larger than any plausible test range.
-    DEFAULT_DURATION_NS
-}
-
 fn compute_compatibility_fp(actions: &[Action]) -> String {
     let canonical = serde_json::json!({
         "schema": REVISION_SCHEMA,
@@ -546,8 +526,7 @@ fn compute_compatibility_fp(actions: &[Action]) -> String {
             .collect::<Vec<_>>(),
     });
     let bytes = serde_json::to_vec(&canonical).expect("canonical serialises");
-    let hash = blake3::hash(&bytes).to_hex().to_string();
-    hash
+    blake3::hash(&bytes).to_hex().to_string()
 }
 
 fn make_receipt_id(batch_id: &str, revision_id: &str) -> String {
@@ -565,8 +544,14 @@ fn make_receipt_id(batch_id: &str, revision_id: &str) -> String {
 mod tests {
     use super::*;
     use crate::action::{CutParams, RangeNs, TargetKind, TargetRef};
-    use crate::revision::StagedRevision;
+    use crate::diff::{DiffEntry, StableDiffKey};
+    use crate::revision::{ReceiptStatus, StagedRevision};
     use std::collections::BTreeSet;
+
+    /// Default duration we use when the active revision doesn't carry one.
+    /// Stays inside `i64` and is comfortably below the validation overflow
+    /// bound so tests can use it.
+    const DEFAULT_DURATION_NS: i64 = 10_000_000_000;
 
     fn make_active(revision_id: &str) -> Revision {
         Revision {

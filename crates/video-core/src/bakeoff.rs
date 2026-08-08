@@ -106,7 +106,7 @@ mod tests {
     fn rejects_bakeoff_with_one_variant() {
         let mut b = sample_bakeoff();
         b.variants.pop();
-        let err = BakeOffService::validate(&b).err().expect("err");
+        let err = BakeOffService::validate(&b).expect_err("err");
         assert!(matches!(err, BakeOffError::TooFewVariants(_)));
     }
 
@@ -114,7 +114,7 @@ mod tests {
     fn rejects_variant_without_axis_tokens() {
         let mut b = sample_bakeoff();
         b.variants[0].axis_tokens.clear();
-        let err = BakeOffService::validate(&b).err().expect("err");
+        let err = BakeOffService::validate(&b).expect_err("err");
         assert!(matches!(err, BakeOffError::NoDeclaredAxis(_)));
     }
 }

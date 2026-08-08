@@ -434,7 +434,7 @@ fn check_session(
             action_index,
         });
     }
-    if !sessions.lock_path().parent().map(|_| ()).is_some() {
+    if sessions.lock_path().parent().map(|_| ()).is_none() {
         return Err(ReceiptFailure {
             code: FailureCode::PermissionDenied,
             message: "session guard is not associated with a project root".to_string(),
@@ -479,8 +479,6 @@ impl ActionTargetId for Action {
         target.as_str().to_string()
     }
 }
-
-trait SessionBindingLookup {}
 
 #[doc(hidden)]
 pub fn _unused_to_keep_links() {}

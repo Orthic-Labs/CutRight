@@ -484,7 +484,7 @@ fn hash_directory(root: &Path) -> Result<String, MigrationError> {
         return Ok(blake3::hash(&[]).to_hex().to_string());
     }
     let mut paths: Vec<PathBuf> = Vec::new();
-    collect_files(root, root, &mut paths)?;
+    collect_files(root, &mut paths)?;
     paths.sort();
     let mut hasher = blake3::Hasher::new();
     for path in paths {
@@ -504,7 +504,7 @@ fn hash_directory(root: &Path) -> Result<String, MigrationError> {
     Ok(hasher.finalize().to_hex().to_string())
 }
 
-fn collect_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), MigrationError> {
+fn collect_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), MigrationError> {
     let read = fs::read_dir(dir).map_err(|source| MigrationError::Io {
         path: dir.to_path_buf(),
         source,
@@ -520,7 +520,7 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), 
             source,
         })?;
         if meta.is_dir() {
-            collect_files(root, &path, out)?;
+            collect_files(&path, out)?;
         } else if meta.is_file() {
             out.push(path);
         }

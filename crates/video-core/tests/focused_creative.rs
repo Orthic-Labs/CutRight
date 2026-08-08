@@ -72,9 +72,7 @@ fn native_audio_finish_rejects_unbound_cue() {
         evidence_ref: "".to_string(),
         reverb_ms: 50,
     };
-    let err = NativeAudioEngine::finish(&profile, vec![cue])
-        .err()
-        .expect("err");
+    let err = NativeAudioEngine::finish(&profile, vec![cue]).expect_err("err");
     assert!(matches!(
         err,
         video_core::native_audio::AudioError::UnboundCue(_)
@@ -95,7 +93,7 @@ fn native_motion_rejects_unknown_transition() {
         allowed_transitions: vec!["cut".to_string()],
         platform: "ig_reels".to_string(),
     };
-    let err = NativeMotionEngine::validate(&clip).err().expect("err");
+    let err = NativeMotionEngine::validate(&clip).expect_err("err");
     assert!(matches!(
         err,
         video_core::native_motion::MotionError::ForbiddenTransition(_, _)
@@ -130,9 +128,7 @@ fn native_typography_rejects_token_outside_safe_zone() {
             evidence_ref: "evidence:ev_1".to_string(),
         }],
     };
-    let err = NativeTypographyEngine::layout(&doc, &profile)
-        .err()
-        .expect("err");
+    let err = NativeTypographyEngine::layout(&doc, &profile).expect_err("err");
     assert!(matches!(
         err,
         video_core::native_typography::TypographyError::OutsideSafeZone(_)
@@ -159,7 +155,7 @@ fn render_graph_compiler_rejects_legacy_renderer() {
             },
         ],
     };
-    let err = RenderGraphCompiler::compile(&g).err().expect("err");
+    let err = RenderGraphCompiler::compile(&g).expect_err("err");
     assert!(matches!(
         err,
         video_core::render_graph_compiler::RenderGraphCompileError::LegacyRenderer(_)

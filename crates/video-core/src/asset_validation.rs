@@ -99,18 +99,14 @@ mod tests {
     fn rejects_missing_license() {
         let mut r = sample();
         r.rights.license = "".to_string();
-        let err = AssetValidationService::validate(&r, "2026-01-01T00:00:00Z")
-            .err()
-            .expect("err");
+        let err = AssetValidationService::validate(&r, "2026-01-01T00:00:00Z").expect_err("err");
         assert!(matches!(err, AssetValidationError::MissingLicense(_)));
     }
 
     #[test]
     fn rejects_expired() {
         let r = sample();
-        let err = AssetValidationService::validate(&r, "2099-02-01T00:00:00Z")
-            .err()
-            .expect("err");
+        let err = AssetValidationService::validate(&r, "2099-02-01T00:00:00Z").expect_err("err");
         assert!(matches!(err, AssetValidationError::Expired { .. }));
     }
 
@@ -118,9 +114,7 @@ mod tests {
     fn rejects_missing_label() {
         let mut r = sample();
         r.semantic_label = "".to_string();
-        let err = AssetValidationService::validate(&r, "2026-01-01T00:00:00Z")
-            .err()
-            .expect("err");
+        let err = AssetValidationService::validate(&r, "2026-01-01T00:00:00Z").expect_err("err");
         assert!(matches!(err, AssetValidationError::MissingLabel(_)));
     }
 }

@@ -60,7 +60,7 @@ fn native_renderer_replaces_remotion() {
 fn native_renderer_replaces_hyperframes() {
     let mut g = source_graph();
     g.nodes[1].inputs.push("hyperframes".to_string());
-    let err = RenderGraphCompiler::compile(&g).err().expect("err");
+    let err = RenderGraphCompiler::compile(&g).expect_err("err");
     assert!(matches!(
         err,
         video_core::render_graph_compiler::RenderGraphCompileError::LegacyRenderer(_)

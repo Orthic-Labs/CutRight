@@ -76,8 +76,7 @@ pub fn build_report(run: &BenchmarkRun) -> Report {
 
 /// Persist the report as JSON.
 pub fn write_report(path: &Path, report: &Report) -> std::io::Result<()> {
-    let json = serde_json::to_string_pretty(report)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let json = serde_json::to_string_pretty(report).map_err(std::io::Error::other)?;
     std::fs::write(path, json)
 }
 
@@ -90,8 +89,7 @@ pub struct Receipt {
 }
 
 pub fn write_receipt(path: &Path, receipt: &Receipt) -> std::io::Result<()> {
-    let json = serde_json::to_string_pretty(receipt)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let json = serde_json::to_string_pretty(receipt).map_err(std::io::Error::other)?;
     std::fs::write(path, json)
 }
 

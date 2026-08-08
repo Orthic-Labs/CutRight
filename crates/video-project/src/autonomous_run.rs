@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn blocking_escalation_forces_reviewed_mode() {
-        let mut inputs = ProjectAutonomousInputs {
+        let inputs = ProjectAutonomousInputs {
             format_key: "recorded_talking_head|tiktok|v1".to_string(),
             autonomy_mode: "autonomous".to_string(),
             critic_id: "qwen3-vl".to_string(),

@@ -7,9 +7,10 @@ use video_recovery::scan::{
 };
 
 fn empty() -> ProjectSnapshot {
-    let mut s = ProjectSnapshot::default();
-    s.active_pointer_present = true;
-    s
+    ProjectSnapshot {
+        active_pointer_present: true,
+        ..Default::default()
+    }
 }
 
 #[test]

@@ -11,8 +11,6 @@
 //
 // Never writes a project file directly; returns canonical artefacts.
 
-use serde::{Deserialize, Serialize};
-
 use crate::narrative::confidence::{
     estimate, Ambiguity, ConfidenceEstimate, ConfidenceInputs, ReviewMode,
 };

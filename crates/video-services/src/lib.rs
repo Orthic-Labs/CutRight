@@ -61,6 +61,12 @@ impl InferenceService {
         Self { config }
     }
 
+    /// Roots this service will resolve against once the bounded model
+    /// router is integrated.
+    pub fn config(&self) -> &ServiceConfig {
+        &self.config
+    }
+
     /// Stable capability id advertised by the inference service.
     pub fn capability_id(&self) -> &'static str {
         "cap.inference.route"

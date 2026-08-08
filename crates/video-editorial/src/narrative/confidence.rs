@@ -38,17 +38,18 @@ pub enum Ambiguity {
 
 impl Ambiguity {
     pub fn blocks(self, mode: ReviewMode) -> bool {
-        match (self, mode) {
-            (Ambiguity::SchemaInvalid, _) => true,
-            (Ambiguity::TruthfulnessRisk, _) => true,
-            (Ambiguity::MissingEvidence, ReviewMode::Autonomous) => true,
-            (Ambiguity::CriticDisagreement, ReviewMode::Autonomous | ReviewMode::ReviewLight) => {
-                true
-            }
-            (Ambiguity::LowTakeMargin, ReviewMode::Autonomous) => true,
-            (Ambiguity::WeakBoundary, ReviewMode::Autonomous) => true,
-            _ => false,
-        }
+        matches!(
+            (self, mode),
+            (Ambiguity::SchemaInvalid, _)
+                | (Ambiguity::TruthfulnessRisk, _)
+                | (Ambiguity::MissingEvidence, ReviewMode::Autonomous)
+                | (
+                    Ambiguity::CriticDisagreement,
+                    ReviewMode::Autonomous | ReviewMode::ReviewLight
+                )
+                | (Ambiguity::LowTakeMargin, ReviewMode::Autonomous)
+                | (Ambiguity::WeakBoundary, ReviewMode::Autonomous)
+        )
     }
 }
 
@@ -75,10 +76,11 @@ pub struct ConfidenceInputs {
 /// Combine inputs into a confidence score. Missing evidence caps
 /// confidence; escalations block per `Ambiguity::blocks` policy.
 pub fn estimate(mode: ReviewMode, i: &ConfidenceInputs) -> ConfidenceEstimate {
-    let mut components: Vec<(f32, &str)> = Vec::new();
-    components.push((i.take_margin.clamp(0.0, 1.0), "take_margin"));
-    components.push((i.evidence_agreement.clamp(0.0, 1.0), "evidence_agreement"));
-    components.push((i.boundary_confidence.clamp(0.0, 1.0), "boundary_confidence"));
+    let components: Vec<(f32, &str)> = vec![
+        (i.take_margin.clamp(0.0, 1.0), "take_margin"),
+        (i.evidence_agreement.clamp(0.0, 1.0), "evidence_agreement"),
+        (i.boundary_confidence.clamp(0.0, 1.0), "boundary_confidence"),
+    ];
     let mut raw = components.iter().map(|(v, _)| *v).sum::<f32>() / components.len() as f32;
 
     if i.missing_evidence {

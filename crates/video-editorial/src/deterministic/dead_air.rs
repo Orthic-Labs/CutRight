@@ -50,7 +50,6 @@ pub fn classify_silence(
                 DeadAirKind::InterSpeech
             }
         }
-        _ => DeadAirKind::Breathing,
     };
     let keep = dur < min_keep_ms || matches!(kind, DeadAirKind::Breathing);
     DeadAirRegion {

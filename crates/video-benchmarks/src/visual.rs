@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{AxisId, BenchmarkEvaluator, EvalContext, EvalError, EvalOutcome, MetricStatus};
+use crate::{AxisId, BenchmarkEvaluator, EvalContext, EvalError, EvalOutcome};
 
 /// A sampled frame reference.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

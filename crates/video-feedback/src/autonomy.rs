@@ -82,23 +82,12 @@ impl Default for AutonomyAdvancementPredicate {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AutonomyDemotionPredicate {
     pub max_regression_count: u32,
     pub max_critic_disagreement: u32,
     pub max_integrity_failures: u32,
     pub max_qa_failures: u32,
-}
-
-impl Default for AutonomyDemotionPredicate {
-    fn default() -> Self {
-        Self {
-            max_regression_count: 0,
-            max_critic_disagreement: 0,
-            max_integrity_failures: 0,
-            max_qa_failures: 0,
-        }
-    }
 }
 
 pub fn initial_state(
@@ -145,11 +134,7 @@ pub fn advance(
     audit_id_seed: &str,
 ) -> AutonomyState {
     let mut next = state.clone();
-    let approved_ok = if predicate.require_user_approval_timestamp {
-        true
-    } else {
-        false
-    };
+    let approved_ok = predicate.require_user_approval_timestamp;
     let passes_benchmark = if predicate.require_benchmark_pass {
         state.metrics.benchmark_pass
     } else {

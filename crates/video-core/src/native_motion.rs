@@ -151,7 +151,7 @@ mod tests {
     fn rejects_forbidden_transition() {
         let mut c = clip();
         c.beats[0].transition = "wipe_secret".to_string();
-        let err = NativeMotionEngine::validate(&c).err().expect("err");
+        let err = NativeMotionEngine::validate(&c).expect_err("err");
         assert!(matches!(err, MotionError::ForbiddenTransition(_, _)));
     }
 

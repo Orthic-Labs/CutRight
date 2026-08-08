@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 use crate::decision::{DecisionRecord, ReviewMode};
-use crate::distributions::{AxisDistribution, DistributionSample};
+use crate::distributions::AxisDistribution;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

@@ -110,8 +110,11 @@ pub fn validate_media(
             limits.max_metadata_size_bytes,
         ));
     }
-    if metadata.compressed_bytes > 0 {
-        let ratio = (metadata.decompressed_bytes / metadata.compressed_bytes) as u32;
+    if let Some(raw_ratio) = metadata
+        .decompressed_bytes
+        .checked_div(metadata.compressed_bytes)
+    {
+        let ratio = raw_ratio as u32;
         if ratio > limits.max_decompression_ratio {
             return Err(MediaLimitError::DecompressionRatio(ratio));
         }

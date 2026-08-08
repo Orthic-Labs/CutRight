@@ -188,7 +188,13 @@ fn correction_undo_check(root: &Path) -> Result<(), LifecycleError> {
     let mut staged = StagedRevision::from_active(&active, 10_000);
     staged.register_target("clip:sample_clip");
     let receipt = match pipeline
-        .apply("correct", "rev_clean", &[action.clone()], &mut staged, None)
+        .apply(
+            "correct",
+            "rev_clean",
+            std::slice::from_ref(&action),
+            &mut staged,
+            None,
+        )
         .map_err(|e| LifecycleError::Check(e.to_string()))?
     {
         ApplyOutcome::Applied { receipt, .. } => receipt,

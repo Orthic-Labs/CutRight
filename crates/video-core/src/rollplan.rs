@@ -90,7 +90,7 @@ mod tests {
             shots: vec![],
             metrics: BTreeMap::new(),
         };
-        let err = RollPlanner::validate(&plan).err().expect("err");
+        let err = RollPlanner::validate(&plan).expect_err("err");
         assert!(matches!(err, RollPlanError::Empty(_)));
     }
 
@@ -110,7 +110,7 @@ mod tests {
             }],
             metrics: BTreeMap::new(),
         };
-        let err = RollPlanner::validate(&plan).err().expect("err");
+        let err = RollPlanner::validate(&plan).expect_err("err");
         assert!(matches!(err, RollPlanError::MustKeepViolated { .. }));
     }
 

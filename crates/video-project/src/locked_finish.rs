@@ -311,63 +311,6 @@ pub fn compile_locked_cut_from_evidence(
     Ok(cut)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    fn cut() -> LockedCut {
-        LockedCut {
-            schema_version: 1,
-            cut_plan_sha256: String::new(),
-            timeline_rate: RationalRate {
-                numerator: 30,
-                denominator: 1,
-            },
-            segments: vec![WordSafeSegment {
-                source_id: "cam-a".into(),
-                source_in: RationalTime::millis(0),
-                source_out: RationalTime::millis(1000),
-                timeline_in: RationalTime::millis(0),
-                timeline_out: RationalTime::millis(1000),
-                first_word_id: "w1".into(),
-                last_word_id: "w2".into(),
-                speech_region_ids: vec!["r1".into()],
-                gap: false,
-            }],
-        }
-    }
-    #[test]
-    fn lock_hash_is_stable_and_detects_mutation() {
-        let locked = compile_locked_cut(cut()).unwrap();
-        let hash = locked.cut_plan_sha256.clone();
-        assert_eq!(locked.canonical_hash(), hash);
-        assert!(locked.assert_hash(&hash).is_ok());
-        let mut changed = locked;
-        changed.segments[0].source_out = RationalTime::millis(900);
-        assert!(matches!(
-            changed.assert_hash(&hash),
-            Err(LockError::HashMismatch)
-        ));
-    }
-
-    #[test]
-    fn canonical_hash_is_sha256() {
-        assert_eq!(
-            sha256_hex(b"abc"),
-            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-        );
-    }
-
-    #[test]
-    fn rejects_unknown_schema_and_zero_denominator() {
-        let mut invalid = cut();
-        invalid.schema_version = 2;
-        assert_eq!(invalid.validate(), Err(LockError::InvalidTime));
-        invalid.schema_version = 1;
-        invalid.segments[0].source_in.denominator = 0;
-        assert_eq!(invalid.validate(), Err(LockError::InvalidTime));
-    }
-}
-
 fn sha256_hex(input: &[u8]) -> String {
     const K: [u32; 64] = [
         0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,
@@ -441,4 +384,60 @@ fn sha256_hex(input: &[u8]) -> String {
         }
     }
     h.iter().map(|word| format!("{word:08x}")).collect()
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn cut() -> LockedCut {
+        LockedCut {
+            schema_version: 1,
+            cut_plan_sha256: String::new(),
+            timeline_rate: RationalRate {
+                numerator: 30,
+                denominator: 1,
+            },
+            segments: vec![WordSafeSegment {
+                source_id: "cam-a".into(),
+                source_in: RationalTime::millis(0),
+                source_out: RationalTime::millis(1000),
+                timeline_in: RationalTime::millis(0),
+                timeline_out: RationalTime::millis(1000),
+                first_word_id: "w1".into(),
+                last_word_id: "w2".into(),
+                speech_region_ids: vec!["r1".into()],
+                gap: false,
+            }],
+        }
+    }
+    #[test]
+    fn lock_hash_is_stable_and_detects_mutation() {
+        let locked = compile_locked_cut(cut()).unwrap();
+        let hash = locked.cut_plan_sha256.clone();
+        assert_eq!(locked.canonical_hash(), hash);
+        assert!(locked.assert_hash(&hash).is_ok());
+        let mut changed = locked;
+        changed.segments[0].source_out = RationalTime::millis(900);
+        assert!(matches!(
+            changed.assert_hash(&hash),
+            Err(LockError::HashMismatch)
+        ));
+    }
+
+    #[test]
+    fn canonical_hash_is_sha256() {
+        assert_eq!(
+            sha256_hex(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_schema_and_zero_denominator() {
+        let mut invalid = cut();
+        invalid.schema_version = 2;
+        assert_eq!(invalid.validate(), Err(LockError::InvalidTime));
+        invalid.schema_version = 1;
+        invalid.segments[0].source_in.denominator = 0;
+        assert_eq!(invalid.validate(), Err(LockError::InvalidTime));
+    }
 }

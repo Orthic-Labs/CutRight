@@ -109,7 +109,7 @@ mod tests {
             evidence_refs: vec![],
             restricted: false,
         };
-        let err = WritingService::assert_atom_bound(&atom).err().expect("err");
+        let err = WritingService::assert_atom_bound(&atom).expect_err("err");
         assert!(matches!(err, WritingError::UnboundAtom(_)));
     }
 
@@ -137,9 +137,7 @@ mod tests {
             copy_atom_ids: vec![],
             evidence_refs: vec!["evidence:ev_1".to_string()],
         };
-        let err = WritingService::assert_package_bound(&pkg)
-            .err()
-            .expect("err");
+        let err = WritingService::assert_package_bound(&pkg).expect_err("err");
         assert!(matches!(err, WritingError::UnboundPackage(_)));
     }
 }

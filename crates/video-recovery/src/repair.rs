@@ -142,8 +142,10 @@ mod tests {
 
     #[test]
     fn revision_hash_mismatch_is_manual() {
-        let mut s = crate::scan::ProjectSnapshot::default();
-        s.active_pointer_present = true;
+        let mut s = crate::scan::ProjectSnapshot {
+            active_pointer_present: true,
+            ..Default::default()
+        };
         s.revisions.push(RevisionDigest {
             id: "rev1".into(),
             declared_hash: "abc".into(),
@@ -156,8 +158,10 @@ mod tests {
 
     #[test]
     fn pack_signature_failure_is_manual() {
-        let mut s = crate::scan::ProjectSnapshot::default();
-        s.active_pointer_present = true;
+        let mut s = crate::scan::ProjectSnapshot {
+            active_pointer_present: true,
+            ..Default::default()
+        };
         s.packs.push(PackDigest {
             id: "pack1".into(),
             signature_valid: false,
@@ -168,8 +172,10 @@ mod tests {
 
     #[test]
     fn receipt_mismatch_classified_manual() {
-        let mut s = crate::scan::ProjectSnapshot::default();
-        s.active_pointer_present = true;
+        let mut s = crate::scan::ProjectSnapshot {
+            active_pointer_present: true,
+            ..Default::default()
+        };
         s.receipts.push(ReceiptDigest {
             id: "r1".into(),
             declared_hash: "a".into(),
