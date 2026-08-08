@@ -125,6 +125,10 @@ pub enum AgentCommand {
     Status(AgentStatusArgs),
     Remove(AgentRemoveArgs),
     Qualify(AgentQualifyArgs),
+    Terminal {
+        #[command(subcommand)]
+        command: AgentTerminalCommand,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -133,6 +137,16 @@ pub struct AgentQualifyArgs {
     pub all: bool,
     #[arg(long)]
     pub json: bool,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum AgentTerminalCommand {
+    Attach(AgentTerminalAttachArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct AgentTerminalAttachArgs {
+    pub session_id: String,
 }
 
 #[derive(Debug, Args)]

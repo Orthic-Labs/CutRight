@@ -4,13 +4,14 @@ mod apply;
 mod capabilities;
 mod cli;
 mod doctor;
+mod terminal;
 
 use clap::Parser;
 use cli::{
-    AgentCommand, AnalyzeCommand, BenchCommand, CleanMachineSampleArgs, Cli, CloudCommand, Command,
-    EditCommand, EvidenceCommand, ExportCommand, FinishCommand, PackageCommand, PreferencesCommand,
-    ProjectCommand, ReceiptsCommand, ReframeCommand, RenderCommand, ReviewCommand, ShortsCommand,
-    SlotCommand, TranscriptCommand,
+    AgentCommand, AgentTerminalCommand, AnalyzeCommand, BenchCommand, CleanMachineSampleArgs, Cli,
+    CloudCommand, Command, EditCommand, EvidenceCommand, ExportCommand, FinishCommand,
+    PackageCommand, PreferencesCommand, ProjectCommand, ReceiptsCommand, ReframeCommand,
+    RenderCommand, ReviewCommand, ShortsCommand, SlotCommand, TranscriptCommand,
 };
 use doctor::DoctorOutcome;
 use serde_json::{json, Value};
@@ -128,6 +129,13 @@ fn main() -> ExitCode {
             }
         }
         Ok(Outcome::CleanMachine(value, passed)) => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&value).expect("JSON serialization cannot fail")
+            );
+            ExitCode::from(if passed { EXIT_OK } else { EXIT_ERROR })
+        }
+        Ok(Outcome::Qualification(value, passed)) => {
             println!(
                 "{}",
                 serde_json::to_string_pretty(&value).expect("JSON serialization cannot fail")
@@ -472,11 +480,51 @@ fn run_agent(command: AgentCommand) -> Result<Outcome, String> {
             }
             agent_qualify::run_all().map(|(value, passed)| Outcome::Qualification(value, passed))
         }
+        AgentCommand::Terminal {
+            command: AgentTerminalCommand::Attach(args),
+        } => {
+            let request = terminal::AttachRequest {
+                session_id: args.session_id,
+                attach_token: String::new(),
+                columns: 120,
+                rows: 40,
+            };
+            let mut view = terminal::TerminalView::default();
+            view.apply(terminal::parse_terminal_event(&[]));
+            let event_kinds = [
+                terminal_event_name(&terminal::TerminalEvent::Bytes(Vec::new())),
+                terminal_event_name(&terminal::TerminalEvent::PromptVisible),
+                terminal_event_name(&terminal::TerminalEvent::Exit(None)),
+                terminal_event_name(&terminal::TerminalEvent::Error(String::new())),
+            ];
+            Ok(Outcome::Value(json!({
+                "event": "agent.terminal.attach",
+                "status": "attach_requested",
+                "session_id": request.session_id,
+                "argv": request.argv(),
+                "command": terminal::ATTACH_COMMAND,
+                "columns": request.columns,
+                "rows": request.rows,
+                "initial_bytes": view.presentation_bytes(),
+                "prompt_visible": view.prompt_visible,
+                "event_kinds": event_kinds,
+                "presentation_only": true
+            })))
+        }
     }
 }
 
 fn video_cli_provider(value: &str) -> Result<agent::Provider, String> {
     agent::Provider::parse(value).map_err(|error| error.to_string())
+}
+
+fn terminal_event_name(event: &terminal::TerminalEvent) -> &'static str {
+    match event {
+        terminal::TerminalEvent::Bytes(_) => "bytes",
+        terminal::TerminalEvent::PromptVisible => "prompt_visible",
+        terminal::TerminalEvent::Exit(_) => "exit",
+        terminal::TerminalEvent::Error(_) => "error",
+    }
 }
 
 fn clean_machine_sample(args: CleanMachineSampleArgs) -> Result<Outcome, String> {

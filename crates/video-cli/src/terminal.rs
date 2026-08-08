@@ -17,7 +17,12 @@ pub struct AttachRequest {
 
 impl AttachRequest {
     pub fn argv(&self) -> Vec<String> {
-        vec!["agent".into(), "terminal".into(), "attach".into(), self.session_id.clone()]
+        vec![
+            "agent".into(),
+            "terminal".into(),
+            "attach".into(),
+            self.session_id.clone(),
+        ]
     }
 }
 
@@ -42,14 +47,20 @@ impl TerminalView {
             TerminalEvent::Bytes(bytes) => self.bytes.extend(bytes),
             TerminalEvent::PromptVisible => self.prompt_visible = true,
             TerminalEvent::Exit(code) => self.exit_code = Some(code),
-            TerminalEvent::Error(message) => self.exit_code = Some(Some(if message.is_empty() { 1 } else { 2 })),
+            TerminalEvent::Error(message) => {
+                self.exit_code = Some(Some(if message.is_empty() { 1 } else { 2 }))
+            }
         }
     }
 
-    pub fn presentation_bytes(&self) -> Vec<u8> { self.bytes.iter().copied().collect() }
+    pub fn presentation_bytes(&self) -> Vec<u8> {
+        self.bytes.iter().copied().collect()
+    }
 }
 
-pub fn parse_terminal_event(bytes: &[u8]) -> TerminalEvent { TerminalEvent::Bytes(bytes.to_vec()) }
+pub fn parse_terminal_event(bytes: &[u8]) -> TerminalEvent {
+    TerminalEvent::Bytes(bytes.to_vec())
+}
 
 #[cfg(test)]
 mod tests {
@@ -57,8 +68,16 @@ mod tests {
 
     #[test]
     fn attach_command_joins_existing_session() {
-        let request = AttachRequest { session_id: "native-1".into(), attach_token: "secret".into(), columns: 120, rows: 40 };
-        assert_eq!(request.argv(), vec!["agent", "terminal", "attach", "native-1"]);
+        let request = AttachRequest {
+            session_id: "native-1".into(),
+            attach_token: "secret".into(),
+            columns: 120,
+            rows: 40,
+        };
+        assert_eq!(
+            request.argv(),
+            vec!["agent", "terminal", "attach", "native-1"]
+        );
     }
 
     #[test]
