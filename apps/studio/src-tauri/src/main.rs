@@ -3,7 +3,6 @@ mod commands;
 mod decision_contract;
 mod decision_ledger;
 mod decision_store;
-mod macos_player;
 mod native_media;
 mod pack_commands;
 mod privacy_settings;
@@ -45,19 +44,6 @@ fn main() {
             commands::rightkit_logs_collect,
             commands::rightkit_logs_clear,
             commands::apply::apply_action_batch,
-            macos_player::native_player_create,
-            macos_player::native_player_load,
-            macos_player::native_player_seek,
-            macos_player::native_player_play,
-            macos_player::native_player_pause,
-            macos_player::native_player_attach,
-            macos_player::native_player_resize,
-            macos_player::native_player_detach,
-            macos_player::native_player_set_rate,
-            macos_player::native_player_set_volume,
-            macos_player::native_player_current_time,
-            macos_player::native_player_duration,
-            macos_player::native_player_destroy,
             security_scoped_bookmarks::create_security_scoped_bookmark,
             security_scoped_bookmarks::resolve_security_scoped_bookmark,
             security_scoped_bookmarks::release_security_scoped_bookmark,

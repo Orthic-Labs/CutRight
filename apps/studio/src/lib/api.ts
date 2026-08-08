@@ -137,19 +137,6 @@ export async function call<T>(
       error: null,
       note: "QA mock — not a real toolchain resolution",
     } as T;
-  if (command === "native_player_create") return 1 as T;
-  if (
-    command === "native_player_load" ||
-    command === "native_player_seek" ||
-    command === "native_player_play" ||
-    command === "native_player_pause" ||
-    command === "native_player_destroy" ||
-    command === "native_player_attach" || command === "native_player_resize" || command === "native_player_detach" ||
-    command === "native_player_set_rate" || command === "native_player_set_volume" || command === "release_security_scoped_bookmark"
-  )
-    return undefined as T;
-  if (command === "native_player_current_time") return 0 as T;
-  if (command === "native_player_duration") return 60 as T;
   if (command === "native_media_capabilities") return { avFoundation: true, vision: true, caption: false, preview: false, audio: false, metal: false, osVersion: "qa", workerVersion: "qa", workerBlake3: "blake3:qa" } as T;
   if (command === "native_media_inspect_asset") return { duration: { numerator: 60, denominator: 1 }, videoTracks: [], audioTracks: [] } as T;
   if (command === "native_media_analyze_frames") return [] as T;
