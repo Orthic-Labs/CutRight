@@ -660,12 +660,10 @@ name = "video-actions"
 version = "0.1.0"
 dependencies = [
  "blake3",
- "chrono",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror",
- "video-core",
 ]
 
 [[package]]
@@ -676,9 +674,6 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror",
- "video-actions",
- "video-capabilities",
- "video-project",
  "video-sessions",
 ]
 
@@ -696,12 +691,10 @@ name = "video-capabilities"
 version = "0.1.0"
 dependencies = [
  "blake3",
- "chrono",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror",
- "video-core",
 ]
 
 [[package]]
@@ -755,7 +748,6 @@ dependencies = [
  "chrono",
  "serde",
  "serde_json",
- "thiserror",
 ]
 
 [[package]]
@@ -763,12 +755,10 @@ name = "video-jobs"
 version = "0.1.0"
 dependencies = [
  "blake3",
- "chrono",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror",
- "video-core",
 ]
 
 [[package]]
@@ -803,7 +793,6 @@ dependencies = [
  "video-runtime",
  "video-security",
  "video-sessions",
- "video-state",
 ]
 
 [[package]]
@@ -831,23 +820,17 @@ dependencies = [
 name = "video-recovery"
 version = "0.1.0"
 dependencies = [
- "blake3",
- "chrono",
  "serde",
  "serde_json",
- "thiserror",
- "video-core",
 ]
 
 [[package]]
 name = "video-runtime"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "serde",
  "serde_json",
  "thiserror",
- "video-core",
 ]
 
 [[package]]
@@ -855,11 +838,9 @@ name = "video-security"
 version = "0.1.0"
 dependencies = [
  "blake3",
- "chrono",
  "serde",
  "serde_json",
  "thiserror",
- "video-core",
 ]
 
 [[package]]
@@ -870,25 +851,17 @@ dependencies = [
  "serde_json",
  "thiserror",
  "video-capabilities",
- "video-core",
- "video-jobs",
  "video-project",
- "video-runtime",
  "video-sessions",
- "video-state",
 ]
 
 [[package]]
 name = "video-sessions"
 version = "0.1.0"
 dependencies = [
- "blake3",
- "chrono",
  "serde",
- "serde_json",
  "tempfile",
  "thiserror",
- "video-core",
 ]
 
 [[package]]
@@ -896,12 +869,10 @@ name = "video-state"
 version = "0.1.0"
 dependencies = [
  "blake3",
- "chrono",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror",
- "video-core",
 ]
 
 [[package]]

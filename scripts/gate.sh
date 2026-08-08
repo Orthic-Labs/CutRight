@@ -195,8 +195,32 @@ else
 fi
 
 if have cargo-machete; then
+  # Scan buildable first-party packages only. Dormant manifests and vendored
+  # upstream workspaces have independent merge/build gates.
   run "unused deps: cargo machete" \
-    cargo machete
+    cargo machete \
+      crates/video-core \
+      crates/video-actions \
+      crates/video-benchmarks \
+      crates/video-capabilities \
+      crates/video-media \
+      crates/video-providers \
+      crates/video-project \
+      crates/video-jobs \
+      crates/video-runtime \
+      crates/video-security \
+      crates/video-recovery \
+      crates/video-cli \
+      crates/video-services \
+      crates/video-state \
+      crates/video-sessions \
+      crates/video-feedback \
+      crates/video-agent \
+      crates/video-editorial \
+      crates/video-protocol \
+      crates/video-daemon \
+      crates/video-driver-host \
+      apps/studio/src-tauri
 else
   skip_note "cargo-machete absent — unused-dependency check UNPROVEN (cargo install cargo-machete)"
 fi

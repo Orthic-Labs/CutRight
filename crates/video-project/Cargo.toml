@@ -22,7 +22,6 @@ video-providers = { path = "../video-providers" }
 video-runtime = { path = "../video-runtime" }
 video-security = { path = "../video-security" }
 video-sessions = { path = "../video-sessions" }
-video-state = { path = "../video-state" }
 
 [dev-dependencies]
 tempfile = "3.23"
