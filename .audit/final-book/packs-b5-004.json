@@ -2,8 +2,8 @@
   "task_id": "CR-F-B5-004",
   "result": "local_director_unqualified",
   "scope": {
-    "changed_files": 3,
-    "changed_lines": 97,
+    "changed_files": 6,
+    "changed_lines": 99,
     "ceiling": {"files": 8, "lines": 1400},
     "ceiling_status": "pass"
   },
@@ -11,23 +11,54 @@
     "selected_model": "Qwen/Qwen3-4B",
     "model_revision": "7c69a109fc3fa19c860be9dff46fc23299092018",
     "runtime_revision": "6a32c29a746a2e44de463de647f9f6661eb5086b",
-    "model_payload_present": false,
-    "runtime_payload_present": false,
+    "model_payload_present": true,
+    "runtime_payload_present": true,
     "offline_direction_available": false,
     "failure_code": "local_director_unqualified"
+  },
+  "provenance": {
+    "model_url": "https://huggingface.co/Qwen/Qwen3-4B/tree/7c69a109fc3fa19c860be9dff46fc23299092018",
+    "runtime_url": "https://github.com/ggml-org/llama.cpp/commit/6a32c29a746a2e44de463de647f9f6661eb5086b",
+    "model_license": "Apache-2.0",
+    "runtime_license": "MIT",
+    "input_shard_sha256": {
+      "model-00001-of-00003.safetensors": "328a91d3122359d5547f9d79521205bc0a46e1f79a792dfe650e99fc2d651223",
+      "model-00002-of-00003.safetensors": "6cd087b316306a68c562436b5492edbcf6e16c6dba3a1308279caa5a58e21ca5",
+      "model-00003-of-00003.safetensors": "e4bf436957184f4eeb86a80e9db394503f1f56446b2e6b7edeac5b81470f4ca1"
+    },
+    "conversion": "pinned llama.cpp convert_hf_to_gguf.py, F16 then llama-quantize Q4_K_M"
   },
   "acceptance": {
     "identity_bound": true,
     "provenance_bound": true,
     "license_bound": true,
-    "architecture_bound": false,
-    "hash_bound": false,
+    "architecture_bound": true,
+    "hash_bound": true,
     "readiness_claim": false,
-    "failure_is_typed": true
+    "failure_is_typed": true,
+    "qualification_receipts_present": false
+  },
+  "checks": {
+    "source_revision": "pass",
+    "input_hashes": "pass",
+    "converted_model_hash": "pass",
+    "runtime_source_hash": "pass",
+    "universal_macos_binary": "pass",
+    "license_notices": "pass",
+    "manifest_contract": "pass",
+    "direct_runtime_smoke": "pass_cpu_only_local_load_and_16_token_generation_exit_0_42.87s",
+    "cargo_director_fixtures": "blocked_global_compute_policy",
+    "editorial_quality": "not_run",
+    "structured_output": "not_run",
+    "tool_choice": "not_run",
+    "memory": "not_run",
+    "containment": "not_run",
+    "clean_machine": "not_run"
   },
   "exact_missing_inputs": [
-    "Qwen3-4B converted GGUF selected by editorial/tool-use qualification",
-    "llama.cpp runtime at pinned revision",
-    "clean-machine and memory qualification receipts"
+    "editorial-quality and structured-output qualification receipt",
+    "tool-choice qualification receipt",
+    "memory, containment, and clean-machine qualification receipts",
+    "release signature after qualification"
   ]
 }
