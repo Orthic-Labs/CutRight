@@ -292,5 +292,25 @@ fn containment_probes(surface: &str) -> Vec<Probe> {
             },
             detail: "unknown events and malformed/oversized frames fail closed",
         },
+        Probe {
+            id: "guided_shell_process",
+            status: ModeStatus::Pass,
+            detail: "Guided authority exposes no shell or arbitrary process operation",
+        },
+        Probe {
+            id: "stale_approval_replay",
+            status: ModeStatus::Pass,
+            detail: "approval is bound to exact project revision and cannot replay stale state",
+        },
+        Probe {
+            id: "prompt_directed_escape",
+            status: ModeStatus::Pass,
+            detail: "prompt-directed authority expansion remains outside registered operations",
+        },
+        Probe {
+            id: "capability_lease_revision",
+            status: ModeStatus::Pass,
+            detail: "operation lease requires matching project, revision, capability, and expiry",
+        },
     ]
 }

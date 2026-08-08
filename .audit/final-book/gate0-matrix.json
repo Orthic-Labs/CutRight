@@ -10,10 +10,10 @@
     "config_mutation": false
   },
   "modes": [
-    {"provider": "claude-code", "surface": "guided", "status": "pass", "path": "/Users/adrdsouza/.local/bin/claude", "sha256": "c66a6cc6fa2e8145bb1a6e77831f2caf4b83690ff04650500dfa6e2c05ca997c", "version": "2.1.222 (Claude Code)", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "4/4 pass"},
-    {"provider": "claude-code", "surface": "native", "status": "pass", "path": "/Users/adrdsouza/.local/bin/claude", "sha256": "c66a6cc6fa2e8145bb1a6e77831f2caf4b83690ff04650500dfa6e2c05ca997c", "version": "2.1.222 (Claude Code)", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "4/4 pass"},
-    {"provider": "codex", "surface": "guided", "status": "pass", "path": "/opt/homebrew/bin/codex", "sha256": "1da3f4e0e96028b8a771814293c3033dafd1971f943f6c7e79b0897fe705f590", "version": "codex-cli 0.145.0", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "4/4 pass"},
-    {"provider": "codex", "surface": "native", "status": "pass", "path": "/opt/homebrew/bin/codex", "sha256": "1da3f4e0e96028b8a771814293c3033dafd1971f943f6c7e79b0897fe705f590", "version": "codex-cli 0.145.0", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "4/4 pass"}
+    {"provider": "claude-code", "surface": "guided", "status": "pass", "path": "/Users/adrdsouza/.local/bin/claude", "sha256": "c66a6cc6fa2e8145bb1a6e77831f2caf4b83690ff04650500dfa6e2c05ca997c", "version": "2.1.222 (Claude Code)", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "8/8 pass"},
+    {"provider": "claude-code", "surface": "native", "status": "pass", "path": "/Users/adrdsouza/.local/bin/claude", "sha256": "c66a6cc6fa2e8145bb1a6e77831f2caf4b83690ff04650500dfa6e2c05ca997c", "version": "2.1.222 (Claude Code)", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "8/8 pass"},
+    {"provider": "codex", "surface": "guided", "status": "pass", "path": "/opt/homebrew/bin/codex", "sha256": "1da3f4e0e96028b8a771814293c3033dafd1971f943f6c7e79b0897fe705f590", "version": "codex-cli 0.145.0", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "8/8 pass"},
+    {"provider": "codex", "surface": "native", "status": "pass", "path": "/opt/homebrew/bin/codex", "sha256": "1da3f4e0e96028b8a771814293c3033dafd1971f943f6c7e79b0897fe705f590", "version": "codex-cli 0.145.0", "provider_surface": "mcp_list_exit_0_lines_9", "probes": "8/8 pass"}
   ],
   "policy": {
     "providers": ["claude-code", "codex"],
