@@ -10,15 +10,15 @@
 
 - **Immutable, hashed inputs.** Ingest registers each source with a `blake3:` digest; a source outside an immutable registration is a hard error, and hashes are re-verified before use. Tests never copy or modify source files.
 - **Typed FFprobe/FFmpeg boundaries.** Probes and renders go through typed structs (`ProbeResponse`, `RenderSegment`, `CaptionCue`, …), not assembled shell strings; encoder and filter capabilities are probed explicitly.
-- **Two ASRs, not blind trust in one.** HeardRight's Parakeet TDT CoreML engine supplies native timed words; WhisperX stands by as an independent word-edge verifier; Silero supplies real speech probabilities.
+- **Two ASRs, not blind trust in one.** CutRight's own Parakeet TDT CoreML engine — built from vendored HeardRight source — supplies native timed words; an independent verifier checks word edges; Silero supplies real speech probabilities.
 - **Rust owns the arithmetic.** Canonical project JSON, timestamp math, and cut plans live in one place, exposed only through the JSON-only `videoctl` CLI (with a global `--dry-run`).
 
 ## The pipeline
 
 ```mermaid
 flowchart LR
-    I[ingest<br/>ffprobe + BLAKE3<br/>immutable manifest] --> TR[transcribe<br/>HeardRight Parakeet TDT<br/>timed words]
-    TR --> B[bench transcribe<br/>HeardRight vs WhisperX<br/>on sampled boundaries]
+    I[ingest<br/>ffprobe + BLAKE3<br/>immutable manifest] --> TR[transcribe<br/>CutRight Parakeet TDT<br/>timed words]
+    TR --> B[bench transcribe<br/>primary vs verifier<br/>on sampled boundaries]
     I --> V[analyze local<br/>Silero VAD · waveforms ·<br/>boundary frames]
     TR --> C[edit candidates<br/>beat labels · take ranks ·<br/>drop reasons]
     V --> C
@@ -31,13 +31,17 @@ flowchart LR
 
 ## Gates that refuse
 
-- `bench transcribe` requires **at least three distinct immutable source clips** before either provider is authorized for destructive word-edge cuts — and without a resolved HeardRight-vs-WhisperX decision, CutRight refuses to call a final render technically approved.
+- `bench transcribe` requires **at least three distinct immutable source clips** before either provider is authorized for destructive word-edge cuts — and without a resolved primary-vs-verifier decision, CutRight refuses to call a final render technically approved.
 - Vertical delivery is blocked until `reframe plan` produces a human-reviewed plan with the top-level `approved` flag **and every anchor's** `approved` flag set. It will not silently center-crop a 16:9 cut into a vertical final.
 - `evidence build` and `qa` produce the waveform/boundary-frame evidence and an explicit QA pass (container, captions, duration) before a render counts as approved.
 
 ## Provider stack
 
-HeardRight owns the models and runtime — including its own model discovery — and CutRight supplies media and policy over a supervised JSON-line stdin/stdout process; CutRight holds no model-directory path of its own. VAD policy defaults: threshold 0.5, 16 kHz, min speech 160 ms, min silence 180 ms. WhisperX runs from a project-local Python venv as the one deliberately-external verifier. Wire it up with `CUTRIGHT_HEARDRIGHT_ENGINE`, `CUTRIGHT_WHISPERX_PYTHON` (only needed if the venv isn't at the project-relative default or on `PATH`), and `CUTRIGHT_FFMPEG`; rough cuts use macOS `h264_videotoolbox`, and HDR input needs an FFmpeg build with `zscale`.
+CutRight owns its speech runtime. The engine is built from vendored HeardRight source under `vendor/heardright`, and CutRight drives it over a supervised JSON-line stdin/stdout process. Models resolve only from a signed CutRight pack — there is no installed-HeardRight lookup, no sibling checkout, and no engine path override. VAD policy defaults: threshold 0.5, 16 kHz, min speech 160 ms, min silence 180 ms.
+
+**Current state:** the speech pack ships as metadata only, so `discover_engine()` returns `runtime_pack_unavailable` and `transcribe --provider heardright` is not yet usable from an installed build. Deterministic ingest, analysis, cut, render, QA, and packaging do not depend on it.
+
+WhisperX remains a development-time word-edge verifier running from a project-local Python venv, resolved via `CUTRIGHT_WHISPERX_PYTHON` (only needed when the venv isn't at the project-relative default or on `PATH`). `CUTRIGHT_FFMPEG` likewise points at a development FFmpeg. Both are development conveniences; a release build resolves the verifier and media tools from signed packs instead. Rough cuts use macOS `h264_videotoolbox`, and HDR input needs an FFmpeg build with `zscale`.
 
 ## Driving it
 
@@ -66,7 +70,7 @@ The full surface spans 25 subcommands — project, ingest, transcribe, bench, an
 ## Around the pipeline
 
 - **Studio** — a Tauri 2 + React 19 review shell (9 IPC commands) that reads project snapshots, re-verifies sources by BLAKE3, and appends hash-bound decisions to a JSONL ledger. Review surface only; the authoring surface is out of this repo's scope.
-- **cutaway / finish** — bridge-period Claude Code skills for short-form work (WhisperX rough cut, then a styling pass), shipping ahead of the control plane covering that ground natively.
+- **cutaway / finish** — absorbed natively. The rough cut and styling pass are now CutRight subcommands (`shorts propose`, `finish validate`) plus bundled skills under `skills/content-video-editor/`, driven by CutRight's own speech engine rather than an external Python verifier.
 
 Not part of the local pipeline, by design: cloud analysis, effect/preset libraries, proxy generation, and preference learning.
 

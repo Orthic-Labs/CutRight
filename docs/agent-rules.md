@@ -23,7 +23,7 @@ Treat verified media evidence and human framing approval as release gates.
 - Keep timestamp arithmetic and canonical project JSON in Rust.
 - Require independent transcription evidence before destructive word-edge cuts.
 - Require approved reframe plan and approved anchors before vertical delivery.
-- Keep HeardRight responsible for ASR models and discovery.
+- Build the speech engine from `vendor/heardright` and resolve models only from signed CutRight packs.
 - Preserve original media and make project retries idempotent.
 
 ## Verification
