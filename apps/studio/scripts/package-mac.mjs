@@ -25,35 +25,33 @@ function run(command, args, env = {}, unset = []) {
 
 function signNested(bundle) {
   const files = spawnSync("find", [bundle, "-type", "f"], { encoding: "utf8" }).stdout.trim().split("\n").filter(Boolean).reverse();
-  const signed = new Set();
   for (const file of files) {
     const kind = spawnSync("file", [file], { encoding: "utf8" }).stdout;
     if (kind.includes("Mach-O")) {
       run("codesign", ["--force", "--options", "runtime", "--timestamp", "--sign", identity, file]);
-      signed.add(resolve(file));
     }
   }
-  return signed;
 }
 
-function refreshSignedPackHashes(bundle, signed) {
+function refreshPackHashes(bundle) {
   const packsRoot = join(bundle, "Contents/Resources/packs");
   for (const pack of ["media", "speech", "verifier"]) {
     const packRoot = resolve(packsRoot, pack);
     const manifestPath = join(packRoot, "PACK.json");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-    let changed = false;
+    const shipped = [];
     for (const item of manifest.files ?? []) {
       const payload = resolve(packRoot, item.path);
       if (!payload.startsWith(`${packRoot}${sep}`)) throw new Error(`pack path escapes root: ${item.path}`);
-      if (!signed.has(payload)) continue;
+      if (!existsSync(payload)) continue;
       const hash = spawnSync("shasum", ["-a", "256", payload], { encoding: "utf8" });
       if (hash.status !== 0) throw new Error(`failed to hash signed pack payload: ${item.path}`);
       item.sha256 = hash.stdout.trim().split(/\s+/)[0];
       item.bytes = statSync(payload).size;
-      changed = true;
+      shipped.push(item);
     }
-    if (changed) writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    manifest.files = shipped;
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   }
 }
 
@@ -64,8 +62,8 @@ run("pnpm", ["--dir", "apps/studio", "exec", "tauri", "build", "--target", "univ
   TAURI_SIGNING_PRIVATE_KEY: key.stdout.trim(), TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "",
 }, ["APPLE_API_ISSUER", "APPLE_API_KEY", "APPLE_API_KEY_PATH", "APPLE_ID", "APPLE_PASSWORD", "APPLE_TEAM_ID"]);
 if (!existsSync(app)) throw new Error("universal app artifact missing");
-const signed = signNested(app);
-refreshSignedPackHashes(app, signed);
+signNested(app);
+refreshPackHashes(app);
 run("codesign", ["--force", "--options", "runtime", "--timestamp", "--entitlements", entitlements, "--sign", identity, app]);
 for (const binary of [join(app, "Contents/MacOS/cutright-studio"), join(app, "Contents/MacOS/cutright-macos-media")]) {
   if (!existsSync(binary)) throw new Error(`universal binary missing: ${binary}`);
