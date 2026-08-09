@@ -25,7 +25,24 @@ ci: none                                           # scripts/gate.sh is the cont
 signed_target: pass                                # CR-F-B1-005, cutright-0.1.5-b6a782b0, notarized + stapled, arm64 + x86_64
 known_blockers:
   - fresh_os_user_proof_pending                    # CR-F-B1-003 TRUE_BLOCKER; needs interactive admin auth to provision a fresh macOS user
+playback_decision: measured                        # CR-F-B8-003, avplayer-latency.json v2 at 23a333d; was decided with no measurement at all
 ```
+
+**`CR-F-B8-003` is now evidenced, and the decision did not change.** `videoctl bench
+playback` did not exist when B8-003 chose `retain_html_video`, so the v1 receipt recorded
+a decision with no measurement behind it and an `accessibility: not_measured` field. Both
+player surfaces were measured on one shared 60s 1080p30 fixture: AVPlayer seek p95 77.0ms
+against HTMLVideoElement 26.6ms, and AVPlayer load p95 19.2ms against 89.2ms. Seek
+dominates timeline editing, so HTML video is retained on evidence. Two things stay open —
+the fixture is synthetic rather than representative project media, and the two harnesses
+use different completion signals, so the 189% seek gap is directionally sound but not
+precise. The v1 receipt's `CUTRIGHT_NATIVE_PLAYER_SPIKE=1` gate does not exist in the
+repository and has been dropped.
+
+**Accessibility is a real open gap in the retained surface.** Studio has no
+`<track kind="captions">` anywhere and the player exposes no accessible name, so the
+promotion threshold's accessibility limb is unmet regardless of which player ships.
+Keyboard operation works through the custom controls in `src/components/Transport.tsx`.
 
 **One blocker left, and it does not look like one from the outside.**
 `CR-F-B1-003` (fresh-OS-user clean-machine proof) is the only open item. Its harness
