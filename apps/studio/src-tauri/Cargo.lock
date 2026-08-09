@@ -508,7 +508,7 @@ checksum = "52560adf09603e58c9a7ee1fe1dcb95a16927b17c127f0ac02d6e768a0e25bc1"
 
 [[package]]
 name = "cutright-studio"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "chrono",
@@ -3840,7 +3840,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "video-actions"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -3850,7 +3850,7 @@ dependencies = [
 
 [[package]]
 name = "video-benchmarks"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -3859,7 +3859,7 @@ dependencies = [
 
 [[package]]
 name = "video-capabilities"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -3869,7 +3869,7 @@ dependencies = [
 
 [[package]]
 name = "video-core"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "chrono",
@@ -3881,7 +3881,7 @@ dependencies = [
 
 [[package]]
 name = "video-editorial"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -3891,7 +3891,7 @@ dependencies = [
 
 [[package]]
 name = "video-jobs"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -3901,7 +3901,7 @@ dependencies = [
 
 [[package]]
 name = "video-media"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -3912,7 +3912,7 @@ dependencies = [
 
 [[package]]
 name = "video-project"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "chrono",
@@ -3933,7 +3933,7 @@ dependencies = [
 
 [[package]]
 name = "video-providers"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -3945,7 +3945,7 @@ dependencies = [
 
 [[package]]
 name = "video-runtime"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -3954,7 +3954,7 @@ dependencies = [
 
 [[package]]
 name = "video-security"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -3964,7 +3964,7 @@ dependencies = [
 
 [[package]]
 name = "video-sessions"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "thiserror 2.0.20",

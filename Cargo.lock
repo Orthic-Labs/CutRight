@@ -657,7 +657,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "video-actions"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -668,7 +668,7 @@ dependencies = [
 
 [[package]]
 name = "video-agent"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -679,7 +679,7 @@ dependencies = [
 
 [[package]]
 name = "video-benchmarks"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -688,7 +688,7 @@ dependencies = [
 
 [[package]]
 name = "video-capabilities"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -699,7 +699,7 @@ dependencies = [
 
 [[package]]
 name = "video-core"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "chrono",
@@ -711,7 +711,7 @@ dependencies = [
 
 [[package]]
 name = "video-daemon"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "libc",
  "serde_json",
@@ -722,7 +722,7 @@ dependencies = [
 
 [[package]]
 name = "video-driver-host"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -733,7 +733,7 @@ dependencies = [
 
 [[package]]
 name = "video-editorial"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -753,7 +753,7 @@ dependencies = [
 
 [[package]]
 name = "video-jobs"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -764,7 +764,7 @@ dependencies = [
 
 [[package]]
 name = "video-media"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -776,7 +776,7 @@ dependencies = [
 
 [[package]]
 name = "video-project"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "chrono",
@@ -798,7 +798,7 @@ dependencies = [
 
 [[package]]
 name = "video-protocol"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -807,7 +807,7 @@ dependencies = [
 
 [[package]]
 name = "video-providers"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -819,7 +819,7 @@ dependencies = [
 
 [[package]]
 name = "video-recovery"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -827,7 +827,7 @@ dependencies = [
 
 [[package]]
 name = "video-runtime"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -836,7 +836,7 @@ dependencies = [
 
 [[package]]
 name = "video-security"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -846,7 +846,7 @@ dependencies = [
 
 [[package]]
 name = "video-services"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
@@ -858,7 +858,7 @@ dependencies = [
 
 [[package]]
 name = "video-sessions"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "serde",
  "tempfile",
@@ -867,7 +867,7 @@ dependencies = [
 
 [[package]]
 name = "video-state"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
@@ -878,7 +878,7 @@ dependencies = [
 
 [[package]]
 name = "videoctl"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "assert_cmd",
  "blake3",
