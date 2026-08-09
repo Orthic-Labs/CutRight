@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "profile": "rust-hybrid",
+  "lanes": ["ci"],
+  "matrix": { "os": ["macos-14"], "node": ["26.5.0"] },
+  "packageManager": "pnpm@11.18.0",
+  "gate": { "path": "scripts/gate.sh" },
+  "templateVersion": "1.1.0"
+}
