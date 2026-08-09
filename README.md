@@ -1,10 +1,18 @@
-<img src=".github/banner.svg" alt="CutRight — Agentic video editing on a verified media path." width="100%">
+<p align="center">
+  <img src=".github/assets/cutright-logo.png" alt="CutRight logo: scissors forming a C" width="160" height="160">
+</p>
 
-**Letting an agent cut video is easy. Trusting the cut is the hard part. CutRight is a local, headless editing pipeline where the media path is verified end to end: Rust owns project state, every FFmpeg call crosses a typed boundary, every source clip is BLAKE3-hashed before it can be cut, and the destructive steps are gated behind evidence and human approval.**
+<h1 align="center">CutRight</h1>
 
-![core](https://img.shields.io/badge/core-Rust%20workspace%2C%205%20crates-df6428?style=flat-square&labelColor=111318)
-![cli](https://img.shields.io/badge/control%20plane-videoctl%2C%20JSON--only-df6428?style=flat-square&labelColor=111318)
-![hashing](https://img.shields.io/badge/sources-BLAKE3%2C%20immutable-df6428?style=flat-square&labelColor=111318)
+<p align="center"><strong>Offline video editing with evidence attached.</strong></p>
+
+<p align="center">CutRight combines a desktop Studio, a Rust media kernel, & an embedded editing agent. Source media stays immutable, edits are typed transactions, uncertain decisions go to review, & final renders carry verification receipts.</p>
+
+<p align="center">
+  <img alt="core" src="https://img.shields.io/badge/core-Rust%20workspace%2C%2021%20crates-e6e1d8?style=flat-square&labelColor=0e0e0f">
+  <img alt="studio" src="https://img.shields.io/badge/desktop-Tauri%202%20%2B%20React%2019-e6e1d8?style=flat-square&labelColor=0e0e0f">
+  <img alt="sources" src="https://img.shields.io/badge/sources-BLAKE3%2C%20immutable-e6e1d8?style=flat-square&labelColor=0e0e0f">
+</p>
 
 ## The verified media path
 
@@ -13,7 +21,7 @@
 - **Two ASRs, not blind trust in one.** CutRight's own Parakeet TDT CoreML engine — built from vendored HeardRight source — supplies native timed words; an independent verifier checks word edges; Silero supplies real speech probabilities.
 - **Rust owns the arithmetic.** Canonical project JSON, timestamp math, and cut plans live in one place, exposed only through the JSON-only `videoctl` CLI (with a global `--dry-run`).
 
-## The pipeline
+## One verified path
 
 ```mermaid
 flowchart LR
@@ -43,10 +51,10 @@ CutRight owns its speech runtime. The engine is built from vendored HeardRight s
 
 WhisperX remains a development-time word-edge verifier running from a project-local Python venv, resolved via `CUTRIGHT_WHISPERX_PYTHON` (only needed when the venv isn't at the project-relative default or on `PATH`). `CUTRIGHT_FFMPEG` likewise points at a development FFmpeg. Both are development conveniences; a release build resolves the verifier and media tools from signed packs instead. Rough cuts use macOS `h264_videotoolbox`, and HDR input needs an FFmpeg build with `zscale`.
 
-## Driving it
+## Run it
 
 ```sh
-cargo test --workspace
+bash scripts/gate.sh
 cargo run -p videoctl -- doctor
 cargo run -p videoctl -- project init  ~/MyVideo.video-project
 cargo run -p videoctl -- ingest        ~/MyVideo.video-project clip.mp4
@@ -65,14 +73,15 @@ cargo run -p videoctl -- receipts verify ~/MyVideo.video-project
 cargo run -p videoctl -- package social ~/MyVideo.video-project
 ```
 
-The full surface spans 25 subcommands — project, ingest, transcribe, bench, analyze, edit, reframe, review, transcript remap, shorts propose, finish/slot, render, qa, package, OTIO export, and receipts verify — every one JSON-in/JSON-out.
+`videoctl` exposes project, ingest, transcription, analysis, edit, review, render, QA, packaging, OTIO, & receipt surfaces as JSON-in/JSON-out commands. Use its global `--dry-run` before any effectful project command.
 
-## Around the pipeline
+## Product surfaces
 
-- **Studio** — a Tauri 2 + React 19 review shell (9 IPC commands) that reads project snapshots, re-verifies sources by BLAKE3, and appends hash-bound decisions to a JSONL ledger. Review surface only; the authoring surface is out of this repo's scope.
-- **cutaway / finish** — absorbed natively. The rough cut and styling pass are now CutRight subcommands (`shorts propose`, `finish validate`) plus bundled skills under `skills/content-video-editor/`, driven by CutRight's own speech engine rather than an external Python verifier.
+- **Studio** is the Tauri 2 + React 19 desktop editor for sources, transcript, story, beats, timeline, design, motion & sound, comparison, finals, QA, & receipts.
+- **The media kernel** keeps canonical state, rational time, source hashes, actions, revisions, render graphs, evidence, jobs, recovery, & package integrity in Rust.
+- **The embedded agent** uses the same typed actions as Studio & `videoctl`; confidence & policy decide whether it acts, asks for review, or stops.
 
-Not part of the local pipeline, by design: cloud analysis, effect/preset libraries, proxy generation, and preference learning.
+Cloud execution is disabled by default. Consent starts off, budget starts at zero, & no production cloud provider ships in this repository.
 
 ## Licensing
 
@@ -80,7 +89,9 @@ Studio's bundled fonts (Tanker, Geist, Spline Sans Mono) ship under the ITF Free
 
 ## Status
 
-The five-crate workspace (~7,200 lines of Rust) implements the full command surface above; the generated architecture doc tracks eight product flows whose pass/fail status the verifier has not yet resolved — treat them as implemented-but-unverified rather than proven, which is exactly the distinction this pipeline exists to enforce.
+[`scripts/gate.sh`](scripts/gate.sh) is the repository gate.
+
+CutRight v2 is implemented across 21 Rust crates & Studio. Current macOS 0.1.5 build is signed & notarized. Fresh-user macOS qualification remains open in [`STATUS.md`](STATUS.md).
 
 <!-- blueprint:docs:start -->
 ## Repository truth docs
