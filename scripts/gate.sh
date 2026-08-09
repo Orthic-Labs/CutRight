@@ -5,9 +5,24 @@
 # This is the single authoritative gate. There is no CI service; this script
 # IS the repository contract. Run it locally before every commit.
 #
+# Test policy (changed 2026-08-09, Adrian's direction)
+# ----------------------------------------------------
+# This gate no longer runs `cargo test`. Both suites — root workspace and
+# Studio — were removed. They turned every gate invocation into a full
+# regression run, and with many tasks calling the gate the machine spent its
+# time recompiling and re-running the same suites.
+#
+# Rust tests now run per task, scoped to the crate that task owns:
+#   cargo test -p <exact-crate>
+#   cargo test --manifest-path apps/studio/src-tauri/Cargo.toml -p <exact-crate>
+#
+# Consequence, stated plainly: nothing runs the full Rust suite automatically
+# any more. Whole-workspace regressions will only be caught if someone runs
+# `cargo test --workspace` deliberately. The frontend suites below still run.
+#
 # It runs, in order and failing fast:
-#   1. root cargo workspace ....... fmt --check, clippy -D warnings, test
-#   2. Studio cargo workspace ..... fmt --check, clippy -D warnings, test
+#   1. root cargo workspace ....... fmt --check, clippy -D warnings
+#   2. Studio cargo workspace ..... fmt --check, clippy -D warnings
 #      (Studio is intentionally a SEPARATE cargo workspace, gated by manifest
 #       path so its Tauri dependency graph and lockfile stay isolated — §7.3)
 #   3. Studio frontend ............ pnpm install, typecheck, test, build
@@ -130,8 +145,12 @@ run "root: cargo fmt --all -- --check" \
   cargo fmt --all -- --check
 run "root: cargo clippy --workspace --all-targets --locked -- -D warnings" \
   cargo clippy --workspace --all-targets --locked -- -D warnings
-run "root: cargo test --workspace --locked" \
-  cargo test --workspace --locked
+# `cargo test --workspace --locked` was removed 2026-08-09 by Adrian's direction.
+# It made every gate invocation a full regression run; with many tasks calling
+# the gate, the machine was compiling and running both Cargo suites repeatedly.
+# Tests now run per task, scoped to the crate that task owns:
+#   cargo test -p <exact-crate>
+# See "Test policy" at the head of this file.
 
 # --- 2. Studio cargo workspace (separate lockfile, gated by manifest path) ---
 STUDIO_MANIFEST="apps/studio/src-tauri/Cargo.toml"
@@ -139,8 +158,9 @@ run "studio: cargo fmt --manifest-path $STUDIO_MANIFEST -- --check" \
   cargo fmt --manifest-path "$STUDIO_MANIFEST" -- --check
 run "studio: cargo clippy --manifest-path $STUDIO_MANIFEST --all-targets --locked -- -D warnings" \
   cargo clippy --manifest-path "$STUDIO_MANIFEST" --all-targets --locked -- -D warnings
-run "studio: cargo test --manifest-path $STUDIO_MANIFEST --locked" \
-  cargo test --manifest-path "$STUDIO_MANIFEST" --locked
+# `cargo test --manifest-path "$STUDIO_MANIFEST" --locked` removed with the root
+# suite on 2026-08-09. Studio Rust tests run per task:
+#   cargo test --manifest-path apps/studio/src-tauri/Cargo.toml -p <exact-crate>
 
 # --- 3. Studio frontend ------------------------------------------------------
 # Prefer corepack so the packageManager pin in apps/studio/package.json is
