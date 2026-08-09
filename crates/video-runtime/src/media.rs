@@ -19,6 +19,14 @@ fn pair(root: &Path, mode: &'static str) -> Option<MediaTools> {
     })
 }
 
+fn signed_pack_roots(executable_dir: &Path) -> [PathBuf; 3] {
+    [
+        executable_dir.join("packs/media/bin"),
+        executable_dir.join("../packs/media/bin"),
+        executable_dir.join("../Resources/packs/media/bin"),
+    ]
+}
+
 pub fn resolve() -> Result<MediaTools, String> {
     #[cfg(debug_assertions)]
     if let Some(ffmpeg) = std::env::var_os("CUTRIGHT_FFMPEG").map(PathBuf::from) {
@@ -38,10 +46,7 @@ pub fn resolve() -> Result<MediaTools, String> {
 
     let executable = std::env::current_exe().map_err(|error| error.to_string())?;
     if let Some(root) = executable.parent() {
-        for candidate in [
-            root.join("packs/media/bin"),
-            root.join("../packs/media/bin"),
-        ] {
+        for candidate in signed_pack_roots(root) {
             if let Some(tools) = pair(&candidate, "signed-pack") {
                 return Ok(tools);
             }
@@ -57,4 +62,19 @@ pub fn resolve() -> Result<MediaTools, String> {
     }
 
     Err("runtime_pack_unavailable: signed media pack is absent".into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn installed_app_resources_are_a_signed_pack_candidate() {
+        let roots = signed_pack_roots(Path::new(
+            "/Applications/CutRight Studio.app/Contents/MacOS",
+        ));
+        assert!(roots.contains(&PathBuf::from(
+            "/Applications/CutRight Studio.app/Contents/MacOS/../Resources/packs/media/bin"
+        )));
+    }
 }
