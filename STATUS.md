@@ -11,21 +11,36 @@ in git history at the parent of `fix(status): rewrite STATUS.md as
 v2-anchored as-built status`.
 
 ```yaml
-as_of_commit: 7777df7da2a537dd6cd4fc5c9b02a2cb73d99bf4
+as_of_commit: 5c956574128b1fca3286d1490863484090cca43b   # CR-F-B7-001, full qualification matrix
 dispatch_package: CutRight-v2 standalone implementation dispatch (frozen 2026-08-06)
 dispatch_status: pass
 task_count: 189
 task_status: 189/189 done (1 multi-commit split, 1 orchestrator variance logged)
 post_execution_fixes: 3 (video-agent registration, video-jobs DAG, video-agent MCP IPv6)
 audit_cleanup_fixes: 8 (this audit round)
-head: 7777df7da2a537dd6cd4fc5c9b02a2cb73d99bf4
-quality_gate: source readiness checks pass; full build gate deferred to build phase
-clean_machine_proof: harness implemented; fresh-user qualification deferred to build phase
-ci: none                                          # scripts/gate.sh is the contract
+head: 5c956574128b1fca3286d1490863484090cca43b           # main, 2026-08-09
+quality_gate: pass                                 # CR-F-B1-004, .audit/final-book/seal-b1-004.json, exit 0 at fa36a3c
+clean_machine_proof: NOT PROVEN                    # see fresh_os_user_proof_pending below — the harness reports a false pass
+ci: none                                           # scripts/gate.sh is the contract
+signed_target: pass                                # CR-F-B1-005, cutright-0.1.5-b6a782b0, notarized + stapled, arm64 + x86_64
 known_blockers:
-  - fresh_os_user_proof_pending                    # requires build-phase execution on a fresh OS user
-  - signed_target_qualification_pending            # requires build, seal, and target qualification
+  - fresh_os_user_proof_pending                    # CR-F-B1-003 TRUE_BLOCKER; needs interactive admin auth to provision a fresh macOS user
 ```
+
+**One blocker left, and it does not look like one from the outside.**
+`CR-F-B1-003` (fresh-OS-user clean-machine proof) is the only open item. Its harness
+**exits 0 and reports `overall_passed: true`**, but the recorded acceptance
+interpretation is `false_positive` — see `.audit/final-book/seal-b1-003.json`.
+Fresh-user isolation itself passed; the acceptance assertion behind the green
+result does not hold. Do not treat a green run of that harness as the proof.
+Provisioning the fresh user needs interactive administrator authentication, which
+no agent can supply.
+
+**Two blockers were cleared and the entries above were stale.** `seal-close.json`
+(2026-08-08 16:43Z) records B1-004 and B1-005 as blocked; both were superseded by
+later runs — `seal-b1-004.json` (2026-08-09 00:07Z, pass) and `seal-b1-005.json`
+(2026-08-09, pass). Read those receipts in timestamp order, not by filename:
+`seal-b1-004-attempt-2.json` is the older blocked run despite its name.
 
 ## v2 architecture — what shipped
 
