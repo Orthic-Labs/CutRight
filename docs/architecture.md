@@ -212,7 +212,5 @@ depend on `video-project`, `video-state`, project storage, or `ActionExecutor`;
 `video-protocol` owns transport DTOs only and may not depend on project,
 state, actions, or services. The gate reports each violating edge by name.
 
-The Local Director remains an offline route: it plans from locally retrieved
-evidence and emits typed requests, while deterministic Rust services own
-arithmetic, media boundaries, project state, and mutations. No network or
-remote provider is required for this route.
+Guided Chat uses user-installed Claude Code or Codex. CutRight bundles no LLM
+and makes no offline semantic-direction claim.
