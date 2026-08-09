@@ -142,9 +142,9 @@ checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
 name = "cc"
-version = "1.4.0"
+version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5add81bb678e6cb321aff7fa0dc7689ad82b112dbc032cea19f91d6b8e3582b9"
+checksum = "5d262e149917187838d5b42777c8253bcb64500067342904e7d429499a6f277e"
 dependencies = [
  "find-msvc-tools",
  "shlex",
@@ -261,9 +261,9 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "find-msvc-tools"
-version = "0.1.9"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
+checksum = "26b73573e6edcd2af0cdf47bd6cb58f0b3839491263c314eaad1ccf24430e1de"
 
 [[package]]
 name = "float-cmp"
@@ -625,18 +625,18 @@ checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
 
 [[package]]
 name = "thiserror"
-version = "2.0.19"
+version = "2.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09a43598840e33d5b0331f38c5e30d13bb11c11210a4b58f0d9b18a5a5eefcd9"
+checksum = "ec86235f5fcc2a73650310756d2ac5b138a5780bbbdfae3eeccec992c435ba4f"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.19"
+version = "2.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43cbfe0cf76104d42a574802844187e84a305e531ed54455f11fbde0f10541cd"
+checksum = "bc04cd3e1236dd4a98afca4569f2deb3f120e5422a4023be2cb683f8486292af"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -657,7 +657,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "video-actions"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "serde",
@@ -668,7 +668,7 @@ dependencies = [
 
 [[package]]
 name = "video-agent"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -679,7 +679,7 @@ dependencies = [
 
 [[package]]
 name = "video-benchmarks"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -688,7 +688,7 @@ dependencies = [
 
 [[package]]
 name = "video-capabilities"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "serde",
@@ -699,7 +699,7 @@ dependencies = [
 
 [[package]]
 name = "video-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "chrono",
@@ -711,7 +711,7 @@ dependencies = [
 
 [[package]]
 name = "video-daemon"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "libc",
  "tempfile",
@@ -721,7 +721,7 @@ dependencies = [
 
 [[package]]
 name = "video-driver-host"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "serde",
@@ -732,7 +732,7 @@ dependencies = [
 
 [[package]]
 name = "video-editorial"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -752,7 +752,7 @@ dependencies = [
 
 [[package]]
 name = "video-jobs"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "serde",
@@ -763,7 +763,7 @@ dependencies = [
 
 [[package]]
 name = "video-media"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "serde",
@@ -775,7 +775,7 @@ dependencies = [
 
 [[package]]
 name = "video-project"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "chrono",
@@ -797,7 +797,7 @@ dependencies = [
 
 [[package]]
 name = "video-protocol"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -806,7 +806,7 @@ dependencies = [
 
 [[package]]
 name = "video-providers"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "serde",
@@ -818,7 +818,7 @@ dependencies = [
 
 [[package]]
 name = "video-recovery"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -826,7 +826,7 @@ dependencies = [
 
 [[package]]
 name = "video-runtime"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -835,7 +835,7 @@ dependencies = [
 
 [[package]]
 name = "video-security"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "serde",
@@ -845,7 +845,7 @@ dependencies = [
 
 [[package]]
 name = "video-services"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -857,7 +857,7 @@ dependencies = [
 
 [[package]]
 name = "video-sessions"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "tempfile",
@@ -866,7 +866,7 @@ dependencies = [
 
 [[package]]
 name = "video-state"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "blake3",
  "serde",
@@ -877,7 +877,7 @@ dependencies = [
 
 [[package]]
 name = "videoctl"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "assert_cmd",
  "blake3",
