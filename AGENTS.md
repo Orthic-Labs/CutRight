@@ -34,7 +34,7 @@
 
 ## Access
 - Read `docs/rules/README.md` plus matching runbook before remote, credentialed, or paid work.
-- Use `ssh vendure-auto` for agent access to Hetzner.
+- Reach Hetzner as an agent with `ssh -F ~/.ssh/config.dd dd` from Windows & `ssh vendure-auto` from Mac.
 - Use `win "<command>"` from Mac & `ssh mac "<command>"` from Windows.
 - Read `docs/rules/github-access.md` before GitHub writes or pushes.
 - Read `docs/rules/cloudflare-access.md` before Cloudflare, R2, Worker, DNS, or Pages work.
@@ -71,7 +71,7 @@ Treat verified media evidence and human framing approval as release gates.
 ## Commands
 - Run `cargo fmt --all --check`.
 - Run `cargo clippy --workspace --all-targets -- -D warnings`.
-- Run `cargo test --workspace`.
+- Run `cargo test -p <crate>` for the crate you changed; the full workspace suite is the release owner's job, not every task's.
 - Run `cargo run -p videoctl -- doctor` before media work.
 - Use `videoctl --dry-run` before any effectful project command.
 
@@ -85,6 +85,6 @@ Treat verified media evidence and human framing approval as release gates.
 - Preserve original media and make project retries idempotent.
 
 ## Verification
-- Run focused crate tests before the full workspace suite.
+- Run focused crate tests only; `scripts/gate.sh` no longer runs `cargo test`.
 - Build waveform, boundary-frame, container, caption, and duration evidence for final renders.
 - Require receipt verification before calling a package approved.
