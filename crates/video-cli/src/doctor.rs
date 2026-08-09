@@ -342,10 +342,18 @@ fn version_check(
     }
 }
 
-/// Resolve the repo root so doctor can find `schemas/` and the studio
-/// bundle in a dev checkout. `CUTRIGHT_REPO_ROOT` overrides for installed
-/// binaries where the compile-time manifest dir no longer applies.
+fn installed_resource_root(executable: &Path) -> Option<PathBuf> {
+    let resources = executable.parent()?.join("../Resources");
+    resources.join("schemas").is_dir().then_some(resources)
+}
+
+/// Resolve installed resources first, then an explicit development checkout.
 fn repo_root() -> PathBuf {
+    if let Ok(executable) = std::env::current_exe() {
+        if let Some(root) = installed_resource_root(&executable) {
+            return root;
+        }
+    }
     if let Some(root) = std::env::var_os("CUTRIGHT_REPO_ROOT") {
         return PathBuf::from(root);
     }
@@ -1322,4 +1330,25 @@ fn write_receipt_file(path: &Path, report: &Value) -> io::Result<()> {
         }
     }
     fs::write(path, serde_json::to_vec_pretty(&receipt)?)
+}
+
+#[cfg(test)]
+mod installed_resource_tests {
+    use super::*;
+
+    #[test]
+    fn app_bundle_resources_precede_checkout_paths() {
+        let root = tempfile::tempdir().expect("tempdir");
+        let executable = root
+            .path()
+            .join("CutRight Studio.app/Contents/MacOS/videoctl");
+        fs::create_dir_all(executable.parent().expect("MacOS dir")).expect("MacOS");
+        fs::create_dir_all(
+            root.path()
+                .join("CutRight Studio.app/Contents/Resources/schemas"),
+        )
+        .expect("schemas");
+        let resources = installed_resource_root(&executable).expect("installed resources");
+        assert!(resources.ends_with("Contents/MacOS/../Resources"));
+    }
 }
