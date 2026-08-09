@@ -714,6 +714,7 @@ name = "video-daemon"
 version = "0.1.2"
 dependencies = [
  "libc",
+ "serde_json",
  "tempfile",
  "thiserror",
  "video-protocol",

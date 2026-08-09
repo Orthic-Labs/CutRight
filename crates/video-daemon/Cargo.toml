@@ -9,6 +9,7 @@ description = "CutRight per-user authenticated process host."
 
 [dependencies]
 libc = "0.2"
+serde_json.workspace = true
 thiserror.workspace = true
 video-protocol = { path = "../video-protocol" }
 

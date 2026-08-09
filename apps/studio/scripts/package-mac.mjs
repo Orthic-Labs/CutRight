@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -55,8 +55,38 @@ function refreshPackHashes(bundle) {
   }
 }
 
+function buildSidecars() {
+  const cacheRoot = process.env.RIGHT_RELEASE_CACHE_ROOT;
+  if (!cacheRoot) throw new Error("RIGHT_RELEASE_CACHE_ROOT is required for release sidecars");
+  const targetDir = join(cacheRoot, "targets/mac/cutright-sidecars");
+  const binDir = join(appRoot, "src-tauri/bin");
+  const triples = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
+  const sidecars = [
+    { name: "videoctl", package: "videoctl" },
+    { name: "cutright-mcp", package: "video-agent" },
+    { name: "cutrightd", package: "video-daemon" },
+  ];
+  mkdirSync(binDir, { recursive: true });
+  for (const triple of triples) {
+    for (const sidecar of sidecars) {
+      run("cargo", ["build", "--release", "--locked", "--target", triple, "--target-dir", targetDir,
+        "-p", sidecar.package, "--bin", sidecar.name]);
+      const destination = join(binDir, `${sidecar.name}-${triple}`);
+      copyFileSync(join(targetDir, triple, "release", sidecar.name), destination);
+      chmodSync(destination, 0o755);
+    }
+  }
+  for (const sidecar of sidecars) {
+    run("lipo", ["-create",
+      join(binDir, `${sidecar.name}-aarch64-apple-darwin`),
+      join(binDir, `${sidecar.name}-x86_64-apple-darwin`),
+      "-output", join(binDir, `${sidecar.name}-universal-apple-darwin`)]);
+  }
+}
+
 const key = spawnSync("security", ["find-generic-password", "-a", process.env.USER, "-s", "rightsuite-updater-key", "-w"], { encoding: "utf8" });
 if (key.status !== 0 || !key.stdout.trim()) throw new Error("shared updater key unavailable");
+buildSidecars();
 run("pnpm", ["--dir", "apps/studio", "exec", "tauri", "build", "--target", "universal-apple-darwin", "--bundles", "app,dmg", "--config", '{"bundle":{"createUpdaterArtifacts":false}}'], {
   APPLE_SIGNING_IDENTITY: identity,
   TAURI_SIGNING_PRIVATE_KEY: key.stdout.trim(), TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "",
@@ -65,7 +95,7 @@ if (!existsSync(app)) throw new Error("universal app artifact missing");
 signNested(app);
 refreshPackHashes(app);
 run("codesign", ["--force", "--options", "runtime", "--timestamp", "--entitlements", entitlements, "--sign", identity, app]);
-for (const binary of [join(app, "Contents/MacOS/cutright-studio"), join(app, "Contents/MacOS/cutright-macos-media")]) {
+for (const binary of ["cutright-studio", "cutright-macos-media", "videoctl", "cutright-mcp", "cutrightd"].map(name => join(app, "Contents/MacOS", name))) {
   if (!existsSync(binary)) throw new Error(`universal binary missing: ${binary}`);
   run("lipo", [binary, "-verify_arch", "arm64", "x86_64"]);
 }
