@@ -76,8 +76,7 @@ fn axis_key(a: AxisId) -> &'static str {
 /// Persist a `BenchmarkRun` as JSON; private fixture paths are redacted.
 pub fn write_run(path: &Path, run: &BenchmarkRun) -> std::io::Result<()> {
     let redacted = redact_paths(run);
-    let json = serde_json::to_string_pretty(&redacted)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let json = serde_json::to_string_pretty(&redacted).map_err(std::io::Error::other)?;
     std::fs::write(path, json)
 }
 

@@ -10,7 +10,7 @@
 //! and produces a topologically ordered plan. The actual GPU-side
 //! binding is wired in the native renderer crate.
 
-use crate::native_compositor::{NativeCompositor, RenderGraph, RenderNode};
+use crate::native_compositor::{NativeCompositor, RenderGraph};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use thiserror::Error;
@@ -125,7 +125,7 @@ mod tests {
         g.nodes[0]
             .props
             .insert("renderer".to_string(), "remotion".to_string());
-        let err = RenderGraphCompiler::compile(&g).err().expect("err");
+        let err = RenderGraphCompiler::compile(&g).expect_err("err");
         assert!(matches!(err, RenderGraphCompileError::LegacyRenderer(_)));
     }
 
@@ -133,7 +133,7 @@ mod tests {
     fn rejects_hyperframes_input() {
         let mut g = clean_graph();
         g.nodes[1].inputs.push("hyperframes".to_string());
-        let err = RenderGraphCompiler::compile(&g).err().expect("err");
+        let err = RenderGraphCompiler::compile(&g).expect_err("err");
         assert!(matches!(err, RenderGraphCompileError::LegacyRenderer(_)));
     }
 }
