@@ -45,7 +45,7 @@ pub mod trust;
 
 pub use analysis::analyze_local;
 pub use audio_profile::{AudioProfile, LoudnessGateResult, AUDIO_PROFILE_SCHEMA_VERSION};
-pub use benchmark::bench_transcribe;
+pub use benchmark::{bench_playback, bench_transcribe};
 pub use candidates::{build_candidates, build_candidates_with_policy, count_fillers};
 pub use caption_profile::{
     build_default_caption_document, default_fallback_chain, default_primary_font, default_profile,

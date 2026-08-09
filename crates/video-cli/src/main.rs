@@ -217,6 +217,11 @@ fn run(cli: Cli) -> Result<Outcome, String> {
         )
         .map(|result| Outcome::Value(json!({ "event": "bench.transcribe", "result": result })))
         .map_err(|error| error.to_string()),
+        Command::Bench {
+            command: BenchCommand::Playback { project, runs },
+        } => video_project::bench_playback(&project, runs, cli.dry_run)
+            .map(|result| Outcome::Value(json!({ "event": "bench.playback", "result": result })))
+            .map_err(|error| error.to_string()),
         Command::Analyze {
             command: AnalyzeCommand::Local(args),
         } => video_project::analyze_local(&args.project, cli.dry_run)
@@ -414,7 +419,12 @@ fn command_name(command: &Command) -> String {
     match command {
         Command::Ingest(_) => "ingest",
         Command::Transcribe(_) => "transcribe",
-        Command::Bench { .. } => "bench transcribe",
+        Command::Bench {
+            command: BenchCommand::Transcribe { .. },
+        } => "bench transcribe",
+        Command::Bench {
+            command: BenchCommand::Playback { .. },
+        } => "bench playback",
         Command::Analyze { .. } => "analyze",
         Command::Reframe { .. } => "reframe plan",
         Command::Evidence { .. } => "evidence build",

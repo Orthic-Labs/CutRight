@@ -7,11 +7,12 @@ use crate::transcription::{is_heardright_provider, is_whisperx_provider};
 use crate::PipelineArtifact;
 use crate::ProjectError;
 use std::path::Path;
+use std::time::Instant;
 use video_core::{
     models::{ProviderResponseEnvelope, SCHEMA_VERSION},
     SourceManifest, Transcript,
 };
-use video_media::render_boundary_probe;
+use video_media::{extract_frame, probe, render_boundary_probe};
 
 /// HeardRight is always the transcript authority and WhisperX is always the
 /// verifier (REV2 plan §8.1), regardless of which CLI flag (`--primary` or
@@ -475,6 +476,101 @@ pub fn bench_transcribe(
     })
 }
 
+/// Seek-to-first-decoded-frame latency benchmark. Reuses
+/// [`video_media::extract_frame`] — the typed FFmpeg boundary that already
+/// runs `-ss <t> -i <input> -frames:v 1` — as the decode primitive, timing
+/// each call with [`Instant`] rather than shelling out separately. Offsets
+/// are spread evenly across the middle 80% of the media's duration so runs
+/// exercise seeks scattered through the file rather than clustering near
+/// the start.
+pub fn bench_playback(
+    project_path: &Path,
+    runs: usize,
+    dry_run: bool,
+) -> Result<serde_json::Value, ProjectError> {
+    if runs == 0 {
+        return Err(ProjectError::InvalidState(
+            "playback benchmark runs must be positive".into(),
+        ));
+    }
+    let sources: SourceManifest = read_json(&project_path.join("sources/manifest.json"))?;
+    let source = sources.sources.first().ok_or(ProjectError::NoSources)?;
+    let media_path = Path::new(&source.path).to_path_buf();
+
+    let path = project_path.join("analysis/bench/playback/report.json");
+    if dry_run {
+        return Ok(serde_json::json!({
+            "status": "dry-run",
+            "path": relative_artifact_path(project_path, &path),
+            "runs": runs,
+        }));
+    }
+
+    let metadata = probe(&media_path)?;
+    let duration_ms = metadata.duration_ms.unwrap_or(10_000).max(1_000);
+    let span_start = duration_ms / 10;
+    let span_end = duration_ms - span_start;
+    let step = if runs > 1 {
+        (span_end - span_start).max(0) / (runs as i64 - 1).max(1)
+    } else {
+        0
+    };
+
+    let frame_path = project_path.join("analysis/bench/playback/frame.jpg");
+    let mut samples = Vec::with_capacity(runs);
+    let mut latencies_ms = Vec::with_capacity(runs);
+    for i in 0..runs {
+        let seek_ms = (span_start + step * i as i64).min(span_end).max(0);
+        let started = Instant::now();
+        extract_frame(&media_path, seek_ms, &frame_path)?;
+        let elapsed_ms = started.elapsed().as_secs_f64() * 1_000.0;
+        latencies_ms.push(elapsed_ms);
+        samples.push(serde_json::json!({
+            "seek_ms": seek_ms,
+            "latency_ms": elapsed_ms,
+        }));
+    }
+    let _ = std::fs::remove_file(&frame_path);
+
+    let mut sorted = latencies_ms.clone();
+    sorted.sort_by(|a, b| a.partial_cmp(b).expect("latency samples are finite"));
+    let percentile = |p: f64| -> f64 {
+        let rank = ((p * (sorted.len() as f64 - 1.0)).round()) as usize;
+        sorted[rank.min(sorted.len() - 1)]
+    };
+    let min_ms = sorted.first().copied().unwrap_or(0.0);
+    let max_ms = sorted.last().copied().unwrap_or(0.0);
+    let p50_ms = percentile(0.50);
+    let p95_ms = percentile(0.95);
+
+    let report = serde_json::json!({
+        "schema_version": SCHEMA_VERSION,
+        "kind": "playback_benchmark",
+        "media_path": media_path.display().to_string(),
+        "decode_boundary": "video_media::extract_frame",
+        "runs": runs,
+        "p50_ms": p50_ms,
+        "p95_ms": p95_ms,
+        "min_ms": min_ms,
+        "max_ms": max_ms,
+        "samples": samples,
+    });
+    write_json_atomic(&path, &report)?;
+
+    Ok(serde_json::json!({
+        "status": "created",
+        "path": relative_artifact_path(project_path, &path),
+        "runs": runs,
+        "p50_ms": p50_ms,
+        "p95_ms": p95_ms,
+        "min_ms": min_ms,
+        "max_ms": max_ms,
+        "media_path": media_path.display().to_string(),
+        "decode_boundary": "video_media::extract_frame",
+        "samples": samples,
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -555,5 +651,39 @@ mod tests {
         assert_eq!(classify_word_disagreement("don't"), "contraction");
         assert_eq!(classify_word_disagreement("re"), "token_split");
         assert_eq!(classify_word_disagreement("mountain"), "content");
+    }
+
+    #[test]
+    fn bench_playback_dry_run_reports_planned_runs_without_touching_media() {
+        use video_core::models::SourceEntry;
+
+        let temp = tempfile::tempdir().unwrap();
+        crate::init_project(temp.path(), false).unwrap();
+        write_json_atomic(
+            &temp.path().join("sources/manifest.json"),
+            &SourceManifest {
+                schema_version: SCHEMA_VERSION,
+                sources: vec![SourceEntry {
+                    source_id: "source-a".into(),
+                    path: "sources/source-a.mov".into(),
+                    blake3: "fixture".into(),
+                    duration_ms: Some(10_000),
+                    width: Some(1920),
+                    height: Some(1080),
+                    rotation_degrees: Some(0),
+                    is_hdr: Some(false),
+                    timebase: None,
+                }],
+            },
+        )
+        .unwrap();
+
+        let result = bench_playback(temp.path(), 5, true).unwrap();
+        assert_eq!(result["status"], "dry-run");
+        assert_eq!(result["runs"], 5);
+        assert!(!temp
+            .path()
+            .join("analysis/bench/playback/report.json")
+            .exists());
     }
 }

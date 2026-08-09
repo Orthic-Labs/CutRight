@@ -259,6 +259,11 @@ pub enum BenchCommand {
         #[arg(long, default_value_t = 40)]
         padding_ms: i64,
     },
+    Playback {
+        project: PathBuf,
+        #[arg(long, default_value_t = 20)]
+        runs: usize,
+    },
 }
 
 #[derive(Debug, Subcommand)]

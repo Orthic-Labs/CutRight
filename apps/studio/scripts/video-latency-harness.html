@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8" /><title>video-latency-harness</title></head>
+  <body>
+    <!--
+      Mirrors src/modes/SourcesMode.tsx's <video> usage: no `controls`
+      attribute, muted=false, single element whose `src` is set directly and
+      `currentTime` is seeked directly — same code path CutRight Studio uses,
+      minus the React wiring, so the browser's decode/paint cost is identical.
+    -->
+    <video id="v" preload="auto" style="width:640px;height:360px"></video>
+    <script>
+      // Exposed for the CDP harness (video-latency-bench.mjs) to call via
+      // Runtime.evaluate. Returns { load: number[], seek: number[] } in ms.
+      window.__runLatencyBench = async function (srcUrl, iterations, seekOffsets) {
+        const video = document.getElementById("v");
+        const load = [];
+        const seek = [];
+
+        function once(el, event) {
+          return new Promise((resolve) => el.addEventListener(event, resolve, { once: true }));
+        }
+
+        for (let i = 0; i < iterations; i += 1) {
+          video.pause();
+          video.removeAttribute("src");
+          video.load();
+          const t0 = performance.now();
+          const loaded = once(video, "loadeddata");
+          video.src = srcUrl + "#t=" + i; // cache-bust so each iteration re-decodes first frame
+          await loaded;
+          load.push(performance.now() - t0);
+        }
+
+        // Ensure metadata (duration) is available before computing seek offsets.
+        if (!video.duration || Number.isNaN(video.duration)) {
+          await once(video, "loadedmetadata");
+        }
+        const duration = video.duration || 1;
+
+        for (let i = 0; i < iterations; i += 1) {
+          const frac = seekOffsets[i % seekOffsets.length];
+          const target = Math.min(Math.max(frac * duration, 0), Math.max(duration - 0.05, 0));
+          const t0 = performance.now();
+          const seeked = once(video, "seeked");
+          video.currentTime = target;
+          await seeked;
+          seek.push(performance.now() - t0);
+        }
+
+        return {
+          load,
+          seek,
+          a11y: {
+            hasControlsAttribute: video.hasAttribute("controls"),
+            keyboardFocusable: video.tabIndex >= 0 || video.hasAttribute("controls"),
+            hasCaptionTrack: video.querySelectorAll('track[kind="captions"], track[kind="subtitles"]').length > 0,
+            accessibleName: video.getAttribute("aria-label") || video.getAttribute("title") || null,
+          },
+        };
+      };
+    </script>
+  </body>
+</html>
