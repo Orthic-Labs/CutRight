@@ -25,3 +25,7 @@ __pycache__/
 docs/dispatch/v2/source/*.pre-*
 # Signed installer output; releases are produced by RightKit, never tracked
 *.dmg
+
+# Parakeet ASR model payload: multi-hundred-MB weights exceed GitHub file limits.
+# Rebuild with scripts/runtime/build-parakeet-pack.py from runtime/manifests/parakeet.model.json
+runtime/packs/speech/bin/models/parakeet-tdt-v3/
