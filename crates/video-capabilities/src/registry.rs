@@ -23,6 +23,15 @@ use serde::{Deserialize, Serialize};
 use crate::error::{RegistryError, RegistryResult};
 use crate::permission::{PermissionSet, PermissionSetId};
 
+#[path = "operation.rs"]
+pub mod operation;
+pub use operation::{
+    default_operation_registry, validate_default_operation_registry, ExecutionMode, HandlerId,
+    Idempotency, LifecycleState, OperationContract, OperationError, OperationExample,
+    OperationRegistry, OperationRegistryError, GOAL_OPERATION_IDS, LIVE_HANDLER_IDS,
+    OPERATION_CONTRACT_SCHEMA,
+};
+
 /// Schema id every registry entry must declare.
 pub const REGISTRY_SCHEMA: &str = "cutright.capability/v1";
 
@@ -205,6 +214,11 @@ impl RegistryDocument {
     /// `schemas/capabilities/registry.schema.v1.json` and the cross-checks in
     /// `V2-CAPABILITY-ACTION-CONTRACT.md` / `V2-ACTION-PERMISSIONS.md`.
     pub fn validate(&self) -> RegistryResult<()> {
+        validate_default_operation_registry().map_err(|error| RegistryError::InvalidEntry {
+            index: 0,
+            capability_id: "<operations>".into(),
+            reason: error.to_string(),
+        })?;
         if self.schema_version != REGISTRY_SCHEMA_VERSION {
             return Err(RegistryError::UnsupportedSchemaVersion {
                 found: self.schema_version,

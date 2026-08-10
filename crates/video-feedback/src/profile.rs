@@ -62,7 +62,7 @@ pub fn approve_profile(
     decision_ids: Vec<String>,
     approver: ProfileApprovedBy,
 ) -> ProfileVersion {
-    let mut version = "0.1.0".to_string();
+    let version = "0.1.0".to_string();
     // version is computed as monotonic; the caller may override.
     let mut values = FormatProfileValues {
         inherited_defaults: BTreeMap::new(),

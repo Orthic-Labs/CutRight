@@ -17,11 +17,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::action::{
-    Action, AudioParams, CaptionParams, ColourCorrectionParams, ColourLutParams,
-    ExportRenderParams, GraphicParams, MoveParams, RestoreParams, RetimeParams, SettingParams,
-    TakeSwapParams,
-};
+use crate::action::{Action, MoveParams, RestoreParams, TakeSwapParams};
 use crate::apply::{ApplyError, ApplyOutcome, StagedApply};
 use crate::revision::{Receipt, StagedRevision, RECEIPT_SCHEMA};
 
@@ -211,17 +207,13 @@ pub fn inverse_batch_for_with_original(
     original_clip_ids: &[Option<String>],
 ) -> Result<InverseBatch, UndoError> {
     let mut inverse_actions: Vec<Action> = Vec::with_capacity(actions.len());
-    let mut fully_invertible = true;
     for (index, action) in actions.iter().enumerate() {
         let original = original_clip_ids
             .get(index)
             .and_then(|value| value.as_deref());
         match inverse_of_with_original(action, original_batch_id, original) {
             Ok(inverse) => inverse_actions.push(inverse),
-            Err(error) => {
-                fully_invertible = false;
-                return Err(error);
-            }
+            Err(error) => return Err(error),
         }
     }
     Ok(InverseBatch {
@@ -229,7 +221,7 @@ pub fn inverse_batch_for_with_original(
         original_batch_id: original_batch_id.to_string(),
         expected_revision: expected_revision.to_string(),
         inverse_actions,
-        fully_invertible,
+        fully_invertible: true,
     })
 }
 
@@ -448,7 +440,11 @@ pub fn _ensure_receipt_schema_in_scope() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::action::{CutParams, RangeNs, TargetKind, TargetRef};
+    use crate::action::{
+        AudioParams, CaptionParams, ColourCorrectionParams, ColourLutParams, CutParams,
+        ExportRenderParams, GraphicParams, RangeNs, RetimeParams, SettingParams, TargetKind,
+        TargetRef,
+    };
     use crate::apply::StagedApply;
     use crate::revision::StagedRevision;
 
@@ -844,7 +840,7 @@ mod tests {
 
     #[test]
     fn undo_refuses_non_reversible_actions() {
-        let mut stack = UndoRedoStack::new();
+        let stack = UndoRedoStack::new();
         let non_reversible = Action::ExportRender {
             target: asset_target("preset_1080p"),
             params: ExportRenderParams {

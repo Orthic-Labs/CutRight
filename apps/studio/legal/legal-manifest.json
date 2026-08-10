@@ -2,9 +2,9 @@
   "schema": 1,
   "appKey": "cutright",
   "productName": "CutRight Studio",
-  "licenseMode": "MIT",
+  "licenseMode": "proprietary",
   "documents": [
-    {"id":"cutright-mit-license","role":"license","title":"CutRight MIT License","version":"1","sha256":"2a49131f4c5864adb8a24f2ea1ae432cc56a0475695dbc5b75f446a49a630ba5","path":"LICENSE","treatment":"notice","material":true},
+    {"id":"cutright-proprietary-license","role":"license","title":"CutRight Proprietary License","version":"2","sha256":"1a10da9e544652368a8c90df9002329c691f7ff052ab8cb68da36a637e0696fa","path":"LICENSE","treatment":"notice","material":true},
     {"id":"cutright-third-party-notices","role":"third_party_notices","title":"CutRight Third-Party Notices","version":"v2","sha256":"d522ad18e7335fce20009d638b37c8cfec0ffc39274854974fe326dcb3dd9714","path":"THIRD-PARTY-NOTICES.md","treatment":"notice","material":false}
   ]
 }

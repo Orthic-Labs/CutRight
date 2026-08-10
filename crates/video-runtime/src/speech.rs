@@ -33,7 +33,11 @@ pub struct VerifiedResource {
 /// MUST NOT support install discovery, environment variables, PATH lookup,
 /// or internet download.
 pub trait PackResourceResolver {
-    fn require(&self, pack: PackId, resource: ResourceId) -> Result<VerifiedResource, ResolverError>;
+    fn require(
+        &self,
+        pack: PackId,
+        resource: ResourceId,
+    ) -> Result<VerifiedResource, ResolverError>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -43,7 +47,11 @@ pub enum ResolverError {
     #[error("resource not present in pack: {pack}/{resource}")]
     ResourceNotPresent { pack: String, resource: String },
     #[error("hash mismatch for {path}: expected {expected}, got {actual}")]
-    HashMismatch { path: String, expected: String, actual: String },
+    HashMismatch {
+        path: String,
+        expected: String,
+        actual: String,
+    },
     #[error("license not in ledger: {0}")]
     UnknownLicense(String),
 }
@@ -66,7 +74,10 @@ pub struct BoundedStderr {
 
 impl BoundedStderr {
     pub fn new(max_bytes: usize) -> Self {
-        Self { max_bytes, captured: Vec::new() }
+        Self {
+            max_bytes,
+            captured: Vec::new(),
+        }
     }
     pub fn push(&mut self, chunk: &[u8]) {
         let remaining = self.max_bytes.saturating_sub(self.capd_len());
@@ -88,8 +99,12 @@ pub struct Cancellation {
 }
 
 impl Cancellation {
-    pub fn new() -> Self { Self { cancelled: false } }
-    pub fn cancel(&mut self) { self.cancelled = true; }
+    pub fn new() -> Self {
+        Self { cancelled: false }
+    }
+    pub fn cancel(&mut self) {
+        self.cancelled = true;
+    }
 }
 
 /// Supervised session options.
@@ -110,33 +125,71 @@ impl Default for SessionOptions {
     }
 }
 
-/// Stub the session entry point so the cap-ledger can record the
-/// hand-shake. The actual session dispatch lives in the vendored
-/// crate; this adapter only wraps the boundary.
+/// Open a session only after every runtime input resolves from a verified
+/// speech pack. No path discovery or fallback occurs at this boundary.
 pub fn open_session(
+    resolver: &impl PackResourceResolver,
     identity: &AdapterIdentity,
     _options: &SessionOptions,
 ) -> Result<SessionHandle, AdapterError> {
     if identity.vendored_commit.is_empty() {
         return Err(AdapterError::EmptyVendoredCommit);
     }
-    Ok(SessionHandle { identity: identity.clone() })
+    let resources = [
+        "bin/heardright-engine",
+        "bin/libsherpa-onnx-c-api.dylib",
+        "bin/libonnxruntime.dylib",
+        "bin/models/parakeet-tdt-v3/encoder.int8.onnx",
+        "bin/models/parakeet-tdt-v3/decoder.int8.onnx",
+        "bin/models/parakeet-tdt-v3/joiner.int8.onnx",
+        "bin/models/parakeet-tdt-v3/tokens.txt",
+        "bin/vad/silero_vad_16k_op15.onnx",
+    ]
+    .into_iter()
+    .map(|resource| resolver.require(PackId("speech".into()), ResourceId(resource.into())))
+    .collect::<Result<Vec<_>, _>>()?;
+    Ok(SessionHandle {
+        identity: identity.clone(),
+        resources,
+    })
 }
 
 #[derive(Debug, Clone)]
 pub struct SessionHandle {
     pub identity: AdapterIdentity,
+    pub resources: Vec<VerifiedResource>,
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum AdapterError {
     #[error("empty vendored commit in adapter identity")]
     EmptyVendoredCommit,
+    #[error(transparent)]
+    Resolver(#[from] ResolverError),
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct Resolver;
+
+    impl PackResourceResolver for Resolver {
+        fn require(
+            &self,
+            pack: PackId,
+            resource: ResourceId,
+        ) -> Result<VerifiedResource, ResolverError> {
+            Ok(VerifiedResource {
+                pack,
+                path: PathBuf::from(&resource.0),
+                resource,
+                sha256: "sha256".into(),
+                blake3: "blake3".into(),
+                license: "verified".into(),
+            })
+        }
+    }
 
     #[test]
     fn bounded_stderr_caps_at_max_bytes() {
@@ -159,5 +212,20 @@ mod tests {
         let o = SessionOptions::default();
         assert!(o.timeout > Duration::from_secs(0));
         assert_eq!(o.stderr.max_bytes, 64 * 1024);
+    }
+
+    #[test]
+    fn session_requires_all_signed_pack_resources() {
+        let identity = AdapterIdentity {
+            vendored_commit: "b60bff947f12ffa9d25e94ad27e8ff30db006a24".into(),
+            pack_hashes: BTreeMap::new(),
+            build_target: "universal-apple-darwin".into(),
+        };
+        let session = open_session(&Resolver, &identity, &SessionOptions::default()).unwrap();
+        assert_eq!(session.resources.len(), 8);
+        assert!(session
+            .resources
+            .iter()
+            .all(|resource| resource.pack.0 == "speech"));
     }
 }

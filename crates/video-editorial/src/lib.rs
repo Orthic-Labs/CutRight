@@ -9,9 +9,13 @@
 
 pub mod benchmark_binding;
 pub mod deterministic;
+pub mod draft;
 pub mod engine;
 pub mod narrative;
 pub mod plan;
 pub mod read_models;
 pub mod rough_cut;
 pub mod variants;
+
+pub use draft::EditorialPlanDraft;
+pub use plan::{apply_draft, compile_draft, DraftValidationError, EditorialPlan};

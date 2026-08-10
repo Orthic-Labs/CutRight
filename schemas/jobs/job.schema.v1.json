@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://cutright.dev/schemas/jobs/job.schema.v1.json",
   "title": "CutRight v2 job (v1)",
-  "description": "A durable, content-addressed job that executes a DAG of stages. A job is the unit of resume, retry, and cancellation. Terminal statuses are `succeeded`, `needs_review`, `failed`, `cancelled`; success is never inferred from process exit alone.",
+  "description": "A durable, content-addressed job that executes a DAG of stages. Job state, attempts, checkpoints, events, receipts, and input-required state live inside the project package. Compare-and-swap revisions make transitions atomic; success is never inferred without a receipt.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -72,6 +72,64 @@
     "preferences_hash": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Exact revision used by project-backed compare-and-swap transitions."
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sequence", "revision", "kind", "detail"],
+        "properties": {
+          "sequence": {"type": "integer", "minimum": 1},
+          "revision": {"type": "integer", "minimum": 0},
+          "kind": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]+$"},
+          "stage_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+          "detail": {"type": "string", "maxLength": 2048}
+        }
+      }
+    },
+    "checkpoints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["checkpoint_id", "state_hash", "state_size_bytes", "created_at_unix_ms"],
+        "properties": {
+          "checkpoint_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+          "state_hash": {"type": "array", "minItems": 32, "maxItems": 32, "items": {"type": "integer", "minimum": 0, "maximum": 255}},
+          "state_size_bytes": {"type": "integer", "minimum": 0},
+          "created_at_unix_ms": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "receipts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage_id", "attempt", "terminal_state", "revision"],
+        "properties": {
+          "stage_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+          "attempt": {"type": "integer", "minimum": 0},
+          "terminal_state": {"enum": ["succeeded", "failed", "cancelled"]},
+          "output_fingerprint": {"type": "array", "minItems": 32, "maxItems": 32, "items": {"type": "integer", "minimum": 0, "maximum": 255}},
+          "revision": {"type": "integer", "minimum": 0},
+          "race": {"type": "object", "additionalProperties": false, "required": ["winner", "loser"], "properties": {"winner": {"enum": ["completion", "cancellation"]}, "loser": {"enum": ["completion", "cancellation"]}}}
+        }
+      }
+    },
+    "input_required": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "stage_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+        "reason": {"type": "string", "maxLength": 2048}
+      }
     }
   },
   "definitions": {

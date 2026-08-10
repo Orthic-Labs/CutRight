@@ -1,5 +1,6 @@
 import { call } from "./lib/api";
-import type { RationalTime } from "./nativePlayer";
+
+type RationalTime = { numerator: number; denominator: number };
 
 export type MacMediaCapabilities = {
   avFoundation: boolean; vision: boolean; caption: boolean; preview: boolean;

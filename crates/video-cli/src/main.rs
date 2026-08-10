@@ -1,14 +1,17 @@
+mod agent;
+mod agent_qualify;
 mod apply;
 mod capabilities;
 mod cli;
 mod doctor;
+mod terminal;
 
 use clap::Parser;
 use cli::{
-    AnalyzeCommand, BenchCommand, CleanMachineSampleArgs, Cli, CloudCommand, Command, EditCommand,
-    EvidenceCommand, ExportCommand, FinishCommand, PackageCommand, PreferencesCommand,
-    ProjectCommand, ReceiptsCommand, ReframeCommand, RenderCommand, ReviewCommand, ShortsCommand,
-    SlotCommand, TranscriptCommand,
+    AgentCommand, AgentTerminalCommand, AnalyzeCommand, BenchCommand, CleanMachineSampleArgs, Cli,
+    CloudCommand, Command, EditCommand, EvidenceCommand, ExportCommand, FinishCommand,
+    PackageCommand, PreferencesCommand, ProjectCommand, ReceiptsCommand, ReframeCommand,
+    RenderCommand, ReviewCommand, ShortsCommand, SlotCommand, TranscriptCommand,
 };
 use doctor::DoctorOutcome;
 use serde_json::{json, Value};
@@ -132,6 +135,13 @@ fn main() -> ExitCode {
             );
             ExitCode::from(if passed { EXIT_OK } else { EXIT_ERROR })
         }
+        Ok(Outcome::Qualification(value, passed)) => {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&value).expect("JSON serialization cannot fail")
+            );
+            ExitCode::from(if passed { EXIT_OK } else { EXIT_ERROR })
+        }
         Err(error) => {
             println!(
                 "{}",
@@ -156,6 +166,7 @@ enum Outcome {
     Doctor(Value, DoctorOutcome),
     Receipts(Value, bool),
     CleanMachine(Value, bool),
+    Qualification(Value, bool),
 }
 
 fn run(cli: Cli) -> Result<Outcome, String> {
@@ -166,6 +177,7 @@ fn run(cli: Cli) -> Result<Outcome, String> {
             Ok(Outcome::Doctor(report, outcome))
         }
         Command::CleanMachineSample(args) => clean_machine_sample(args),
+        Command::Agent { command } => run_agent(command),
         Command::Project {
             command: ProjectCommand::Init { folder },
         } => video_project::init_project(&folder, cli.dry_run)
@@ -205,6 +217,11 @@ fn run(cli: Cli) -> Result<Outcome, String> {
         )
         .map(|result| Outcome::Value(json!({ "event": "bench.transcribe", "result": result })))
         .map_err(|error| error.to_string()),
+        Command::Bench {
+            command: BenchCommand::Playback { project, runs },
+        } => video_project::bench_playback(&project, runs, cli.dry_run)
+            .map(|result| Outcome::Value(json!({ "event": "bench.playback", "result": result })))
+            .map_err(|error| error.to_string()),
         Command::Analyze {
             command: AnalyzeCommand::Local(args),
         } => video_project::analyze_local(&args.project, cli.dry_run)
@@ -402,7 +419,12 @@ fn command_name(command: &Command) -> String {
     match command {
         Command::Ingest(_) => "ingest",
         Command::Transcribe(_) => "transcribe",
-        Command::Bench { .. } => "bench transcribe",
+        Command::Bench {
+            command: BenchCommand::Transcribe { .. },
+        } => "bench transcribe",
+        Command::Bench {
+            command: BenchCommand::Playback { .. },
+        } => "bench playback",
         Command::Analyze { .. } => "analyze",
         Command::Reframe { .. } => "reframe plan",
         Command::Evidence { .. } => "evidence build",
@@ -422,9 +444,97 @@ fn command_name(command: &Command) -> String {
         Command::Capabilities { .. } => "capabilities list",
         Command::CleanMachineSample(_) => "clean-machine-sample",
         Command::Apply { .. } => "apply",
+        Command::Agent { .. } => "agent",
         Command::Doctor(_) | Command::Project { .. } => "unknown",
     }
     .to_string()
+}
+
+fn run_agent(command: AgentCommand) -> Result<Outcome, String> {
+    match command {
+        AgentCommand::Integrate(args) => {
+            let provider = video_cli_provider(&args.provider)?;
+            agent::run(agent::AgentCommand {
+                provider,
+                binary: args.binary,
+                config: args.config,
+                remove: false,
+            })
+            .map(Outcome::Value)
+        }
+        AgentCommand::Status(args) => {
+            let provider = video_cli_provider(&args.provider)?;
+            match args.config {
+                Some(config) => agent::status(provider, &config).map(Outcome::Value),
+                None => Ok(Outcome::Value(json!({
+                    "event": "agent.status",
+                    "provider": provider,
+                    "registered": false,
+                    "status": "unconfigured"
+                }))),
+            }
+        }
+        AgentCommand::Remove(args) => {
+            let provider = video_cli_provider(&args.provider)?;
+            agent::run(agent::AgentCommand {
+                provider,
+                binary: args.binary,
+                config: args.config,
+                remove: true,
+            })
+            .map(Outcome::Value)
+        }
+        AgentCommand::Qualify(args) => {
+            if !args.all {
+                return Err("agent qualify requires --all".into());
+            }
+            agent_qualify::run_all().map(|(value, passed)| Outcome::Qualification(value, passed))
+        }
+        AgentCommand::Terminal {
+            command: AgentTerminalCommand::Attach(args),
+        } => {
+            let request = terminal::AttachRequest {
+                session_id: args.session_id,
+                attach_token: String::new(),
+                columns: 120,
+                rows: 40,
+            };
+            let mut view = terminal::TerminalView::default();
+            view.apply(terminal::parse_terminal_event(&[]));
+            let event_kinds = [
+                terminal_event_name(&terminal::TerminalEvent::Bytes(Vec::new())),
+                terminal_event_name(&terminal::TerminalEvent::PromptVisible),
+                terminal_event_name(&terminal::TerminalEvent::Exit(None)),
+                terminal_event_name(&terminal::TerminalEvent::Error(String::new())),
+            ];
+            Ok(Outcome::Value(json!({
+                "event": "agent.terminal.attach",
+                "status": "attach_requested",
+                "session_id": request.session_id,
+                "argv": request.argv(),
+                "command": terminal::ATTACH_COMMAND,
+                "columns": request.columns,
+                "rows": request.rows,
+                "initial_bytes": view.presentation_bytes(),
+                "prompt_visible": view.prompt_visible,
+                "event_kinds": event_kinds,
+                "presentation_only": true
+            })))
+        }
+    }
+}
+
+fn video_cli_provider(value: &str) -> Result<agent::Provider, String> {
+    agent::Provider::parse(value).map_err(|error| error.to_string())
+}
+
+fn terminal_event_name(event: &terminal::TerminalEvent) -> &'static str {
+    match event {
+        terminal::TerminalEvent::Bytes(_) => "bytes",
+        terminal::TerminalEvent::PromptVisible => "prompt_visible",
+        terminal::TerminalEvent::Exit(_) => "exit",
+        terminal::TerminalEvent::Error(_) => "error",
+    }
 }
 
 fn clean_machine_sample(args: CleanMachineSampleArgs) -> Result<Outcome, String> {

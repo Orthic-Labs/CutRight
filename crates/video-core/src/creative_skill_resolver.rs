@@ -163,7 +163,7 @@ mod tests {
             seed: None,
             policy_ref: None,
         };
-        let err = resolver.plan(&req).err().expect("must error");
+        let err = resolver.plan(&req).expect_err("must error");
         assert!(matches!(err, ResolverError::Unresolved(_)));
     }
 }

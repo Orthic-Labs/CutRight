@@ -225,7 +225,7 @@ mod tests {
                 },
             ],
         };
-        let err = NativeCompositor::validate(&graph).err().expect("err");
+        let err = NativeCompositor::validate(&graph).expect_err("err");
         assert!(matches!(err, CompositorError::Cycle(_)));
     }
 }

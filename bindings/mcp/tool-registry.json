@@ -1,226 +1,385 @@
 {
-  "generator": "cutright.capability_codegen/v1",
-  "registry_id": "cutright-v2-canonical",
-  "schema": "cutright.mcp_tool_registry/v1",
+  "generator": "cutright.operation_codegen/v1",
+  "registry_id": "cutright-operation-registry-v1",
+  "schema": "cutright.operation_surface/v1",
+  "operation_count": 11,
   "tools": {
-    "asset.plan": {
-      "capability_id": "asset.plan",
-      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
-      "input_schema": {
+    "cutright.edit.commit": {
+      "operation": "cutright.edit.commit",
+      "handler_id": "handler.edit.commit",
+      "purpose": "Apply an approved plan",
+      "execution_mode": "write",
+      "idempotency": "retry_safe",
+      "output_schema": {
+        "type": "object",
         "additionalProperties": false,
         "properties": {
-          "intent": {
+          "revision_id": {
             "type": "string"
           },
-          "revision_id": {
+          "receipt_id": {
             "type": "string"
           }
-        },
-        "required": [
-          "revision_id",
-          "intent"
-        ],
-        "type": "object"
-      },
-      "kind": "mutation",
-      "owner_component": "video-actions",
-      "permission_set": "pset.asset_plan",
-      "schema": "cutright.mcp_tool/v1"
+        }
+      }
     },
-    "evidence.read": {
-      "capability_id": "evidence.read",
-      "description": "Read capability generated from the canonical registry (CR-V2-B2-014).",
-      "input_schema": {
+    "cutright.edit.prepare": {
+      "operation": "cutright.edit.prepare",
+      "handler_id": "handler.edit.prepare",
+      "purpose": "Prepare media and durable analysis",
+      "execution_mode": "write_process",
+      "idempotency": "retry_safe",
+      "output_schema": {
+        "type": "object",
         "additionalProperties": false,
         "properties": {
-          "max_items": {
-            "maximum": 10000,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "revision_id": {
+          "task_id": {
             "type": "string"
+          }
+        }
+      }
+    },
+    "cutright.edit.preview": {
+      "operation": "cutright.edit.preview",
+      "handler_id": "handler.edit.preview",
+      "purpose": "Validate a plan without mutation",
+      "execution_mode": "compute",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "valid": {
+            "type": "boolean"
           },
-          "window": {
-            "additionalProperties": false,
-            "properties": {
-              "end_ns": {
-                "minimum": 0,
-                "type": "integer"
-              },
-              "start_ns": {
-                "minimum": 0,
-                "type": "integer"
-              }
-            },
+          "diff": {
             "type": "object"
           }
-        },
-        "required": [
-          "revision_id"
-        ],
-        "type": "object"
-      },
-      "kind": "read",
-      "owner_component": "video-state",
-      "permission_set": "pset.evidence_read_only",
-      "schema": "cutright.mcp_tool/v1"
+        }
+      }
     },
-    "export.publish": {
-      "capability_id": "export.publish",
-      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
-      "input_schema": {
+    "cutright.evidence.query": {
+      "operation": "cutright.evidence.query",
+      "handler_id": "handler.evidence.query",
+      "purpose": "Return bounded editorial evidence",
+      "execution_mode": "read",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
         "additionalProperties": false,
         "properties": {
-          "revision_id": {
-            "type": "string"
-          },
-          "target": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "revision_id",
-          "target"
-        ],
-        "type": "object"
-      },
-      "kind": "mutation",
-      "owner_component": "video-jobs",
-      "permission_set": "pset.render_jobs",
-      "schema": "cutright.mcp_tool/v1"
-    },
-    "pack.manage": {
-      "capability_id": "pack.manage",
-      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
-      "input_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "op": {
-            "enum": [
-              "install",
-              "activate",
-              "repair",
-              "rollback",
-              "offline"
-            ]
-          },
-          "pack_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "op"
-        ],
-        "type": "object"
-      },
-      "kind": "mutation",
-      "owner_component": "video-runtime",
-      "permission_set": "pset.pack_manager",
-      "schema": "cutright.mcp_tool/v1"
-    },
-    "render.dispatch": {
-      "capability_id": "render.dispatch",
-      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
-      "input_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "preset_id": {
-            "type": "string"
-          },
-          "revision_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "revision_id",
-          "preset_id"
-        ],
-        "type": "object"
-      },
-      "kind": "mutation",
-      "owner_component": "video-jobs",
-      "permission_set": "pset.render_jobs",
-      "schema": "cutright.mcp_tool/v1"
-    },
-    "settings.write": {
-      "capability_id": "settings.write",
-      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
-      "input_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "key": {
-            "type": "string"
-          },
-          "value": {
-            "type": [
-              "string",
-              "number",
-              "boolean",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "key",
-          "value"
-        ],
-        "type": "object"
-      },
-      "kind": "mutation",
-      "owner_component": "video-project",
-      "permission_set": "pset.pack_manager",
-      "schema": "cutright.mcp_tool/v1"
-    },
-    "timeline.cut": {
-      "capability_id": "timeline.cut",
-      "description": "Mutation capability generated from the canonical registry (CR-V2-B2-014).",
-      "input_schema": {
-        "additionalProperties": false,
-        "properties": {
-          "ranges": {
-            "type": "array"
-          },
-          "revision_id": {
-            "type": "string"
-          },
-          "targets": {
+          "items": {
             "type": "array"
           }
-        },
-        "required": [
-          "revision_id",
-          "targets"
-        ],
-        "type": "object"
-      },
-      "kind": "mutation",
-      "owner_component": "video-actions",
-      "permission_set": "pset.editorial_engine",
-      "schema": "cutright.mcp_tool/v1"
+        }
+      }
     },
-    "timeline.read": {
-      "capability_id": "timeline.read",
-      "description": "Read capability generated from the canonical registry (CR-V2-B2-014).",
-      "input_schema": {
+    "cutright.job.cancel": {
+      "operation": "cutright.job.cancel",
+      "handler_id": "handler.job.cancel",
+      "purpose": "Cancel work while preserving state",
+      "execution_mode": "write_process",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
         "additionalProperties": false,
         "properties": {
-          "revision_id": {
-            "type": "string"
-          },
-          "track_id": {
+          "status": {
             "type": "string"
           }
-        },
-        "required": [
-          "revision_id"
-        ],
-        "type": "object"
-      },
-      "kind": "read",
-      "owner_component": "video-state",
-      "permission_set": "pset.evidence_read_only",
-      "schema": "cutright.mcp_tool/v1"
+        }
+      }
+    },
+    "cutright.job.input": {
+      "operation": "cutright.job.input",
+      "handler_id": "handler.job.input",
+      "purpose": "Resolve one typed input requirement",
+      "execution_mode": "write",
+      "idempotency": "retry_safe",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "cutright.job.result": {
+      "operation": "cutright.job.result",
+      "handler_id": "handler.job.result",
+      "purpose": "Return outcome artifacts and receipts",
+      "execution_mode": "read",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "artifacts": {
+            "type": "array"
+          },
+          "receipts": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "cutright.job.resume": {
+      "operation": "cutright.job.resume",
+      "handler_id": "handler.job.resume",
+      "purpose": "Resume from a verified checkpoint",
+      "execution_mode": "write_process",
+      "idempotency": "retry_safe",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "cutright.job.status": {
+      "operation": "cutright.job.status",
+      "handler_id": "handler.job.status",
+      "purpose": "Return grounded task progress",
+      "execution_mode": "read",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "cutright.project.open_or_create": {
+      "operation": "cutright.project.open_or_create",
+      "handler_id": "handler.project.open_or_create",
+      "purpose": "Bind immutable sources to a project",
+      "execution_mode": "write",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "revision_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "cutright.render.finish": {
+      "operation": "cutright.render.finish",
+      "handler_id": "handler.render.finish",
+      "purpose": "Render a selected variant and run QA",
+      "execution_mode": "write_process",
+      "idempotency": "retry_safe",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string"
+          }
+        }
+      }
     }
+  },
+  "surfaces": {
+    "typescript": [
+      {
+        "operation": "cutright.edit.commit",
+        "handler_id": "handler.edit.commit"
+      },
+      {
+        "operation": "cutright.edit.prepare",
+        "handler_id": "handler.edit.prepare"
+      },
+      {
+        "operation": "cutright.edit.preview",
+        "handler_id": "handler.edit.preview"
+      },
+      {
+        "operation": "cutright.evidence.query",
+        "handler_id": "handler.evidence.query"
+      },
+      {
+        "operation": "cutright.job.cancel",
+        "handler_id": "handler.job.cancel"
+      },
+      {
+        "operation": "cutright.job.input",
+        "handler_id": "handler.job.input"
+      },
+      {
+        "operation": "cutright.job.result",
+        "handler_id": "handler.job.result"
+      },
+      {
+        "operation": "cutright.job.resume",
+        "handler_id": "handler.job.resume"
+      },
+      {
+        "operation": "cutright.job.status",
+        "handler_id": "handler.job.status"
+      },
+      {
+        "operation": "cutright.project.open_or_create",
+        "handler_id": "handler.project.open_or_create"
+      },
+      {
+        "operation": "cutright.render.finish",
+        "handler_id": "handler.render.finish"
+      }
+    ],
+    "cli": [
+      {
+        "operation": "cutright.edit.commit",
+        "command": "edit commit"
+      },
+      {
+        "operation": "cutright.edit.prepare",
+        "command": "edit prepare"
+      },
+      {
+        "operation": "cutright.edit.preview",
+        "command": "edit preview"
+      },
+      {
+        "operation": "cutright.evidence.query",
+        "command": "evidence query"
+      },
+      {
+        "operation": "cutright.job.cancel",
+        "command": "job cancel"
+      },
+      {
+        "operation": "cutright.job.input",
+        "command": "job input"
+      },
+      {
+        "operation": "cutright.job.result",
+        "command": "job result"
+      },
+      {
+        "operation": "cutright.job.resume",
+        "command": "job resume"
+      },
+      {
+        "operation": "cutright.job.status",
+        "command": "job status"
+      },
+      {
+        "operation": "cutright.project.open_or_create",
+        "command": "project open_or_create"
+      },
+      {
+        "operation": "cutright.render.finish",
+        "command": "render finish"
+      }
+    ],
+    "schemas": [
+      {
+        "operation": "cutright.edit.commit",
+        "schema": "schemas/agent/operation-contract.schema.v1.json"
+      },
+      {
+        "operation": "cutright.edit.prepare",
+        "schema": "schemas/agent/operation-contract.schema.v1.json"
+      },
+      {
+        "operation": "cutright.edit.preview",
+        "schema": "schemas/agent/operation-contract.schema.v1.json"
+      },
+      {
+        "operation": "cutright.evidence.query",
+        "schema": "schemas/agent/operation-contract.schema.v1.json"
+      },
+      {
+        "operation": "cutright.job.cancel",
+        "schema": "schemas/agent/operation-contract.schema.v1.json"
+      },
+      {
+        "operation": "cutright.job.input",
+        "schema": "schemas/agent/operation-contract.schema.v1.json"
+      },
+      {
+        "operation": "cutright.job.result",
+        "schema": "schemas/agent/operation-contract.schema.v1.json"
+      },
+      {
+        "operation": "cutright.job.resume",
+        "schema": "schemas/agent/operation-contract.schema.v1.json"
+      },
+      {
+        "operation": "cutright.job.status",
+        "schema": "schemas/agent/operation-contract.schema.v1.json"
+      },
+      {
+        "operation": "cutright.project.open_or_create",
+        "schema": "schemas/agent/operation-contract.schema.v1.json"
+      },
+      {
+        "operation": "cutright.render.finish",
+        "schema": "schemas/agent/operation-contract.schema.v1.json"
+      }
+    ],
+    "conformance": [
+      {
+        "operation": "cutright.edit.commit",
+        "handler_id": "handler.edit.commit"
+      },
+      {
+        "operation": "cutright.edit.prepare",
+        "handler_id": "handler.edit.prepare"
+      },
+      {
+        "operation": "cutright.edit.preview",
+        "handler_id": "handler.edit.preview"
+      },
+      {
+        "operation": "cutright.evidence.query",
+        "handler_id": "handler.evidence.query"
+      },
+      {
+        "operation": "cutright.job.cancel",
+        "handler_id": "handler.job.cancel"
+      },
+      {
+        "operation": "cutright.job.input",
+        "handler_id": "handler.job.input"
+      },
+      {
+        "operation": "cutright.job.result",
+        "handler_id": "handler.job.result"
+      },
+      {
+        "operation": "cutright.job.resume",
+        "handler_id": "handler.job.resume"
+      },
+      {
+        "operation": "cutright.job.status",
+        "handler_id": "handler.job.status"
+      },
+      {
+        "operation": "cutright.project.open_or_create",
+        "handler_id": "handler.project.open_or_create"
+      },
+      {
+        "operation": "cutright.render.finish",
+        "handler_id": "handler.render.finish"
+      }
+    ]
   }
 }

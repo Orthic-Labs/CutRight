@@ -20,6 +20,9 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+#[path = "../../video-runtime/src/media.rs"]
+mod packed_media;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 #[value(rename_all = "lower")]
 pub enum DoctorProfile {
@@ -254,24 +257,50 @@ fn resolve_bin(env_var: &str, default_name: &str) -> PathBuf {
 }
 
 fn check_ffmpeg_execute() -> Value {
-    version_check(
-        "core.ffmpeg.execute",
-        resolve_bin("CUTRIGHT_FFMPEG", "ffmpeg"),
-        "ffmpeg version",
-        "install ffmpeg (e.g. `brew install ffmpeg`) or set CUTRIGHT_FFMPEG",
-    )
+    match packed_media::resolve() {
+        Ok(tools) => version_check(
+            "core.ffmpeg.execute",
+            tools.ffmpeg,
+            tools.mode,
+            "ffmpeg version",
+            "install signed CutRight media pack",
+        ),
+        Err(error) => check(
+            "core.ffmpeg.execute",
+            true,
+            "missing",
+            json!({"error": error}),
+            Some("install signed CutRight media pack"),
+        ),
+    }
 }
 
 fn check_ffprobe_execute() -> Value {
-    version_check(
-        "core.ffprobe.execute",
-        resolve_bin("CUTRIGHT_FFPROBE", "ffprobe"),
-        "ffprobe version",
-        "install ffmpeg/ffprobe (e.g. `brew install ffmpeg`) or set CUTRIGHT_FFPROBE",
-    )
+    match packed_media::resolve() {
+        Ok(tools) => version_check(
+            "core.ffprobe.execute",
+            tools.ffprobe,
+            tools.mode,
+            "ffprobe version",
+            "install signed CutRight media pack",
+        ),
+        Err(error) => check(
+            "core.ffprobe.execute",
+            true,
+            "missing",
+            json!({"error": error}),
+            Some("install signed CutRight media pack"),
+        ),
+    }
 }
 
-fn version_check(id: &str, bin: PathBuf, expect_prefix: &str, remediation: &str) -> Value {
+fn version_check(
+    id: &str,
+    bin: PathBuf,
+    mode: &str,
+    expect_prefix: &str,
+    remediation: &str,
+) -> Value {
     let mut cmd = Command::new(&bin);
     cmd.arg("-version");
     match run_with_timeout(cmd, DEFAULT_TIMEOUT) {
@@ -283,7 +312,7 @@ fn version_check(id: &str, bin: PathBuf, expect_prefix: &str, remediation: &str)
                     id,
                     true,
                     "ok",
-                    json!({ "bin": bin, "version_line": first_line.trim() }),
+                    json!({ "bin": bin, "version_line": first_line.trim(), "resolution": mode }),
                     None,
                 )
             } else {
@@ -291,7 +320,7 @@ fn version_check(id: &str, bin: PathBuf, expect_prefix: &str, remediation: &str)
                     id,
                     true,
                     "degraded",
-                    json!({ "bin": bin, "version_line": first_line.trim() }),
+                    json!({ "bin": bin, "version_line": first_line.trim(), "resolution": mode }),
                     Some("the resolved binary ran but did not report the expected version banner"),
                 )
             }
@@ -313,10 +342,18 @@ fn version_check(id: &str, bin: PathBuf, expect_prefix: &str, remediation: &str)
     }
 }
 
-/// Resolve the repo root so doctor can find `schemas/` and the studio
-/// bundle in a dev checkout. `CUTRIGHT_REPO_ROOT` overrides for installed
-/// binaries where the compile-time manifest dir no longer applies.
+fn installed_resource_root(executable: &Path) -> Option<PathBuf> {
+    let resources = executable.parent()?.join("../Resources");
+    resources.join("schemas").is_dir().then_some(resources)
+}
+
+/// Resolve installed resources first, then an explicit development checkout.
 fn repo_root() -> PathBuf {
+    if let Ok(executable) = std::env::current_exe() {
+        if let Some(root) = installed_resource_root(&executable) {
+            return root;
+        }
+    }
     if let Some(root) = std::env::var_os("CUTRIGHT_REPO_ROOT") {
         return PathBuf::from(root);
     }
@@ -702,11 +739,15 @@ fn render_checks() -> Vec<Value> {
 }
 
 fn ffmpeg_bin() -> PathBuf {
-    resolve_bin("CUTRIGHT_FFMPEG", "ffmpeg")
+    packed_media::resolve()
+        .map(|tools| tools.ffmpeg)
+        .unwrap_or_else(|_| PathBuf::from("runtime_pack_unavailable"))
 }
 
 fn ffprobe_bin() -> PathBuf {
-    resolve_bin("CUTRIGHT_FFPROBE", "ffprobe")
+    packed_media::resolve()
+        .map(|tools| tools.ffprobe)
+        .unwrap_or_else(|_| PathBuf::from("runtime_pack_unavailable"))
 }
 
 fn list_encoders() -> io::Result<String> {
@@ -1289,4 +1330,25 @@ fn write_receipt_file(path: &Path, report: &Value) -> io::Result<()> {
         }
     }
     fs::write(path, serde_json::to_vec_pretty(&receipt)?)
+}
+
+#[cfg(test)]
+mod installed_resource_tests {
+    use super::*;
+
+    #[test]
+    fn app_bundle_resources_precede_checkout_paths() {
+        let root = tempfile::tempdir().expect("tempdir");
+        let executable = root
+            .path()
+            .join("CutRight Studio.app/Contents/MacOS/videoctl");
+        fs::create_dir_all(executable.parent().expect("MacOS dir")).expect("MacOS");
+        fs::create_dir_all(
+            root.path()
+                .join("CutRight Studio.app/Contents/Resources/schemas"),
+        )
+        .expect("schemas");
+        let resources = installed_resource_root(&executable).expect("installed resources");
+        assert!(resources.ends_with("Contents/MacOS/../Resources"));
+    }
 }

@@ -27,9 +27,8 @@
 //! - no model download or network fallback of any kind.
 
 use serde_json::Value;
-use std::env;
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::Mutex;
@@ -142,15 +141,26 @@ fn unique_id(prefix: &str) -> String {
 
 /// Resolve the HeardRight engine location (§9.3, v2 standalone boundary).
 ///
-/// The speech engine ships inside the signed CutRight speech runtime pack.
-/// Release code never resolves it through environment overrides,
-/// installed-location probing, or bare-name lookup: until the pack is
-/// materialized this returns the typed
-/// [`ProviderError::RuntimePackNotInstalled`] degraded state. The pack
-/// installer constructs a session from the pack-provided engine path
-/// explicitly via [`HeardRightClient::with_engine`].
+/// Resolve the engine only from a pack directory relative to this binary.
+/// No environment override, sibling checkout, PATH lookup, or download is
+/// permitted. Missing or non-file payloads remain a typed degraded state.
 pub fn discover_engine() -> Result<PathBuf, ProviderError> {
-    Err(ProviderError::RuntimePackNotInstalled)
+    let executable = std::env::current_exe().map_err(ProviderError::Start)?;
+    let Some(bundle_root) = executable.parent() else {
+        return Err(ProviderError::RuntimePackNotInstalled);
+    };
+    discover_engine_from_bundle_root(bundle_root)
+}
+
+fn discover_engine_from_bundle_root(bundle_root: &Path) -> Result<PathBuf, ProviderError> {
+    let candidates = [
+        bundle_root.join("packs/speech/bin/heardright-engine"),
+        bundle_root.join("../packs/speech/bin/heardright-engine"),
+    ];
+    candidates
+        .into_iter()
+        .find(|path| path.is_file())
+        .ok_or(ProviderError::RuntimePackNotInstalled)
 }
 
 /// One supervised HeardRight engine session: spawn, handshake, and a
@@ -165,16 +175,18 @@ pub(crate) struct Session {
 
 impl Session {
     fn spawn(engine: &std::path::Path) -> Result<Self, ProviderError> {
-        // HeardRight owns model discovery, runtime loading, and platform
-        // backend choice. CutRight passes no model-directory paths; the
-        // HR_ASR_BACKEND value is a policy hint, not an internal model
-        // location. The environment is an explicit allow-list (§10.1): only
-        // PATH (needed to resolve any dynamic libraries/tools HeardRight
-        // itself shells out to) and the one policy hint are passed through.
-        let mut env_allow = vec![("HR_ASR_BACKEND".to_string(), "parakeet-tdt".to_string())];
-        if let Ok(path) = env::var("PATH") {
-            env_allow.push(("PATH".to_string(), path));
-        }
+        // The signed pack owns engine + models. Pass only pack-relative model
+        // roots and fixed backend policy; no PATH, download, or user location.
+        let pack_bin = engine.parent().unwrap_or_else(|| std::path::Path::new("."));
+        let models = pack_bin.join("models/parakeet-tdt-v3");
+        let env_allow = vec![
+            ("HR_ASR_BACKEND".to_string(), "parakeet-tdt".to_string()),
+            ("HR_ASR_COREML".to_string(), "0".to_string()),
+            (
+                "HR_MODELS_DIR".to_string(),
+                models.to_string_lossy().into_owned(),
+            ),
+        ];
         let spec = ProcessSpec {
             executable: engine.to_path_buf(),
             args: Vec::new(),
@@ -537,5 +549,23 @@ impl HeardRightClient {
             }
             Err(other) => Err(other),
         }
+    }
+}
+
+#[cfg(test)]
+mod discovery_tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn missing_runtime_pack_reports_the_typed_degraded_state() {
+        let root = std::env::temp_dir().join(unique_id("cutright-heardright-discovery"));
+        fs::create_dir_all(&root).expect("create isolated bundle root");
+
+        let error = discover_engine_from_bundle_root(&root)
+            .expect_err("isolated bundle root must report missing runtime pack");
+        assert!(matches!(error, ProviderError::RuntimePackNotInstalled));
+
+        fs::remove_dir_all(root).expect("remove isolated bundle root");
     }
 }

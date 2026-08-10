@@ -112,6 +112,75 @@ pub enum Command {
         #[command(flatten)]
         args: ApplyArgs,
     },
+    /// Register or inspect CutRight's provider-native MCP entry.
+    Agent {
+        #[command(subcommand)]
+        command: AgentCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum AgentCommand {
+    Integrate(AgentIntegrateArgs),
+    Status(AgentStatusArgs),
+    Remove(AgentRemoveArgs),
+    Qualify(AgentQualifyArgs),
+    Terminal {
+        #[command(subcommand)]
+        command: AgentTerminalCommand,
+    },
+}
+
+#[derive(Debug, Args)]
+pub struct AgentQualifyArgs {
+    #[arg(long)]
+    pub all: bool,
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum AgentTerminalCommand {
+    Attach(AgentTerminalAttachArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct AgentTerminalAttachArgs {
+    pub session_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct AgentIntegrateArgs {
+    #[arg(long)]
+    pub provider: String,
+    #[arg(long)]
+    pub config: PathBuf,
+    #[arg(long)]
+    pub binary: PathBuf,
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct AgentStatusArgs {
+    #[arg(long, default_value = "claude-code")]
+    pub provider: String,
+    #[arg(long)]
+    pub config: Option<PathBuf>,
+    #[arg(long)]
+    pub json: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct AgentRemoveArgs {
+    #[arg(long)]
+    pub provider: String,
+    #[arg(long)]
+    pub config: PathBuf,
+    #[arg(long)]
+    pub binary: PathBuf,
+    #[arg(long)]
+    pub json: bool,
 }
 
 #[derive(Debug, Args)]
@@ -189,6 +258,11 @@ pub enum BenchCommand {
         boundaries: usize,
         #[arg(long, default_value_t = 40)]
         padding_ms: i64,
+    },
+    Playback {
+        project: PathBuf,
+        #[arg(long, default_value_t = 20)]
+        runs: usize,
     },
 }
 

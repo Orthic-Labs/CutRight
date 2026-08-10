@@ -1,8 +1,8 @@
 //! Privacy-safe logs and telemetry-off defaults — integration tests.
 
 use video_security::privacy::{
-    build_export, build_log_entry, clear_diagnostics, network_attempt_record, redact,
-    telemetry_off, LogBuffer, NetworkAttemptCounter,
+    build_export, build_log_entry, clear_diagnostics, network_attempt_count,
+    network_attempt_record, redact, telemetry_off, LogBuffer,
 };
 
 #[test]
@@ -39,13 +39,13 @@ fn redact_strips_transcripts_and_paths_and_keys() {
 
 #[test]
 fn network_attempt_counter_is_visible_with_blocked_network() {
-    let before = NetworkAttemptCounter::default().attempts;
-    assert_eq!(before, 0);
+    // Read the live atomic, not NetworkAttemptCounter::default(), which is
+    // always zero. Other tests in this binary share the counter, so assert a
+    // delta rather than an absolute value.
+    let before = network_attempt_count();
     network_attempt_record();
     network_attempt_record();
-    // Direct count must reflect increments:
-    let now = NetworkAttemptCounter::default();
-    assert!(now.attempts >= 0);
+    assert!(network_attempt_count() >= before + 2);
 }
 
 #[test]

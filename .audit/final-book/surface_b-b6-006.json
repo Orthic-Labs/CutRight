@@ -1,0 +1,51 @@
+{
+  "task": "CR-F-B6-006",
+  "title": "build-the-studio-agent-panel-terminal-and-daemon-client",
+  "status": "checkpoint_foreign_clippy_gate",
+  "commit_message": "CR-F-B6-006: build-the-studio-agent-panel-terminal-and-daemon-client",
+  "scope": {
+    "files": 7,
+    "changed_lines": 108,
+    "paths": [
+      "apps/studio/src/components/AgentPanel.tsx",
+      "apps/studio/src/components/AgentTerminal.tsx",
+      "apps/studio/src/hooks/useAgentSession.ts",
+      "apps/studio/src/contracts/agent.ts",
+      "apps/studio/src-tauri/src/daemon.rs",
+      "apps/studio/src-tauri/src/main.rs",
+      "apps/studio/src/modes/SettingsMode.tsx"
+    ]
+  },
+  "acceptance": {
+    "focused": {
+      "command": "pnpm --dir apps/studio test",
+      "result": "pass",
+      "test_files": 21,
+      "tests": 110
+    },
+    "fmt": {
+      "command": "cargo fmt --all --check",
+      "result": "pass",
+      "toolchain": "rustc 1.96.0-aarch64-apple-darwin"
+    },
+    "workspace_clippy": {
+      "command": "cargo clippy --workspace --all-targets -- -D warnings",
+      "result": "blocked_by_foreign_video_agent_edits",
+      "foreign_paths": [
+        "crates/video-agent/src/mcp.rs",
+        "crates/video-agent/src/tools.rs",
+        "crates/video-agent/src/bin/cutright-mcp.rs"
+      ],
+      "foreign_errors": [
+        "McpAdapter lacks Debug for unwrap_err",
+        "dead-code errors in foreign MCP adapter/bin"
+      ]
+    }
+  },
+  "provider_boundary": {
+    "allowed": ["user-installed Claude Code", "user-installed Codex"],
+    "bundled_or_local_llm": false,
+    "offline_semantic_direction_claim": false
+  },
+  "foreign_edits": "preserved_and_not_staged"
+}

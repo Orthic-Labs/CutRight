@@ -11,22 +11,53 @@ in git history at the parent of `fix(status): rewrite STATUS.md as
 v2-anchored as-built status`.
 
 ```yaml
-as_of_commit: <filled at v2 RC seal>
+as_of_commit: 5c956574128b1fca3286d1490863484090cca43b   # CR-F-B7-001, full qualification matrix
 dispatch_package: CutRight-v2 standalone implementation dispatch (frozen 2026-08-06)
 dispatch_status: pass
 task_count: 189
 task_status: 189/189 done (1 multi-commit split, 1 orchestrator variance logged)
 post_execution_fixes: 3 (video-agent registration, video-jobs DAG, video-agent MCP IPv6)
 audit_cleanup_fixes: 8 (this audit round)
-head: <filled at v2 RC seal>
-quality_gate: source readiness checks pass; full build gate deferred to build phase
-clean_machine_proof: harness implemented; fresh-user qualification deferred to build phase
-ci: none                                          # scripts/gate.sh is the contract
+head: 5c956574128b1fca3286d1490863484090cca43b           # main, 2026-08-09
+quality_gate: pass                                 # CR-F-B1-004, .audit/final-book/seal-b1-004.json, exit 0 at fa36a3c
+clean_machine_proof: NOT PROVEN                    # see fresh_os_user_proof_pending below — the harness reports a false pass
+ci: none                                           # scripts/gate.sh is the contract
+signed_target: pass                                # CR-F-B1-005, cutright-0.1.5-b6a782b0, notarized + stapled, arm64 + x86_64
 known_blockers:
-  - fresh_os_user_proof_pending                    # requires build-phase execution on a fresh OS user
-  - clean_candidate_commit_pending                 # current repaired source remains an uncommitted worktree
-  - signed_target_qualification_pending            # requires build, seal, and target qualification
+  - fresh_os_user_proof_pending                    # CR-F-B1-003 TRUE_BLOCKER; needs interactive admin auth to provision a fresh macOS user
+playback_decision: measured                        # CR-F-B8-003, avplayer-latency.json v2 at 23a333d; was decided with no measurement at all
 ```
+
+**`CR-F-B8-003` is now evidenced, and the decision did not change.** `videoctl bench
+playback` did not exist when B8-003 chose `retain_html_video`, so the v1 receipt recorded
+a decision with no measurement behind it and an `accessibility: not_measured` field. Both
+player surfaces were measured on one shared 60s 1080p30 fixture: AVPlayer seek p95 77.0ms
+against HTMLVideoElement 26.6ms, and AVPlayer load p95 19.2ms against 89.2ms. Seek
+dominates timeline editing, so HTML video is retained on evidence. Two things stay open —
+the fixture is synthetic rather than representative project media, and the two harnesses
+use different completion signals, so the 189% seek gap is directionally sound but not
+precise. The v1 receipt's `CUTRIGHT_NATIVE_PLAYER_SPIKE=1` gate does not exist in the
+repository and has been dropped.
+
+**Accessibility is a real open gap in the retained surface.** Studio has no
+`<track kind="captions">` anywhere and the player exposes no accessible name, so the
+promotion threshold's accessibility limb is unmet regardless of which player ships.
+Keyboard operation works through the custom controls in `src/components/Transport.tsx`.
+
+**One blocker left, and it does not look like one from the outside.**
+`CR-F-B1-003` (fresh-OS-user clean-machine proof) is the only open item. Its harness
+**exits 0 and reports `overall_passed: true`**, but the recorded acceptance
+interpretation is `false_positive` — see `.audit/final-book/seal-b1-003.json`.
+Fresh-user isolation itself passed; the acceptance assertion behind the green
+result does not hold. Do not treat a green run of that harness as the proof.
+Provisioning the fresh user needs interactive administrator authentication, which
+no agent can supply.
+
+**Two blockers were cleared and the entries above were stale.** `seal-close.json`
+(2026-08-08 16:43Z) records B1-004 and B1-005 as blocked; both were superseded by
+later runs — `seal-b1-004.json` (2026-08-09 00:07Z, pass) and `seal-b1-005.json`
+(2026-08-09, pass). Read those receipts in timestamp order, not by filename:
+`seal-b1-004-attempt-2.json` is the older blocked run despite its name.
 
 ## v2 architecture — what shipped
 

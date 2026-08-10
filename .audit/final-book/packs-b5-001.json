@@ -1,0 +1,56 @@
+{
+  "task_id": "CR-F-B5-001",
+  "result": "pass",
+  "scope": {
+    "owned_paths": [
+      "vendor/heardright/cutright-adapter/",
+      "runtime/packs/speech/",
+      "crates/video-runtime/src/speech.rs",
+      "crates/video-providers/src/heardright.rs",
+      ".audit/final-book/packs-b5-001.json"
+    ],
+    "changed_files_text": 8,
+    "changed_lines_text": 883,
+    "binary_payload_files": 9,
+    "ceiling": {"files": 8, "lines": 1400},
+    "ceiling_status": "pass"
+  },
+  "payload": {
+    "pack_sha256": "ee9d40ce645aafbfdd127225b4c75b09c12de5f828fbdeb180c1648daccf8b41",
+    "engine_sha256": "1b2852e03663a148363883cd304abc5fcc9db01504cc58a7445c9259c876f815",
+    "architectures": ["arm64", "x86_64"],
+    "heardright_revision": "b60bff947f12ffa9d25e94ad27e8ff30db006a24",
+    "sherpa_onnx_revision": "142807252687d81b40d6315f23470a1512a00de3",
+    "resolution": "signed-pack-relative-only"
+  },
+  "acceptance": {
+    "three_real_clip_transcriptions": {
+      "status": "pass",
+      "clips": 3,
+      "formats": "mono 16-bit PCM WAVE at 16000 Hz",
+      "word_counts": [9, 9, 8],
+      "timed_words": true,
+      "evidence": "/tmp/cutright-b5-001-acceptance/results.jsonl"
+    },
+    "absent_pack": {
+      "status": "pass",
+      "error": "runtime_pack_unavailable",
+      "fallback": false,
+      "evidence": "/tmp/cutright-b5-001-acceptance/missing.jsonl"
+    },
+    "corrupt_pack": {
+      "status": "pass",
+      "error": "runtime_pack_unavailable",
+      "fallback": false,
+      "evidence": "/tmp/cutright-b5-001-acceptance/corrupt.jsonl"
+    }
+  },
+  "verification": {
+    "pack_json": "pass",
+    "adapter_clang_werror": "pass",
+    "speech_rustfmt": "pass",
+    "video_providers_tests": "pass: 21",
+    "videoctl_doctor": "pass: core profile status ok",
+    "book_doctor_command_note": "videoctl emits JSON by default; documented doctor --json flag is unsupported"
+  }
+}

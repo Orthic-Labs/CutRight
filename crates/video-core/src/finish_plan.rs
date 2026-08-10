@@ -111,9 +111,8 @@ mod tests {
 
     #[test]
     fn rejects_missing_audit() {
-        let err = CompiledFinishPlanCompiler::compile("cp_1", "r", "c", "m", "a", "")
-            .err()
-            .expect("err");
+        let err =
+            CompiledFinishPlanCompiler::compile("cp_1", "r", "c", "m", "a", "").expect_err("err");
         assert!(matches!(err, CompiledFinishPlanError::MissingSubplan(_)));
     }
 }

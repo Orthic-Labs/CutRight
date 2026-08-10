@@ -32,8 +32,6 @@ use crate::project_scope::canonical_project_root;
 pub struct ApplyOutcome {
     /// The executor's typed report, serialised to JSON for the frontend.
     pub report: ExecutorReport,
-    /// True when the report represents an applied (mutating) batch.
-    pub applied: bool,
 }
 
 /// Load the canonical capability registry from disk, resolving the registry
@@ -112,8 +110,7 @@ pub(crate) fn run_apply(
         .execute(&batch, &registry, &guard, None)
         .map_err(|error| format!("apply: executor failed: {error}"))?;
 
-    let applied = report.is_applied();
-    Ok(ApplyOutcome { report, applied })
+    Ok(ApplyOutcome { report })
 }
 
 /// Tauri command entry point. Returns the executor report as JSON so the
@@ -183,7 +180,7 @@ mod tests {
         let json = serde_json::to_value(&batch).unwrap();
 
         let outcome = run_apply(temp.path().to_string_lossy().into_owned(), json).unwrap();
-        assert!(outcome.applied || outcome.report.is_dry_run() || outcome.report.is_failed());
+        assert!(outcome.report.is_dry_run() || outcome.report.is_failed());
     }
 
     #[test]

@@ -1,11 +1,14 @@
-// apps/studio/src/components/AgentPanel.tsx — CR-V2-B6-018.
-import type { ReactNode } from "react";
-export function AgentPanel(props: { session_id: string; children?: ReactNode }) {
-  return (
-    <section className="agent-panel" aria-label="Agent">
-      <h2>Agent</h2>
-      <code>{props.session_id}</code>
-      {props.children}
-    </section>
-  );
+import { useMemo, useState } from "react";
+import { useAgentSession } from "../hooks/useAgentSession";
+import type { AgentProvider, AgentRoute } from "../contracts/agent";
+import { AgentTerminal } from "./AgentTerminal";
+
+export function AgentPanel({ projectPath }: { projectPath: string }) {
+  const { routes, session, error, busy, start, pause, resume, cancel } = useAgentSession(projectPath);
+  const [goal, setGoal] = useState(""); const [chosen, setChosen] = useState<AgentProvider | "">("");
+  const ready = useMemo(() => routes.filter((route) => route.guided_qualified), [routes]);
+  const selected: AgentRoute | undefined = ready.find((route) => route.provider === chosen) ?? (ready.length === 1 ? ready[0] : undefined);
+  const canStart = Boolean(goal.trim() && selected && !busy);
+  const submit = async () => { if (canStart && selected) await start(goal.trim(), selected.provider); };
+  return <section className="agent-panel" aria-label="Guided Chat Agent"><header><h2>Guided Chat</h2><span className="agent-provider-badge">{session?.provider ?? "No provider"}</span></header>{!ready.length && <p role="status">Guided Chat unavailable: qualify Claude Code or Codex in Settings.</p>}{ready.length > 1 && !chosen && <fieldset><legend>Choose provider</legend>{ready.map((route) => <label key={route.provider}><input type="radio" name="agent-provider" value={route.provider} onChange={() => setChosen(route.provider)} /> {route.provider}</label>)}</fieldset>}{ready.length === 1 && <p role="status">Ready: {ready[0].provider}</p>}<label htmlFor="agent-goal">Goal</label><textarea id="agent-goal" value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="Describe editorial goal" disabled={!ready.length || busy} /><div className="agent-actions"><button type="button" onClick={() => void submit()} disabled={!canStart}>Start</button>{session?.status === "running" && <button type="button" onClick={() => void pause()} disabled={busy}>Pause</button>}{session?.status === "paused" && <button type="button" onClick={() => void resume()} disabled={busy}>Resume</button>}{session && !["completed", "failed"].includes(session.status) && <button type="button" onClick={() => void cancel()} disabled={busy}>Cancel</button>}</div>{error && <p role="alert">{error}</p>}{session && <><p className="agent-plan">{session.plan ?? "Plan pending"}</p><ol className="agent-activity">{session.events.map((event) => <li key={event.id}>{event.text}</li>)}</ol>{session.approval && <div role="alert">Approval required: {session.approval.action}</div>}<progress max={1} value={session.progress ?? 0} aria-label="Agent progress" />{session.result && <output>{session.result}</output>}<AgentTerminal bytes={[]} attached={false} promptVisible={false} exitCode={undefined} onAttach={() => undefined} onDetach={() => undefined} /></>}</section>;
 }

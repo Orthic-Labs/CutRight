@@ -1,6 +1,6 @@
 {
   "name": "cutright-studio",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.18.0",
@@ -14,6 +14,8 @@
     "qa:browser:stop": "bash scripts/qa-browser-stop.sh",
     "qa:functional": "node scripts/qa-functional.mjs",
     "qa:shot": "node scripts/qa-shot.mjs",
+    "bench:video-latency": "node scripts/video-latency-bench.mjs",
+    "check:mac-rpath": "bash scripts/check-macos-rpath.sh",
     "release:doctor": "right-release doctor",
     "release:build:mac": "right-release build --platform mac",
     "release:upload:patch:mac": "right-release upload --platform mac --tier patch",

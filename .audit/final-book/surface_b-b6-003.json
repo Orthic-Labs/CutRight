@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "dispatch_id": "cutright-lane-8-surface_b-2026-08-08",
+  "task_id": "CR-F-B6-003",
+  "result": "pass",
+  "commit_message": "CR-F-B6-003: add-provider-sessions-and-guided-chat",
+  "scope": {
+    "changed_files_text": 1,
+    "changed_lines_text": 279,
+    "ceiling": {"files": 8, "lines": 1400},
+    "ceiling_status": "pass",
+    "owned_paths": ["crates/video-daemon/src/provider_sessions.rs"]
+  },
+  "acceptance": {
+    "provider_selection": "pass: zero routes unavailable, one preselected, several require explicit choice",
+    "provider_failure": "pass: failure becomes input_required and automatic fallback defaults off",
+    "authority": "pass: only registered CutRight tools are allowed",
+    "durable_state_shape": "pass: goal, provider, model, plan, evidence, calls, approvals, summaries, errors, receipts; no reasoning field",
+    "cross_provider": "pass: continuation copies CutRight-owned state and excludes vendor session id",
+    "bundled_or_local_llm": "absent"
+  },
+  "verification": {
+    "cargo_test_p_video_daemon": "pass: 3 existing daemon tests",
+    "cargo_clippy_workspace_all_targets_d_warnings": "pass",
+    "cargo_fmt_all_check": "pass",
+    "compiler": "rustc 1.96.0"
+  },
+  "foreign_work": "video-agent edits remained unstaged and untouched"
+}

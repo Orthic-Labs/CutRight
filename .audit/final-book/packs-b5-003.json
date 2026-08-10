@@ -1,0 +1,37 @@
+{
+  "task_id": "CR-F-B5-003",
+  "result": "pass",
+  "scope": {
+    "changed_files": 6,
+    "changed_lines_text": 225,
+    "binary_payload_files": 2,
+    "ceiling": {"files": 6, "lines": 900},
+    "ceiling_status": "pass"
+  },
+  "pack": {
+    "sha256": "0792fcd7242d27b84d180bbfdf2d829e6ec30b2fc388431d4a0d7a49d51c5314",
+    "ffmpeg_sha256": "624df15d5d26119c75c67bccaaeba953db4eedc276dc80a68f00d8774112ca83",
+    "ffprobe_sha256": "96fadf60eae56f60d75641f1ddfdc57ac955653e92776da82a8ba09521b9ce35",
+    "version": "7.1.5",
+    "architectures": ["arm64", "x86_64"],
+    "license": "LGPL-2.1-or-later",
+    "source_snapshot_sha256": "21a780036037373edbb04a309cd383cbc65b6f5e0935f3dc296b0d2c62f683c3"
+  },
+  "acceptance": {
+    "clean_install_doctor": "pass",
+    "doctor_status": "ok",
+    "ffmpeg_resolution": "signed-pack",
+    "ffprobe_resolution": "signed-pack",
+    "release_path_lookup": false,
+    "development_override_release": false
+  },
+  "verification": {
+    "configure_policy": "pass: disable-gpl, disable-nonfree, static, no autodetect",
+    "external_dependencies": "Apple system frameworks only",
+    "tiny_h264_aac_mp4": "pass: 1 second, video and audio streams",
+    "ffprobe_json": "pass",
+    "cargo_check_videoctl": "pass",
+    "release_videoctl_build": "pass",
+    "release_clean_layout_doctor": "pass"
+  }
+}

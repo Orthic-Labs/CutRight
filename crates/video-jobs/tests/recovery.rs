@@ -7,7 +7,9 @@
 // 2. Changed input invalidates downstream stages only.
 // 3. Cancellation leaves completed verified stages reusable.
 
-use video_jobs::{CancellationToken, JobDag, RunnerOutcome, StageRecord, StageSpec, StageState};
+use video_jobs::{
+    CancellationToken, JobDag, ProjectJobStore, RunnerOutcome, StageRecord, StageSpec, StageState,
+};
 
 fn build_dag(stages: Vec<StageSpec>) -> JobDag {
     JobDag::new("j".to_string(), "recovery".to_string(), stages).unwrap()
@@ -89,4 +91,77 @@ fn pending_record_can_be_built_without_running() {
     let r = StageRecord::pending("a");
     assert_eq!(r.state, StageState::Pending);
     assert!(r.fingerprint.is_none());
+}
+
+#[test]
+fn persisted_kill_restart_reuses_record_without_invented_success() {
+    let dir = tempfile::tempdir().unwrap();
+    let dag = build_dag(vec![stage("a", vec![], serde_json::json!({}))]);
+    let mut store = ProjectJobStore::open(dir.path()).unwrap();
+    store
+        .create(video_jobs::job_record_from_dag(&dag, "restart"))
+        .unwrap();
+
+    // Process dies after recording Running. Restart must repair only this
+    // transient marker and leave success proof absent until callback completion.
+    store
+        .transact("restart", 0, |job| {
+            let stage = job.stages.get_mut("a").unwrap();
+            stage.transition(StageState::Ready).unwrap();
+            stage.transition(StageState::Running).unwrap();
+            Ok(())
+        })
+        .unwrap();
+    drop(store);
+
+    let mut reopened = ProjectJobStore::open(dir.path()).unwrap();
+    let recovered = reopened.load("restart").unwrap();
+    assert_eq!(recovered.stages["a"].state, StageState::Running);
+    assert!(recovered.receipts.is_empty());
+    let mut recovered = recovered;
+    let report = video_jobs::recover_in_place(&mut recovered);
+    assert_eq!(report.resumed_stages, vec!["a"]);
+    reopened
+        .compare_and_swap("restart", 1, {
+            recovered.revision = 2;
+            recovered
+        })
+        .unwrap();
+
+    let project_root = dir.path().to_path_buf();
+    let callback = |context: &video_jobs::StageContext| {
+        let observer = ProjectJobStore::open(&project_root).unwrap();
+        assert_eq!(
+            observer.load("restart").unwrap().stages["a"].state,
+            StageState::Running
+        );
+        Ok(video_jobs::StageOutput {
+            fingerprint: context.stage_fingerprint,
+            checkpoint: None,
+        })
+    };
+    let outcome = video_jobs::run_persisted(
+        &mut reopened,
+        &dag,
+        "restart",
+        &CancellationToken::new(),
+        &callback,
+    )
+    .unwrap();
+    assert_eq!(outcome, RunnerOutcome::Completed);
+    let final_record = reopened.load("restart").unwrap();
+    assert_eq!(final_record.stages["a"].state, StageState::Succeeded);
+    assert_eq!(final_record.receipts.len(), 1);
+    assert_eq!(final_record.receipts[0].revision + 1, final_record.revision);
+}
+
+#[test]
+fn persisted_success_without_receipt_cannot_complete() {
+    let dir = tempfile::tempdir().unwrap();
+    let dag = build_dag(vec![stage("a", vec![], serde_json::json!({}))]);
+    let mut store = ProjectJobStore::open(dir.path()).unwrap();
+    let mut record = video_jobs::job_record_from_dag(&dag, "unreceipted");
+    record.stages.get_mut("a").unwrap().state = StageState::Succeeded;
+    // Store itself rejects an unreceipted success before it reaches disk.
+    assert!(store.create(record).is_err());
 }

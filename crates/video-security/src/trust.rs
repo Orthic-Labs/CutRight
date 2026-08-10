@@ -139,14 +139,16 @@ pub fn compute_trust(inputs: &TrustInputs) -> TrustComputation {
         }
     }
     let overall = classify_overall(
-        sources_ok,
-        revisions_ok,
-        actions_ok,
-        jobs_ok,
-        renders_ok,
-        qa_ok,
-        skills_ok,
-        packs_ok,
+        ComponentStatus {
+            sources_ok,
+            revisions_ok,
+            actions_ok,
+            jobs_ok,
+            renders_ok,
+            qa_ok,
+            skills_ok,
+            packs_ok,
+        },
         &failures,
     );
     let can_finalize = matches!(overall, TrustOverall::Pass | TrustOverall::PassWithNotes);
@@ -167,7 +169,7 @@ pub fn compute_trust(inputs: &TrustInputs) -> TrustComputation {
     }
 }
 
-fn classify_overall(
+struct ComponentStatus {
     sources_ok: bool,
     revisions_ok: bool,
     actions_ok: bool,
@@ -176,16 +178,17 @@ fn classify_overall(
     qa_ok: bool,
     skills_ok: bool,
     packs_ok: bool,
-    failures: &[TrustFailureRecord],
-) -> TrustOverall {
-    let all_ok = sources_ok
-        && revisions_ok
-        && actions_ok
-        && jobs_ok
-        && renders_ok
-        && qa_ok
-        && skills_ok
-        && packs_ok;
+}
+
+fn classify_overall(status: ComponentStatus, failures: &[TrustFailureRecord]) -> TrustOverall {
+    let all_ok = status.sources_ok
+        && status.revisions_ok
+        && status.actions_ok
+        && status.jobs_ok
+        && status.renders_ok
+        && status.qa_ok
+        && status.skills_ok
+        && status.packs_ok;
     if all_ok {
         return TrustOverall::Pass;
     }
@@ -195,7 +198,7 @@ fn classify_overall(
     }
     // sources/canonical/revisions are non-repairable if tampered; treat
     // them as such even though the per-line repairable flag stayed true.
-    let canonical_failed = !sources_ok || !revisions_ok;
+    let canonical_failed = !status.sources_ok || !status.revisions_ok;
     if canonical_failed {
         return TrustOverall::FailNonRepairable;
     }

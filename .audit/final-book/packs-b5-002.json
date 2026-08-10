@@ -1,0 +1,31 @@
+{
+  "task_id": "CR-F-B5-002",
+  "result": "pass",
+  "scope": {
+    "changed_files_text": 5,
+    "changed_lines_text": 240,
+    "binary_payload_files": 1,
+    "ceiling": {"files": 6, "lines": 900},
+    "ceiling_status": "pass"
+  },
+  "pack": {
+    "sha256": "5fe2d7471792b891e77afdb10c7c5b4c9fc293c7c24c0d724f8f1db4c7a80b51",
+    "engine_sha256": "4e7da6d0e5771b0a4f569df07110e0337b4a62183046b9dce148c8d9dffc4044",
+    "architecture": ["arm64", "x86_64"],
+    "backend": "Apple Speech framework, on-device required",
+    "independent_from_primary": true
+  },
+  "acceptance": {
+    "destructive_word_edge_gate": "pass: verifier_unavailable remains a non-accepting benchmark state",
+    "release_python_lookup": "pass: release rlib contains no Python override, venv, or python3 discovery strings",
+    "packed_relative_resolution": "pass",
+    "no_network_mode": "pass: requiresOnDeviceRecognition=true"
+  },
+  "verification": {
+    "swift_universal_build": "pass",
+    "swift_self_test": "pass: one valid timed word",
+    "provider_debug_check": "pass",
+    "provider_release_build": "pass",
+    "provider_tests": "blocked by global RightSuite compute policy after 21 tests passed before this task"
+  }
+}

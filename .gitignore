@@ -12,6 +12,9 @@
 /apps/studio/src-tauri/gen/
 /apps/studio/src-tauri/target/
 /apps/studio/src-tauri/bin/cutright-macos-media-*
+/apps/studio/src-tauri/bin/videoctl-*
+/apps/studio/src-tauri/bin/cutright-mcp-*
+/apps/studio/src-tauri/bin/cutrightd-*
 /crates/*/target/
 /crates/*/Cargo.lock
 /tools/*/target/
@@ -20,3 +23,5 @@ __pycache__/
 .DS_Store
 # Pre-task backups left in source roots during dispatch execution
 docs/dispatch/v2/source/*.pre-*
+# Signed installer output; releases are produced by RightKit, never tracked
+*.dmg

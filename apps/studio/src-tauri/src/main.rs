@@ -1,9 +1,9 @@
 mod artifact_state;
 mod commands;
+mod daemon;
 mod decision_contract;
 mod decision_ledger;
 mod decision_store;
-mod macos_player;
 mod native_media;
 mod pack_commands;
 mod privacy_settings;
@@ -20,6 +20,7 @@ mod tests;
 
 fn main() {
     tauri::Builder::default()
+        .manage(daemon::AgentDaemonState::default())
         .manage(native_media::NativeMediaState::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
@@ -45,19 +46,6 @@ fn main() {
             commands::rightkit_logs_collect,
             commands::rightkit_logs_clear,
             commands::apply::apply_action_batch,
-            macos_player::native_player_create,
-            macos_player::native_player_load,
-            macos_player::native_player_seek,
-            macos_player::native_player_play,
-            macos_player::native_player_pause,
-            macos_player::native_player_attach,
-            macos_player::native_player_resize,
-            macos_player::native_player_detach,
-            macos_player::native_player_set_rate,
-            macos_player::native_player_set_volume,
-            macos_player::native_player_current_time,
-            macos_player::native_player_duration,
-            macos_player::native_player_destroy,
             security_scoped_bookmarks::create_security_scoped_bookmark,
             security_scoped_bookmarks::resolve_security_scoped_bookmark,
             security_scoped_bookmarks::release_security_scoped_bookmark,
@@ -67,7 +55,13 @@ fn main() {
             native_media::native_media_render_caption,
             native_media::native_media_render_preview,
             native_media::native_media_audio_features,
-            native_media::native_media_cancel
+            native_media::native_media_cancel,
+            daemon::agent_routes,
+            daemon::agent_session_start,
+            daemon::agent_session_events,
+            daemon::agent_session_pause,
+            daemon::agent_session_resume,
+            daemon::agent_session_cancel
         ])
         .run(tauri::generate_context!())
         .expect("CutRight Studio failed to start");

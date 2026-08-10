@@ -185,15 +185,15 @@ mod tests {
 
     #[test]
     fn token_overlap_identical_is_one() {
-        let a = normalize_tokens(&vec!["hello".into(), "world".into()]);
-        let b = normalize_tokens(&vec!["hello".into(), "world".into()]);
+        let a = normalize_tokens(&["hello".into(), "world".into()]);
+        let b = normalize_tokens(&["hello".into(), "world".into()]);
         assert!((token_overlap(&a, &b) - 1.0).abs() < 1e-5);
     }
 
     #[test]
     fn token_overlap_disjoint_is_zero() {
-        let a = normalize_tokens(&vec!["hello".into()]);
-        let b = normalize_tokens(&vec!["world".into()]);
+        let a = normalize_tokens(&["hello".into()]);
+        let b = normalize_tokens(&["world".into()]);
         assert_eq!(token_overlap(&a, &b), 0.0);
     }
 

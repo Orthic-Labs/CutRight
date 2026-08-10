@@ -729,14 +729,11 @@ mod tests {
         // 1, so the verifier must catch it as out-of-order.
         let mut replayed = lines[0].to_vec();
         replayed.push(b'\n');
-        let mut appended = bytes[..bytes.len() - 0].to_vec();
-        appended.extend_from_slice(&replayed);
         // The original file already ends with a newline; no extra newline is
         // needed. The replayed line still has seq=1, so when the verifier
         // expects seq=3 it will report OutOfOrder.
         let mut final_bytes = bytes.clone();
         final_bytes.extend_from_slice(&replayed);
-        let _ = appended;
         fs::write(&path, final_bytes).expect("write replayed");
 
         let report = verifier.verify(LogKind::Audit).expect("verify");

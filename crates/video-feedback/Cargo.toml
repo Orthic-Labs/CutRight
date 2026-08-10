@@ -2,7 +2,7 @@
 name = "video-feedback"
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
+license = "LicenseRef-Proprietary"
 authors = ["Orthic Labs"]
 publish = false
 description = "CutRight v2 feedback, preference, and autonomy crate"
@@ -11,7 +11,6 @@ description = "CutRight v2 feedback, preference, and autonomy crate"
 serde = { workspace = true }
 serde_json = { workspace = true }
 blake3 = { workspace = true }
-thiserror = { workspace = true }
 chrono = { workspace = true }
 
 [dev-dependencies]

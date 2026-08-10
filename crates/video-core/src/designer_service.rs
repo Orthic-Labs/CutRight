@@ -105,7 +105,7 @@ mod tests {
             evidence_refs: vec![],
             policy_ref: None,
         };
-        let err = DesignerService::plan_request(&req).err().expect("err");
+        let err = DesignerService::plan_request(&req).expect_err("err");
         assert!(matches!(err, DesignerError::RequestRejected(_)));
     }
 
@@ -131,7 +131,7 @@ mod tests {
             verdict: "pass".to_string(),
             reviewer: "designer".to_string(),
         };
-        let err = DesignerService::review(&review).err().expect("err");
+        let err = DesignerService::review(&review).expect_err("err");
         assert!(matches!(err, DesignerError::ReviewRejected(_)));
     }
 }

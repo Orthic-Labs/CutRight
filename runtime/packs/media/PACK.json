@@ -1,0 +1,61 @@
+{
+  "schema": "cutright.pack_manifest/v1",
+  "pack_id": "media",
+  "version": "7.1.5",
+  "status": "qualified",
+  "target": {
+    "platform": "macos",
+    "arch": "universal",
+    "min_version": "13.0"
+  },
+  "resolution": "relative-to-installed-binary",
+  "development_overrides": ["CUTRIGHT_FFMPEG", "CUTRIGHT_FFPROBE"],
+  "release_path_lookup": false,
+  "source": {
+    "upstream": "FFmpeg",
+    "release": "7.1.5",
+    "snapshot_sha256": "21a780036037373edbb04a309cd383cbc65b6f5e0935f3dc296b0d2c62f683c3",
+    "configure_sha256": "698e28a0c6bf6e2065d466efa7bea3a75be2e8160a0f28f1edc2e15e2e885c99",
+    "license": "LGPL-2.1-or-later",
+    "license_sha256": "246041b6ecf9bc32d718a62c57877c78b5eb397b6467e74ed7ae2626ab189c30"
+  },
+  "build": {
+    "flags": [
+      "--disable-gpl",
+      "--disable-nonfree",
+      "--disable-autodetect",
+      "--enable-static",
+      "--disable-shared",
+      "--enable-videotoolbox",
+      "--enable-audiotoolbox"
+    ],
+    "external_dependencies": "Apple system frameworks only",
+    "network": false
+  },
+  "files": [
+    {
+      "path": "bin/ffmpeg",
+      "bytes": 30929864,
+      "sha256": "624df15d5d26119c75c67bccaaeba953db4eedc276dc80a68f00d8774112ca83",
+      "license": "LGPL-2.1-or-later"
+    },
+    {
+      "path": "bin/ffprobe",
+      "bytes": 30673768,
+      "sha256": "96fadf60eae56f60d75641f1ddfdc57ac955653e92776da82a8ba09521b9ce35",
+      "license": "LGPL-2.1-or-later"
+    }
+  ],
+  "capabilities": {
+    "ffprobe_json": true,
+    "h264_decode": true,
+    "h264_encode": "videotoolbox",
+    "aac_decode": true,
+    "aac_encode": true,
+    "mp4_mux_demux": true,
+    "lut3d": true,
+    "colortemperature": true,
+    "caption_path": "CutRight native caption renderer",
+    "hdr_path": "CutRight native HDR path"
+  }
+}

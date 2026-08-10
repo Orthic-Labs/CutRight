@@ -131,7 +131,6 @@ impl BrandIdentityService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
 
     #[test]
     fn brand_service_registers_and_executes() {
@@ -167,9 +166,7 @@ mod tests {
             provenance: "brand_card.json".to_string(),
             locked_token_ids: vec!["mark.primary".to_string()],
         };
-        let err = BrandService::assert_token_not_locked(&card, "mark.primary")
-            .err()
-            .expect("err");
+        let err = BrandService::assert_token_not_locked(&card, "mark.primary").expect_err("err");
         assert!(matches!(err, BrandServiceError::LockedToken(_)));
         BrandService::assert_token_not_locked(&card, "color.bg").expect("ok");
     }

@@ -21,15 +21,18 @@ use video_core::process_runner::{CancellationToken, ProcessSpec, TempFileGuard};
 /// this crate's own manifest directory (never an absolute developer path;
 /// §9.3). This lets a `.venv-whisperx` checked out next to the workspace
 /// resolve without any environment configuration, on any machine.
+#[cfg(debug_assertions)]
 const PROJECT_VENV_PYTHON_UNIX: &str = "../../.venv-whisperx/bin/python";
+#[cfg(debug_assertions)]
 const PROJECT_VENV_PYTHON_WINDOWS: &str = "../../.venv-whisperx/Scripts/python.exe";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(600);
 const OUTPUT_CAP_BYTES: usize = 16 * 1024 * 1024;
 
 #[derive(Debug, Clone)]
 pub struct WhisperXProvider {
-    python: PathBuf,
-    script: PathBuf,
+    executable: PathBuf,
+    argument_prefix: Vec<String>,
+    development_python: bool,
     timeout: Duration,
 }
 
@@ -56,6 +59,7 @@ struct WhisperXWord {
 /// WhisperX is the optional alignment verifier: an unavailable result here
 /// is a normal, expected outcome (never a panic), and callers treat it as
 /// "verifier unavailable" rather than a hard failure.
+#[cfg(debug_assertions)]
 fn discover_python() -> Result<PathBuf, ProviderError> {
     if let Some(path) = env::var_os("CUTRIGHT_WHISPERX_PYTHON") {
         let path = PathBuf::from(path);
@@ -95,6 +99,7 @@ fn discover_python() -> Result<PathBuf, ProviderError> {
 /// to `which`/`where`. This is the same style of PATH search the OS itself
 /// performs at spawn time, done ahead of time only so a missing interpreter
 /// can be reported as a clear discovery failure instead of a spawn error.
+#[cfg(debug_assertions)]
 fn resolve_on_path(name: &str) -> Option<PathBuf> {
     let path_var = env::var_os("PATH")?;
     for dir in env::split_paths(&path_var) {
@@ -114,13 +119,47 @@ fn resolve_on_path(name: &str) -> Option<PathBuf> {
 
 impl WhisperXProvider {
     pub fn discover() -> Result<Self, ProviderError> {
-        let python = discover_python()?;
+        #[cfg(debug_assertions)]
+        if env::var_os("CUTRIGHT_WHISPERX_PYTHON").is_some() {
+            return Self::discover_development();
+        }
+
+        let executable = std::env::current_exe()
+            .ok()
+            .and_then(|current| current.parent().map(std::path::Path::to_path_buf))
+            .and_then(|root| {
+                [
+                    root.join("packs/verifier/bin/cutright-verifier"),
+                    root.join("../packs/verifier/bin/cutright-verifier"),
+                ]
+                .into_iter()
+                .find(|candidate| candidate.is_file())
+            });
+        if let Some(executable) = executable {
+            return Ok(Self {
+                executable,
+                argument_prefix: Vec::new(),
+                development_python: false,
+                timeout: DEFAULT_TIMEOUT,
+            });
+        }
+
+        #[cfg(debug_assertions)]
+        return Self::discover_development();
+        #[cfg(not(debug_assertions))]
+        Err(ProviderError::WhisperXPythonMissing(
+            "signed CutRight verifier pack is not installed".into(),
+        ))
+    }
+
+    #[cfg(debug_assertions)]
+    fn discover_development() -> Result<Self, ProviderError> {
+        let executable = discover_python()?;
         let script = env::var_os("CUTRIGHT_WHISPERX_SCRIPT")
             .map(PathBuf::from)
             .unwrap_or_else(|| {
                 PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("../..")
-                    .join("cutaway/scripts/whisperx_align.py")
+                    .join("../../cutaway/scripts/whisperx_align.py")
             });
         if !script.is_file() {
             return Err(ProviderError::WhisperXScriptMissing);
@@ -131,13 +170,17 @@ impl WhisperXProvider {
             .map(Duration::from_secs)
             .unwrap_or(DEFAULT_TIMEOUT);
         Ok(Self {
-            python,
-            script,
+            executable,
+            argument_prefix: vec![script.display().to_string()],
+            development_python: true,
             timeout,
         })
     }
 
     fn env_allow(&self) -> Vec<(String, String)> {
+        if !self.development_python {
+            return Vec::new();
+        }
         // Explicit allow-list (§10.1): only what the interpreter needs to
         // resolve itself and any native extensions it loads.
         ["PATH", "HOME", "PYTHONHOME", "PYTHONPATH"]
@@ -157,13 +200,12 @@ impl WhisperXProvider {
             ),
             ".json",
         );
+        let mut args = self.argument_prefix.clone();
+        args.push(request.source_path.display().to_string());
+        args.push(output_guard.path.display().to_string());
         let spec = ProcessSpec {
-            executable: self.python.clone(),
-            args: vec![
-                self.script.display().to_string(),
-                request.source_path.display().to_string(),
-                output_guard.path.display().to_string(),
-            ],
+            executable: self.executable.clone(),
+            args,
             env_allow: self.env_allow(),
             working_dir: None,
             timeout: self.timeout,

@@ -1,0 +1,11 @@
+Parakeet TDT 0.6B v3 model attribution
+
+Copyright NVIDIA Corporation.
+
+Source: https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3
+Upstream revision: 541d1f99c6b0c3cd0b11a95167540bb8edefd82b
+License: Creative Commons Attribution 4.0 International (CC-BY-4.0)
+License text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Runtime export: k2-fsa/sherpa-onnx
+Exporter revision: 23e65586527871859acfab73048a8bb83bbae856

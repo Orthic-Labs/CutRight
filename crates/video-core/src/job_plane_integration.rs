@@ -119,7 +119,7 @@ mod tests {
     fn rejects_missing_finish_plan() {
         let mut j = sample();
         j.finish_plan_id = "".to_string();
-        let err = JobPlaneIntegration::submit(&j).err().expect("err");
+        let err = JobPlaneIntegration::submit(&j).expect_err("err");
         assert!(matches!(
             err,
             JobPlaneIntegrationError::MissingFinishPlan(_)

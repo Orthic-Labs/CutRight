@@ -40,3 +40,10 @@ apps/studio/design/shots/screening-room-finals.png
 apps/studio/design/shots/screening-room-qa.png
 apps/studio/design/shots/screening-room-settings.png
 apps/studio/design/shots/reduced-motion.png
+
+# First-party Studio QA capture introduced with the v2 implementation gate.
+apps/studio/design/shots/graphite-lock.png
+
+# First-party workspace skill artwork imported byte-for-byte with the pinned
+# designer capability corpus.
+skills/designer/engine/huashu/assets/banner.svg

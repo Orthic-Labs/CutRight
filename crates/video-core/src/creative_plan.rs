@@ -147,7 +147,7 @@ mod tests {
             arc: vec!["hook".to_string()],
             evidence_refs: vec![],
         };
-        let err = CreativePlanner::plan(&editorial).err().expect("err");
+        let err = CreativePlanner::plan(&editorial).expect_err("err");
         assert!(matches!(err, PlanningError::UnboundPlan(_)));
     }
 

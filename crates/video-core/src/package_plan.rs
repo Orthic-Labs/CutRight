@@ -120,7 +120,7 @@ mod tests {
     fn rejects_no_thumbnail() {
         let mut p = sample();
         p.thumbnails.clear();
-        let err = PackagePlanService::validate(&p).err().expect("err");
+        let err = PackagePlanService::validate(&p).expect_err("err");
         assert!(matches!(err, PackageAssetError::NoThumbnail(_)));
     }
 
@@ -128,7 +128,7 @@ mod tests {
     fn rejects_no_title_card() {
         let mut p = sample();
         p.title_cards.clear();
-        let err = PackagePlanService::validate(&p).err().expect("err");
+        let err = PackagePlanService::validate(&p).expect_err("err");
         assert!(matches!(err, PackageAssetError::NoTitleCard(_)));
     }
 
@@ -136,7 +136,7 @@ mod tests {
     fn rejects_unbound_thumbnail() {
         let mut p = sample();
         p.thumbnails[0].style_direction_id = "".to_string();
-        let err = PackagePlanService::validate(&p).err().expect("err");
+        let err = PackagePlanService::validate(&p).expect_err("err");
         assert!(matches!(err, PackageAssetError::UnboundThumbnail(_)));
     }
 }

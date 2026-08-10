@@ -579,13 +579,6 @@ fn target_str(action: &Action) -> &str {
     action_target(action).map(TargetRef::as_str).unwrap_or("")
 }
 
-/// Pull a target's project id (if known) from the validation context.
-fn target_project(target: &TargetRef, ctx: &ValidationContext) -> Option<String> {
-    ctx.target_projects
-        .get(target.as_str())
-        .map(|project| project.clone())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -214,7 +214,7 @@ mod tests {
             seed: None,
             policy_ref: None,
         };
-        let err = rt.execute(&req).err().expect("must error");
+        let err = rt.execute(&req).expect_err("must error");
         assert!(matches!(err, SkillRuntimeError::HandlerNotRegistered(_)));
     }
 
@@ -231,7 +231,7 @@ mod tests {
             seed: None,
             policy_ref: None,
         };
-        let err = rt.execute(&req).err().expect("must error");
+        let err = rt.execute(&req).expect_err("must error");
         assert!(matches!(err, SkillRuntimeError::SchemaVersion { .. }));
     }
 }

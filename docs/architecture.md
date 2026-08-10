@@ -31,7 +31,11 @@ Technical overview of components, interfaces, classified flow inventory, and cap
 The deterministic Phase-1 graph supplies the evidence substrate; Phase-2 understanding supplies
 the human component names and operational flow. Raw file and symbol nodes are intentionally omitted.
 
-CutRight is a local agentic video editing engine: Rust workspace (video-core/video-media/video-providers/video-project/video-cli) wiring a JSON-only videoctl control plane to a Tauri 2 Studio shell (React 19 + Rust core). Sources are immutable BLAKE3-registered media; transcription is provided by HeardRight (Parakeet TDT) over a JSON-line engine, with WhisperX as a verifier; renders are produced by FFmpeg/zimg caption-card pipelines with macOS-side Swift sidecars. The Studio IPC surface is 9 commands and videoctl exposes ~25 subcommands, of which init/migrate/ingest/transcribe/bench/analyze/reframe/evidence/edit(render)/render.final/qa/select paths are wired.
+CutRight is a local agentic video editing engine: Rust workspace (video-core/video-media/video-providers/video-project/video-cli) wiring a JSON-only videoctl control plane to a Tauri 2 Studio shell (React 19 + Rust core). Sources are immutable BLAKE3-registered media; transcription is provided by CutRight's own Parakeet TDT engine — built from vendored HeardRight source, resolved only from signed CutRight packs — over a JSON-line protocol, with an independent word-edge verifier; renders are produced by FFmpeg/zimg caption-card pipelines with macOS-side Swift sidecars. The Studio IPC surface is 9 commands and videoctl exposes ~25 subcommands, of which init/migrate/ingest/transcribe/bench/analyze/reframe/evidence/edit(render)/render.final/qa/select paths are wired.
+
+## Final-output encoder decision (CR-F-B8-004)
+
+Final delivery remains Rust-owned FFmpeg `libx264` plus AAC, selected by each YouTube/Reels color profile; this is the deterministic release path. `h264_videotoolbox` remains limited to rough/preview renders, while archival/master output uses software `prores_ks` plus PCM. The macOS Swift sidecar supplies native media inspection, captions, previews, and timeline transforms, but never replaces final-output encoding.
 
 ## System workflow
 
@@ -53,7 +57,7 @@ flowchart LR
   c12["runs both providers on sampled boundaries"]
   c13["analysis/bench/transcribe/report.json (with hashed envelopes)"]
   c14["videoctl analyze local"]
-  c15["HeardRightProvider VAD (silero inside HR)"]
+  c15["HeardRightProvider VAD (Silero inside the CutRight speech engine)"]
   c16["analysis/vad-<source_id>.json + cache/waveforms/<source_id>.png + cache/frames/<sourc…"]
   c17["videoctl edit candidates"]
   c18["build_candidates"]
@@ -183,3 +187,30 @@ _(source: .agent/understanding.json:architecture.dataFlow)_
 ## Status
 
 Generated from index signature `512d7cc08470e0de0f4afe4a921117e4`. Unchanged-repo rebuilds are byte-identical.
+
+## Enforced crate dependency DAG
+
+CR-F-B2-001 freezes this dependency direction, and `scripts/check-crate-dag.py`
+enforces it from every local Cargo path dependency before Rust checks run:
+
+```text
+Studio / videoctl / cutright-mcp
+              |
+        video-daemon
+              |
+        video-services
+              |
+        video-project
+              |
+ domain crates: video-actions, video-capabilities, video-core, video-editorial,
+ video-jobs, video-media, video-providers, video-runtime, video-security,
+ video-sessions, video-state
+```
+
+Lower crates cannot depend upward. In particular, `video-driver-host` may not
+depend on `video-project`, `video-state`, project storage, or `ActionExecutor`;
+`video-protocol` owns transport DTOs only and may not depend on project,
+state, actions, or services. The gate reports each violating edge by name.
+
+Guided Chat uses user-installed Claude Code or Codex. CutRight bundles no LLM
+and makes no offline semantic-direction claim.

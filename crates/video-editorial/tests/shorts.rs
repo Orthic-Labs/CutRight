@@ -21,28 +21,6 @@ fn beats() -> Vec<ShortBeatRef> {
     ]
 }
 
-fn static_inputs<'a>(
-    beats: &'a [ShortBeatRef],
-    hook: f32,
-    ctx: f32,
-    payoff: f32,
-    visual: f32,
-    boundary: f32,
-    dup: f32,
-    recorded: bool,
-) -> ShortInputs<'a> {
-    ShortInputs {
-        beats,
-        hook_strength: hook,
-        standalone_context: ctx,
-        payoff,
-        visual_support: visual,
-        boundary_confidence: boundary,
-        duplication_penalty: dup,
-        recorded,
-    }
-}
-
 #[test]
 fn self_contained_window_from_beats() {
     let b = beats();
@@ -50,7 +28,16 @@ fn self_contained_window_from_beats() {
         "c1",
         "Why X",
         "X is broken because...",
-        static_inputs(&b, 0.9, 0.8, 0.7, 0.6, 0.5, 0.0, true),
+        ShortInputs {
+            beats: &b,
+            hook_strength: 0.9,
+            standalone_context: 0.8,
+            payoff: 0.7,
+            visual_support: 0.6,
+            boundary_confidence: 0.5,
+            duplication_penalty: 0.0,
+            recorded: true,
+        },
     );
     assert!(c.exclusion_reason.is_none());
     assert_eq!(c.beat_ids.len(), 3);
@@ -65,13 +52,31 @@ fn overlapping_candidates_diversity_filtered() {
         "full",
         "t",
         "h",
-        static_inputs(&b_full, 0.8, 0.8, 0.8, 0.8, 0.8, 0.0, true),
+        ShortInputs {
+            beats: &b_full,
+            hook_strength: 0.8,
+            standalone_context: 0.8,
+            payoff: 0.8,
+            visual_support: 0.8,
+            boundary_confidence: 0.8,
+            duplication_penalty: 0.0,
+            recorded: true,
+        },
     );
     let c_partial = build_candidate(
         "partial",
         "t",
         "h",
-        static_inputs(&b_partial, 0.9, 0.9, 0.9, 0.9, 0.9, 0.0, true),
+        ShortInputs {
+            beats: &b_partial,
+            hook_strength: 0.9,
+            standalone_context: 0.9,
+            payoff: 0.9,
+            visual_support: 0.9,
+            boundary_confidence: 0.9,
+            duplication_penalty: 0.0,
+            recorded: true,
+        },
     );
     let kept = diversity_filter(vec![c_partial, c_full]);
     // full ranks above partial by score; partial is a subset of full -> dropped
@@ -86,7 +91,16 @@ fn source_ranges_compiled_from_evidence_bound_beats() {
         "c1",
         "t",
         "h",
-        static_inputs(&b, 0.5, 0.5, 0.5, 0.5, 0.5, 0.0, true),
+        ShortInputs {
+            beats: &b,
+            hook_strength: 0.5,
+            standalone_context: 0.5,
+            payoff: 0.5,
+            visual_support: 0.5,
+            boundary_confidence: 0.5,
+            duplication_penalty: 0.0,
+            recorded: true,
+        },
     );
     // No timestamps are produced by the model itself; beats are the source.
     assert!(c.beat_ids.iter().all(|id| id.starts_with("b")));
@@ -100,7 +114,16 @@ fn unrecorded_excluded_with_reason() {
         "c1",
         "t",
         "h",
-        static_inputs(&b, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, false),
+        ShortInputs {
+            beats: &b,
+            hook_strength: 1.0,
+            standalone_context: 1.0,
+            payoff: 1.0,
+            visual_support: 1.0,
+            boundary_confidence: 1.0,
+            duplication_penalty: 0.0,
+            recorded: false,
+        },
     );
     assert!(c.exclusion_reason.is_some());
     let v: Vec<ShortCandidate> = vec![c];

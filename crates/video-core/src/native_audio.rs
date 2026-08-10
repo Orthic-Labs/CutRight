@@ -143,9 +143,7 @@ mod tests {
     fn rejects_out_of_range_lufs() {
         let mut p = profile();
         p.integrated_lufs = -5.0;
-        let err = NativeAudioEngine::finish(&p, vec![cue()])
-            .err()
-            .expect("err");
+        let err = NativeAudioEngine::finish(&p, vec![cue()]).expect_err("err");
         assert!(matches!(err, AudioError::LoudnessOutOfRange(_)));
     }
 
@@ -153,9 +151,7 @@ mod tests {
     fn rejects_reverb_over_budget() {
         let mut c = cue();
         c.reverb_ms = 500;
-        let err = NativeAudioEngine::finish(&profile(), vec![c])
-            .err()
-            .expect("err");
+        let err = NativeAudioEngine::finish(&profile(), vec![c]).expect_err("err");
         assert!(matches!(err, AudioError::ReverbExceeds(_)));
     }
 

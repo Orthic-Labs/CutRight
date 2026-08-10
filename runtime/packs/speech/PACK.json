@@ -1,9 +1,45 @@
 {
   "build": {
-    "command": "python3 scripts/runtime/build-heardright-adapter.py --root .",
+    "command": "clang -O3 -Wall -Wextra -Werror -arch arm64 -arch x86_64 vendor/heardright/cutright-adapter/src/main.c -Lruntime/packs/speech/bin -lsherpa-onnx-c-api -lonnxruntime -Wl,-rpath,@loader_path -o runtime/packs/speech/bin/heardright-engine",
     "network": false,
     "offline": true,
     "path_lookup": false
+  },
+  "status": "qualified",
+  "payload_contract": {
+    "engine": "bin/heardright-engine",
+    "parakeet_manifest": "../../manifests/parakeet.model.json",
+    "silero_manifest": "../../manifests/silero-vad.model.json",
+    "required_parakeet_assets": ["encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokenizer.json", "tokens.txt"],
+    "required_silero_asset": "silero_vad_16k_op15.onnx"
+  },
+  "provenance": {
+    "source_manifest": "runtime/manifests/speech-engine.source.json",
+    "adapter_root": "vendor/heardright/cutright-adapter",
+    "resolution": "relative-to-installed-binary",
+    "heardright_revision": "b60bff947f12ffa9d25e94ad27e8ff30db006a24",
+    "sherpa_onnx": {
+      "revision": "142807252687d81b40d6315f23470a1512a00de3",
+      "version": "1.13.4",
+      "license": "Apache-2.0"
+    },
+    "onnx_runtime": {
+      "license": "MIT",
+      "binary_revision": "b60bff947f12ffa9d25e94ad27e8ff30db006a24"
+    },
+    "parakeet": {
+      "upstream": "nvidia/parakeet-tdt-0.6b-v3",
+      "revision": "541d1f99c6b0c3cd0b11a95167540bb8edefd82b",
+      "license": "CC-BY-4.0",
+      "exporter": "k2-fsa/sherpa-onnx",
+      "exporter_revision": "23e65586527871859acfab73048a8bb83bbae856",
+      "artifact": "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2"
+    },
+    "silero": {
+      "upstream": "snakers4/silero-vad",
+      "revision": "76e3dc408eb2a5c655c34e230d2d5459b4439daa",
+      "license": "MIT"
+    }
   },
   "capabilities": [
     "speech.transcribe",
@@ -11,6 +47,70 @@
     "speech.engine-dispatch"
   ],
   "files": [
+    {
+      "path": "bin/heardright-engine",
+      "kind": "engine",
+      "bytes": 68448,
+      "sha256": "1b2852e03663a148363883cd304abc5fcc9db01504cc58a7445c9259c876f815",
+      "license": "Apache-2.0 AND MIT"
+    },
+    {
+      "path": "bin/libsherpa-onnx-c-api.dylib",
+      "bytes": 5985656,
+      "sha256": "1f16f3dc70afaa25e774f36113365f7ace836c927ea485350124ac3f3d836ecf",
+      "license": "Apache-2.0"
+    },
+    {
+      "path": "bin/libonnxruntime.dylib",
+      "bytes": 65176960,
+      "sha256": "e1d9b6b25ee67c10a3abd02c4da13f7eaa48ab337b1e441f0354da33f39d3eaf",
+      "license": "MIT"
+    },
+    {
+      "path": "bin/models/parakeet-tdt-v3/encoder.int8.onnx",
+      "sha256": "acfc2b4456377e15d04f0243af540b7fe7c992f8d898d751cf134c3a55fd2247",
+      "license": "CC-BY-4.0"
+    },
+    {
+      "path": "bin/models/parakeet-tdt-v3/decoder.int8.onnx",
+      "sha256": "179e50c43d1a9de79c8a24149a2f9bac6eb5981823f2a2ed88d655b24248db4e",
+      "license": "CC-BY-4.0"
+    },
+    {
+      "path": "bin/models/parakeet-tdt-v3/joiner.int8.onnx",
+      "sha256": "3164c13fc2821009440d20fcb5fdc78bff28b4db2f8d0f0b329101719c0948b3",
+      "license": "CC-BY-4.0"
+    },
+    {
+      "path": "bin/models/parakeet-tdt-v3/tokenizer.json",
+      "sha256": "bd321b096832a3f270bd3b2a88823957920f1a5c5ada71114a26ea729d0cbe91",
+      "license": "CC-BY-4.0"
+    },
+    {
+      "path": "bin/models/parakeet-tdt-v3/tokens.txt",
+      "sha256": "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d",
+      "license": "CC-BY-4.0"
+    },
+    {
+      "path": "bin/vad/silero_vad_16k_op15.onnx",
+      "sha256": "7ed98ddbad84ccac4cd0aeb3099049280713df825c610a8ed34543318f1b2c49",
+      "license": "MIT"
+    },
+    {
+      "path": "licenses/SILERO-MIT.txt",
+      "sha256": "2e63e9a38b6e8fc0c7bc37ce174caca1862870856c6daf5697cfb785e925520b",
+      "license": "MIT"
+    },
+    {
+      "path": "licenses/NVIDIA-PARAKEET-CC-BY-4.0.txt",
+      "sha256": "83416c2f11df09a31257f2ec7990382623995f5fcbd895ef71bc16565eaa8015",
+      "license": "CC-BY-4.0"
+    },
+    {
+      "path": "licenses/SHERPA-ONNX-ORT-NOTICES.txt",
+      "sha256": "ecf13802c6cc6347039f02e635ce5756fe4dc7f83541830d7adba643a22a1fc9",
+      "license": "Apache-2.0 AND MIT"
+    },
     {
       "bytes": 1341,
       "path": "CUTRIGHT-ADAPTATION.md",
@@ -1232,13 +1332,13 @@
   "schema": "cutright.speech_adapter/v1",
   "source": {
     "compiler": {
-      "name": "metadata-only",
-      "target": "arm64",
-      "version": "1"
+      "name": "Apple clang",
+      "target": "universal-apple-darwin",
+      "version": "17.0.0"
     },
-    "license": "MIT OR Apache-2.0",
-    "revision": "64d10d4967dc315a793b317f779d61c9d1e50a3ecd9a053ce6b2043080e63b6a",
-    "root": "vendor/heardright"
+    "license": "Apache-2.0 AND MIT",
+    "revision": "b60bff947f12ffa9d25e94ad27e8ff30db006a24",
+    "root": "vendor/heardright/cutright-adapter"
   },
   "version": "0.1.0"
 }

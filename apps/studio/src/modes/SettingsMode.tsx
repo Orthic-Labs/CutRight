@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { call } from "../lib/api";
 import { CredentialField } from "../components/CredentialField";
 import { SettingsDeleteConfirm } from "../components/SettingsDeleteConfirm";
+import { AgentPanel } from "../components/AgentPanel";
 import {
   isCloudSettingsValid,
   UPLOAD_POLICIES,
@@ -157,6 +158,7 @@ export function SettingsMode({ project }: { project: Snapshot }) {
 
   return (
     <div className="settings-mode">
+      <AgentPanel projectPath={project.project_path} />
       <section className="settings-section">
         <h2>Cloud analysis</h2>
         <p className="settings-hint">
@@ -305,7 +307,7 @@ export function SettingsMode({ project }: { project: Snapshot }) {
 
       <section className="settings-section" aria-label="CutRight legal and updates">
         <h2>CutRight</h2>
-        <p className="settings-hint">{appInfo?.license ?? "MIT"} · {appInfo?.tier ?? "free"} · local/offline</p>
+        <p className="settings-hint">{appInfo?.license ?? "Proprietary"} · {appInfo?.tier ?? "free"} · local/offline</p>
         <dl className="facts-grid"><dt>Telemetry</dt><dd>{appInfo?.telemetry === false ? "off" : "—"}</dd><dt>Updates</dt><dd>{appInfo?.updates ?? "—"}</dd></dl>
       </section>
 

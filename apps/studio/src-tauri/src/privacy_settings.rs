@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use video_security::privacy::{telemetry_off, NetworkAttemptCounter};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct PrivacySettings {
     pub telemetry_enabled: bool,
     pub network_allowed: bool,
@@ -34,16 +35,19 @@ impl Default for PrivacySettings {
 }
 
 impl PrivacySettings {
+    #[allow(dead_code)]
     pub fn is_network_blocked(&self) -> bool {
         !self.network_allowed
     }
 
+    #[allow(dead_code)]
     pub fn is_telemetry_off(&self) -> bool {
         !self.telemetry_enabled
     }
 
     /// Apply privacy-safe transformations to a project id so logs only see
     /// the pseudonym.
+    #[allow(dead_code)]
     pub fn pseudonym_for(&self, raw_project_id: &str) -> String {
         use blake3::Hasher;
         let mut h = Hasher::new();
@@ -84,10 +88,14 @@ mod tests {
 
     #[test]
     fn different_salts_give_different_pseudonyms() {
-        let mut s1 = PrivacySettings::default();
-        s1.project_pseudonym_salt = "salt-1".to_string();
-        let mut s2 = PrivacySettings::default();
-        s2.project_pseudonym_salt = "salt-2".to_string();
+        let s1 = PrivacySettings {
+            project_pseudonym_salt: "salt-1".to_string(),
+            ..PrivacySettings::default()
+        };
+        let s2 = PrivacySettings {
+            project_pseudonym_salt: "salt-2".to_string(),
+            ..PrivacySettings::default()
+        };
         assert_ne!(s1.pseudonym_for("p1"), s2.pseudonym_for("p1"));
     }
 }

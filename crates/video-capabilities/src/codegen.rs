@@ -345,7 +345,7 @@ pub fn render_mcp_tool_registry(document: &RegistryDocument) -> Result<String, C
     });
     serde_json::to_string_pretty(&value).map_err(|e| CodegenError::Io {
         path: PathBuf::from("<mcp-tool-registry>"),
-        source: std::io::Error::new(std::io::ErrorKind::Other, e),
+        source: std::io::Error::other(e),
     })
 }
 

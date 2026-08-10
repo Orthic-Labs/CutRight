@@ -292,7 +292,6 @@
   "warnings": [
     "B4-027 task ID shared across 2 commits (code + evidence); see disposition note",
     "CR-V2-B1: malformed task ID logged as orchestrator variance V-1",
-    "RC-MANIFEST head refreshed to current HEAD (was stale at a9154a3)",
-    "STATUS.md rewrite pending (this validation was generated before STATUS update)"
+    "RC-MANIFEST head refreshed to current HEAD (was stale at a9154a3)"
   ]
 }

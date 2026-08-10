@@ -48,7 +48,7 @@ fn empty_input_yields_no_clusters() {
 
 #[test]
 fn jaccard_basic() {
-    let a = normalize_tokens(&vec!["alpha".into(), "beta".into()]);
-    let b = normalize_tokens(&vec!["alpha".into(), "gamma".into()]);
+    let a = normalize_tokens(&["alpha".into(), "beta".into()]);
+    let b = normalize_tokens(&["alpha".into(), "gamma".into()]);
     assert!((token_overlap(&a, &b) - 1.0 / 3.0).abs() < 1e-5);
 }

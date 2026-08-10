@@ -7,6 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct PackSummary {
     pub id: String,
     pub active: bool,
@@ -18,6 +19,7 @@ pub struct PackSummary {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct PackCommandResult {
     pub ok: bool,
     pub message: String,
@@ -26,6 +28,7 @@ pub struct PackCommandResult {
 
 /// Verify a pack: signature and integrity. Source must be a local verified
 /// bundle.
+#[allow(dead_code)]
 pub fn pack_verify(pack_id: &str, source: &str) -> PackCommandResult {
     if source != "local_verified_bundle" {
         return PackCommandResult {
@@ -45,6 +48,7 @@ pub fn pack_verify(pack_id: &str, source: &str) -> PackCommandResult {
 
 /// Repair a pack from a chosen installer payload. Corrupt payloads are
 /// rejected. The previously active compatible pack is kept until success.
+#[allow(dead_code)]
 pub fn pack_repair_from_payload(
     pack_id: &str,
     payload_source: &str,
@@ -66,6 +70,7 @@ pub fn pack_repair_from_payload(
 
 /// Activate a pack. The pack service refuses unless the source is a local
 /// verified bundle.
+#[allow(dead_code)]
 pub fn pack_activate(pack_id: &str, source: &str) -> PackCommandResult {
     let verify = pack_verify(pack_id, source);
     if !verify.ok {
@@ -84,6 +89,7 @@ pub fn pack_activate(pack_id: &str, source: &str) -> PackCommandResult {
 
 /// Roll back to the supplied previously compatible pack. The action is
 /// idempotent.
+#[allow(dead_code)]
 pub fn pack_rollback(pack_id: &str, target: &str) -> PackCommandResult {
     PackCommandResult {
         ok: true,

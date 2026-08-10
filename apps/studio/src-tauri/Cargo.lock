@@ -279,7 +279,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
@@ -508,7 +508,7 @@ checksum = "52560adf09603e58c9a7ee1fe1dcb95a16927b17c127f0ac02d6e768a0e25bc1"
 
 [[package]]
 name = "cutright-studio"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "chrono",
@@ -1826,7 +1826,7 @@ dependencies = [
  "once_cell",
  "png 0.18.1",
  "serde",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "windows-sys 0.61.2",
 ]
 
@@ -2399,7 +2399,7 @@ checksum = "a4e608c6638b9c18977b00b475ac1f28d14e84b27d8d42f70e0bf1e3dec127ac"
 dependencies = [
  "getrandom 0.2.17",
  "libredox",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
@@ -3117,7 +3117,7 @@ dependencies = [
  "tauri-runtime",
  "tauri-runtime-wry",
  "tauri-utils",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "tokio",
  "tray-icon",
  "url",
@@ -3168,7 +3168,7 @@ dependencies = [
  "sha2",
  "syn 2.0.119",
  "tauri-utils",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "time",
  "url",
  "uuid",
@@ -3219,7 +3219,7 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "tauri-plugin-fs",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "url",
 ]
 
@@ -3242,7 +3242,7 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "tauri-utils",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "toml 1.1.4+spec-1.1.0",
  "url",
 ]
@@ -3259,7 +3259,7 @@ dependencies = [
  "serde_json",
  "tauri",
  "tauri-plugin",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
@@ -3280,7 +3280,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tauri-utils",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "url",
  "webkit2gtk",
  "webview2-com",
@@ -3343,7 +3343,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "swift-rs",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "toml 1.1.4+spec-1.1.0",
  "url",
  "urlpattern",
@@ -3395,11 +3395,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.19"
+version = "2.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09a43598840e33d5b0331f38c5e30d13bb11c11210a4b58f0d9b18a5a5eefcd9"
+checksum = "ec86235f5fcc2a73650310756d2ac5b138a5780bbbdfae3eeccec992c435ba4f"
 dependencies = [
- "thiserror-impl 2.0.19",
+ "thiserror-impl 2.0.20",
 ]
 
 [[package]]
@@ -3415,9 +3415,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.19"
+version = "2.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43cbfe0cf76104d42a574802844187e84a305e531ed54455f11fbde0f10541cd"
+checksum = "bc04cd3e1236dd4a98afca4569f2deb3f120e5422a4023be2cb683f8486292af"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3708,7 +3708,7 @@ dependencies = [
  "once_cell",
  "png 0.18.1",
  "serde",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "windows-sys 0.61.2",
 ]
 
@@ -3840,91 +3840,85 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "video-actions"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "blake3",
- "chrono",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
- "video-core",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "video-benchmarks"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "video-capabilities"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "blake3",
- "chrono",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
- "video-core",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "video-core"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "chrono",
  "libc",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "video-editorial"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "serde",
  "serde_json",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "video-benchmarks",
 ]
 
 [[package]]
 name = "video-jobs"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "blake3",
- "chrono",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
- "video-core",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "video-media"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "video-core",
 ]
 
 [[package]]
 name = "video-project"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "chrono",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "video-actions",
  "video-capabilities",
  "video-core",
@@ -3935,66 +3929,45 @@ dependencies = [
  "video-runtime",
  "video-security",
  "video-sessions",
- "video-state",
 ]
 
 [[package]]
 name = "video-providers"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "blake3",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "video-core",
  "video-media",
 ]
 
 [[package]]
 name = "video-runtime"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
- "chrono",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
- "video-core",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "video-security"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "blake3",
- "chrono",
  "serde",
  "serde_json",
- "thiserror 2.0.19",
- "video-core",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "video-sessions"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
- "blake3",
- "chrono",
  "serde",
- "serde_json",
- "thiserror 2.0.19",
- "video-core",
-]
-
-[[package]]
-name = "video-state"
-version = "0.1.0"
-dependencies = [
- "blake3",
- "chrono",
- "serde",
- "serde_json",
- "thiserror 2.0.19",
- "video-core",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
@@ -4216,7 +4189,7 @@ version = "0.38.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "381336cfffd772377d291702245447a5251a2ffa5bad679c99e61bc48bacbf9c"
 dependencies = [
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "windows",
  "windows-core 0.61.2",
 ]
@@ -4725,7 +4698,7 @@ dependencies = [
  "sha2",
  "soup3",
  "tao-macros",
- "thiserror 2.0.19",
+ "thiserror 2.0.20",
  "url",
  "webkit2gtk",
  "webkit2gtk-sys",

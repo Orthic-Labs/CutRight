@@ -1,4 +1,4 @@
-use chrono::{TimeZone, Utc};
+use chrono::Utc;
 use video_feedback::autonomy::{
     advance, demote, has_regression_trigger, initial_state, transitions, AutonomyDemotionPredicate,
     AutonomyMode, AutonomyTransitionReason,

@@ -2,7 +2,7 @@
 name = "v2-skill-compiler"
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
+license = "LicenseRef-Proprietary"
 authors = ["Orthic Labs"]
 description = "Deterministic CutRight v2 skill compiler: compiles skills/ against schemas/skills/ and capabilities/registry.json into a byte-identical resource pack."
 publish = false

@@ -1,5 +1,5 @@
 {
-  "capability_count": 0,
+  "capability_count": 11,
   "catalog_id": "cutright-skill-catalog-v1",
   "generated_from": {
     "lock": "skills/catalog.lock.json",
@@ -7,9 +7,11 @@
     "pack_id": "cutright-skill-pack-v1",
     "pack_schema_version": 1
   },
-  "registry_present": false,
+  "registry_present": true,
   "schema_version": 1,
-  "schemas": [],
+  "schemas": [
+    "schemas/agent/operation-contract.schema.v1.json"
+  ],
   "skills": [
     {
       "calls": [
@@ -247,5 +249,198 @@
       "video-director",
       "writing"
     ]
-  }
+  },
+  "operations": [
+    {
+      "operation": "cutright.edit.commit",
+      "handler_id": "handler.edit.commit",
+      "purpose": "Apply an approved plan",
+      "execution_mode": "write",
+      "idempotency": "retry_safe",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "revision_id": {
+            "type": "string"
+          },
+          "receipt_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "operation": "cutright.edit.prepare",
+      "handler_id": "handler.edit.prepare",
+      "purpose": "Prepare media and durable analysis",
+      "execution_mode": "write_process",
+      "idempotency": "retry_safe",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "operation": "cutright.edit.preview",
+      "handler_id": "handler.edit.preview",
+      "purpose": "Validate a plan without mutation",
+      "execution_mode": "compute",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "diff": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "operation": "cutright.evidence.query",
+      "handler_id": "handler.evidence.query",
+      "purpose": "Return bounded editorial evidence",
+      "execution_mode": "read",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    {
+      "operation": "cutright.job.cancel",
+      "handler_id": "handler.job.cancel",
+      "purpose": "Cancel work while preserving state",
+      "execution_mode": "write_process",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "operation": "cutright.job.input",
+      "handler_id": "handler.job.input",
+      "purpose": "Resolve one typed input requirement",
+      "execution_mode": "write",
+      "idempotency": "retry_safe",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "operation": "cutright.job.result",
+      "handler_id": "handler.job.result",
+      "purpose": "Return outcome artifacts and receipts",
+      "execution_mode": "read",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "artifacts": {
+            "type": "array"
+          },
+          "receipts": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    {
+      "operation": "cutright.job.resume",
+      "handler_id": "handler.job.resume",
+      "purpose": "Resume from a verified checkpoint",
+      "execution_mode": "write_process",
+      "idempotency": "retry_safe",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "operation": "cutright.job.status",
+      "handler_id": "handler.job.status",
+      "purpose": "Return grounded task progress",
+      "execution_mode": "read",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "operation": "cutright.project.open_or_create",
+      "handler_id": "handler.project.open_or_create",
+      "purpose": "Bind immutable sources to a project",
+      "execution_mode": "write",
+      "idempotency": "idempotent",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "revision_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "operation": "cutright.render.finish",
+      "handler_id": "handler.render.finish",
+      "purpose": "Render a selected variant and run QA",
+      "execution_mode": "write_process",
+      "idempotency": "retry_safe",
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
 }

@@ -21,7 +21,7 @@ use tauri_plugin_dialog::DialogExt;
 
 #[tauri::command]
 pub(crate) fn rightkit_app_info() -> serde_json::Value {
-    serde_json::json!({"schema_version":1,"app":"cutright","tier":"free","license":"MIT","offline":true,"telemetry":false,"updates":"disabled-until-configured"})
+    serde_json::json!({"schema_version":1,"app":"cutright","tier":"free","license":"Proprietary","offline":true,"telemetry":false,"updates":"disabled-until-configured"})
 }
 
 #[tauri::command]

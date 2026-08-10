@@ -131,20 +131,16 @@ fn validate_limits(limits: &ResourceLimits) -> Result<(), SandboxError> {
 }
 
 fn check_readable(path: &Path, root_scope: &Path) -> Result<(), SandboxError> {
-    if path.is_absolute() {
-        if root_scope.as_os_str().is_empty() {
-            return Err(SandboxError::AbsoluteWithoutRoot(path.to_path_buf()));
-        }
+    if path.is_absolute() && root_scope.as_os_str().is_empty() {
+        return Err(SandboxError::AbsoluteWithoutRoot(path.to_path_buf()));
     }
     for c in path.components() {
         match c {
             Component::ParentDir => {
                 return Err(SandboxError::PathTraversesScope(path.to_path_buf()));
             }
-            Component::Prefix(_) => {
-                if root_scope.as_os_str().is_empty() {
-                    return Err(SandboxError::PathOutsideScope(path.to_path_buf()));
-                }
+            Component::Prefix(_) if root_scope.as_os_str().is_empty() => {
+                return Err(SandboxError::PathOutsideScope(path.to_path_buf()));
             }
             _ => {}
         }

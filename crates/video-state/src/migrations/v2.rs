@@ -4,14 +4,14 @@
 //!
 //! 1. `identity-map`     — translate v1 string ids into v2 stable ids.
 //! 2. `ms-to-ns`         — keep millisecond fields, add rational-time fields
-//!                          (v2 keeps both representations and bounds them).
+//!    (v2 keeps both representations and bounds them).
 //! 3. `effect-table`     — translate legacy `Remotion:Effect` ids to the
-//!                          native effect registry; legacy effects become
-//!                          provenance records, not active capabilities.
+//!    native effect registry; legacy effects become
+//!    provenance records, not active capabilities.
 //! 4. `provider-ledger`  — translate external provider records (WhisperX,
-//!                          HeardRight cloud, CodeRight) into a local-only
-//!                          provenance ledger; the active v2 configuration
-//!                          has zero external runtime dependencies.
+//!    HeardRight cloud, CodeRight) into a local-only
+//!    provenance ledger; the active v2 configuration
+//!    has zero external runtime dependencies.
 //!
 //! The runner is owned by `video-state::migrate`; this module only
 //! provides the frozen descriptor set and a small helper that
