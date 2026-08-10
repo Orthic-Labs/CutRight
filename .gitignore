@@ -29,3 +29,7 @@ docs/dispatch/v2/source/*.pre-*
 # Parakeet ASR model payload: multi-hundred-MB weights exceed GitHub file limits.
 # Rebuild with scripts/runtime/build-parakeet-pack.py from runtime/manifests/parakeet.model.json
 runtime/packs/speech/bin/models/parakeet-tdt-v3/
+
+# Vendored runtime binaries (ffmpeg, ONNX Runtime, sherpa, packaged engines).
+# Third-party payload rebuilt by scripts/runtime/*; kept on disk, out of git.
+runtime/packs/*/bin/
