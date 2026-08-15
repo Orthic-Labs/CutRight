@@ -6,8 +6,19 @@ import { fileURLToPath } from "node:url";
 
 const appRoot = fileURLToPath(new URL("..", import.meta.url));
 const repoRoot = resolve(appRoot, "../..");
+function metadata(cwd) {
+  const result = spawnSync("cargo", ["metadata", "--manifest-path", "Cargo.toml", "--no-deps", "--format-version", "1"], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`cargo metadata failed: ${result.stderr || result.status}`);
+  return result.stdout;
+}
 const version = JSON.parse(await (await import("node:fs/promises")).readFile(join(appRoot, "package.json"), "utf8")).version;
-const target = join(appRoot, "src-tauri/target/universal-apple-darwin/release/bundle");
+// A managed build owns the target root, so the bundle is not under src-tauri.
+// Honour the injected directory and otherwise ask Cargo where it writes.
+const cargoTargetRoot = process.env.CARGO_TARGET_DIR
+  ? resolve(appRoot, process.env.CARGO_TARGET_DIR)
+  : JSON.parse(metadata(join(appRoot, "src-tauri"))).target_directory;
+const target = join(cargoTargetRoot, "universal-apple-darwin/release/bundle");
 const macos = join(target, "macos");
 const dmgDir = join(target, "dmg");
 const app = join(macos, "CutRight Studio.app");
@@ -56,9 +67,6 @@ function refreshPackHashes(bundle) {
 }
 
 function buildSidecars() {
-  const cacheRoot = process.env.RIGHT_RELEASE_CACHE_ROOT;
-  if (!cacheRoot) throw new Error("RIGHT_RELEASE_CACHE_ROOT is required for release sidecars");
-  const targetDir = join(cacheRoot, "targets/mac/cutright-sidecars");
   const binDir = join(appRoot, "src-tauri/bin");
   const triples = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
   const sidecars = [
@@ -68,11 +76,30 @@ function buildSidecars() {
   ];
   mkdirSync(binDir, { recursive: true });
   for (const triple of triples) {
+    // One cargo invocation per triple builds all three sidecars; the broker
+    // owns the target root so binaries are resolved from cargo's own
+    // artifact stream instead of a predicted --target-dir path.
+    const args = ["build", "--release", "--locked", "--target", triple, "--message-format=json-render-diagnostics"];
+    for (const sidecar of sidecars) args.push("-p", sidecar.package, "--bin", sidecar.name);
+    const result = spawnSync("cargo", args, {
+      cwd: repoRoot, encoding: "utf8", maxBuffer: 512 * 1024 * 1024, stdio: ["inherit", "pipe", "inherit"],
+    });
+    if (result.error) throw result.error;
+    if (result.status !== 0) process.exit(result.status ?? 1);
+
+    const produced = new Map();
+    for (const line of (result.stdout ?? "").split("\n")) {
+      if (!line.startsWith("{")) continue;
+      let message;
+      try { message = JSON.parse(line); } catch { continue; }
+      if (message.reason !== "compiler-artifact" || !message.executable) continue;
+      produced.set(message.target?.name, message.executable);
+    }
     for (const sidecar of sidecars) {
-      run("cargo", ["build", "--release", "--locked", "--target", triple, "--target-dir", targetDir,
-        "-p", sidecar.package, "--bin", sidecar.name]);
+      const source = produced.get(sidecar.name);
+      if (!source) throw new Error(`sidecar build produced no executable named ${sidecar.name}`);
       const destination = join(binDir, `${sidecar.name}-${triple}`);
-      copyFileSync(join(targetDir, triple, "release", sidecar.name), destination);
+      copyFileSync(source, destination);
       chmodSync(destination, 0o755);
     }
   }
