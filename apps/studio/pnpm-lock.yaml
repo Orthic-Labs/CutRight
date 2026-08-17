@@ -19,8 +19,8 @@ importers:
         version: 19.2.8(react@19.2.8)
     devDependencies:
       '@rightkit/release':
-        specifier: 0.2.50
-        version: 0.2.50
+        specifier: 0.2.63
+        version: 0.2.63
       '@tauri-apps/cli':
         specifier: ^2.11.4
         version: 2.11.4
@@ -126,8 +126,8 @@ packages:
   '@oxc-project/types@0.139.0':
     resolution: {integrity: sha512-r9gHphtCs+1M7J0pw6Sn/hh/Wpa/iQrOOkrNAlVLF/gHq+/CJmHIWKKUUhdWjcD6CIa8idarspCsASiXCXvFUw==}
 
-  '@rightkit/release@0.2.50':
-    resolution: {integrity: sha512-hvqIcUNwD1HBQ733dDpcZJ7LcY5nZlfVU8LxqOT0Qx7UJF/IOv66odyYHGZpU0eKLPN8Y6yLYlop2qL0p4uNZg==}
+  '@rightkit/release@0.2.63':
+    resolution: {integrity: sha512-qj4TVDWAQS/TcbCHZ6yuJW6iZTo0Wjd1+nhPfrYbQvLmSKnlnTHe5/h39Auv1Oh8T58zXlQ8nxDoT/NPfM7odg==}
     hasBin: true
 
   '@rolldown/binding-android-arm64@1.1.5':
@@ -872,7 +872,7 @@ snapshots:
 
   '@oxc-project/types@0.139.0': {}
 
-  '@rightkit/release@0.2.50': {}
+  '@rightkit/release@0.2.63': {}
 
   '@rolldown/binding-android-arm64@1.1.5':
     optional: true
