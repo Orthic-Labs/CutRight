@@ -10,6 +10,7 @@
     "build": "tsc && vite build",
     "test": "vitest run --environment jsdom",
     "tauri": "tauri",
+    "generate:icons": "node scripts/generate-icons.mjs",
     "qa:browser": "bash scripts/qa-browser.sh",
     "qa:browser:stop": "bash scripts/qa-browser-stop.sh",
     "qa:functional": "node scripts/qa-functional.mjs",
@@ -18,24 +19,38 @@
     "check:mac-rpath": "bash scripts/check-macos-rpath.sh",
     "release:doctor": "right-release doctor",
     "release:build:mac": "right-release build --platform mac",
+    "release:build:win": "right-release build --platform win",
     "release:upload:patch:mac": "right-release upload --platform mac --tier patch",
     "release:upload:update:mac": "right-release upload --platform mac --tier update",
-    "rightkit:package:mac": "node scripts/package-mac.mjs --notarize"
+    "release:upload:patch:win": "right-release upload --platform win --tier patch",
+    "release:upload:update:win": "right-release upload --platform win --tier update",
+    "rightkit:package:mac": "node scripts/package-mac.mjs --notarize",
+    "rightkit:package:win": "node scripts/package-win.mjs",
+    "rightkit:ax:static": "right-ax ax static ../..",
+    "rightkit:ax:conformance": "right-ax ax conformance ../..",
+    "rightkit:ax:report": "right-ax ax report ../.. --format markdown",
+    "rightkit:git:sync": "right-git sync ../..",
+    "rightkit:git:drift": "right-git drift ../.."
   },
   "dependencies": {
+    "@rightkit/logs": "0.1.3",
+    "@rightkit/platform-ui": "0.1.0",
     "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-os": "2.3.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
+    "@rightkit/ax": "0.1.1",
+    "@rightkit/git": "0.2.0",
+    "@rightkit/release": "0.2.65",
     "@tauri-apps/cli": "^2.11.4",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "jsdom": "^27.4.0",
     "typescript": "^6.0.3",
     "vite": "^8.1.3",
-    "vitest": "^4.0.18",
-    "jsdom": "^27.4.0",
-    "@rightkit/release": "0.2.63"
+    "vitest": "^4.0.18"
   }
 }

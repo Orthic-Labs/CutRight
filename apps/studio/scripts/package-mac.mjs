@@ -13,11 +13,11 @@ function metadata(cwd) {
   return result.stdout;
 }
 const version = JSON.parse(await (await import("node:fs/promises")).readFile(join(appRoot, "package.json"), "utf8")).version;
-// A managed build owns the target root, so the bundle is not under src-tauri.
-// Honour the injected directory and otherwise ask Cargo where it writes.
-const cargoTargetRoot = process.env.CARGO_TARGET_DIR
-  ? resolve(appRoot, process.env.CARGO_TARGET_DIR)
-  : JSON.parse(metadata(join(appRoot, "src-tauri"))).target_directory;
+// A managed build owns the target root, so the bundle is not under src-tauri,
+// and CARGO_TARGET_DIR can be set but stale on a broker-managed host. Cargo's
+// own `cargo metadata` target_directory is the sole source of truth for
+// locating build output; it never reads the env var to find it.
+const cargoTargetRoot = JSON.parse(metadata(join(appRoot, "src-tauri"))).target_directory;
 const target = join(cargoTargetRoot, "universal-apple-darwin/release/bundle");
 const macos = join(target, "macos");
 const dmgDir = join(target, "dmg");
