@@ -1,8 +1,10 @@
 import { useRef } from "react";
+import { Kbd, usePlatform } from "@rightkit/platform-ui/react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
 export function Help({ close }: { close: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const platform = usePlatform();
   useFocusTrap(true, ref);
   return (
     <div
@@ -21,7 +23,12 @@ export function Help({ close }: { close: () => void }) {
         <p>
           Space play/pause · J/K/L seek, pause, play/rate · A swap variant · ← → words · ⇧← → segments · ,/. frames
         </p>
-        <p>⌘1–5 modes · ⌘K commands/sources · ⌘R refresh · 1–9 sources · Esc close</p>
+        <p>
+          <Kbd chord="Mod+1–5" platform={platform} /> modes ·{" "}
+          <Kbd chord="Mod+K" platform={platform} /> commands/sources ·{" "}
+          <Kbd chord="Mod+R" platform={platform} /> refresh · 1–9 sources ·{" "}
+          <Kbd chord="Esc" platform={platform} /> close
+        </p>
       </div>
     </div>
   );

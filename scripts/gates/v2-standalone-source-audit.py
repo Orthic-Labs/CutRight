@@ -416,12 +416,12 @@ def structural_findings(root: Path) -> list[dict]:
     workflows = root / ".github" / "workflows"
     if workflows.is_dir():
         for entry in sorted(workflows.iterdir()):
-            if entry.is_file():
+            if entry.is_file() and not entry.read_text(encoding="utf-8", errors="replace").startswith("# Managed by right-git"):
                 rel = ".github/workflows/" + entry.name
                 findings.append({
                     "file": rel, "line": 1, "rule_id": "R14-hosted-ci",
                     "severity": "FAIL", "classification": "release_code",
-                    "snippet": "hosted CI workflow files are forbidden",
+                    "snippet": "unmanaged hosted CI workflow files are forbidden",
                 })
     for tree in ("skills", "vendor"):
         base = root / tree
@@ -685,7 +685,7 @@ def self_test() -> int:
                       for f in report["findings"]),
               detail=str(report["findings"]))
 
-        # 13. Hosted CI workflow FAILs.
+        # 13. Unmanaged hosted CI workflow FAILs; RightKit workflow passes.
         ci = tmp_root / "cicase"
         (ci / ".github" / "workflows").mkdir(parents=True)
         (ci / ".github" / "workflows" / "x.yml").write_text("on: push\n", encoding="utf-8")
@@ -693,6 +693,10 @@ def self_test() -> int:
         check("hosted-ci-fails", not report["summary"]["passed"]
               and any(f["rule_id"] == "R14-hosted-ci" for f in report["findings"]),
               detail=str(report["findings"]))
+        (ci / ".github" / "workflows" / "rightgit.yml").write_text("# Managed by right-git\non: push\n", encoding="utf-8")
+        (ci / ".github" / "workflows" / "x.yml").unlink()
+        report = run_audit_on(ci)
+        check("rightgit-ci-passes", report["summary"]["passed"], detail=str(report["findings"]))
 
     if failures:
         print(f"v2-standalone-source-audit self-test: {failures} failure(s)", file=sys.stderr)

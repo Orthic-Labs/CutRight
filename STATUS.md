@@ -21,7 +21,8 @@ audit_cleanup_fixes: 8 (this audit round)
 head: 5c956574128b1fca3286d1490863484090cca43b           # main, 2026-08-09
 quality_gate: pass                                 # CR-F-B1-004, .audit/final-book/seal-b1-004.json, exit 0 at fa36a3c
 clean_machine_proof: NOT PROVEN                    # see fresh_os_user_proof_pending below — the harness reports a false pass
-ci: none                                           # scripts/gate.sh is the contract
+ci: right-git rust-hybrid                           # scripts/gate.sh is the contract
+ci_policy: supersedes local-only CR-V2-B1-005       # managed public CI calls the unchanged local gate authority
 signed_target: pass                                # CR-F-B1-005, cutright-0.1.5-b6a782b0, notarized + stapled, arm64 + x86_64
 known_blockers:
   - fresh_os_user_proof_pending                    # CR-F-B1-003 TRUE_BLOCKER; needs interactive admin auth to provision a fresh macOS user

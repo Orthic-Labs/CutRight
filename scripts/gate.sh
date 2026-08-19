@@ -2,8 +2,8 @@
 #
 # scripts/gate.sh — CutRight repository gate (hardening plan §7.2).
 #
-# This is the single authoritative gate. There is no CI service; this script
-# IS the repository contract. Run it locally before every commit.
+# This is the single authoritative gate. RightKit-managed public CI calls this
+# exact script; run it locally before every commit.
 #
 # Test policy (changed 2026-08-09, Adrian's direction)
 # ----------------------------------------------------
@@ -139,6 +139,10 @@ echo "gate.sh: mode = $([ "$WITH_QA" -eq 1 ] && echo 'default + QA' || echo 'def
 # --- 0. enforced crate dependency DAG ---------------------------------------
 run "crate DAG: python3 scripts/check-crate-dag.py" \
   python3 scripts/check-crate-dag.py
+run "repository shape: scripts/gates/v2-repository-shape.sh" \
+  bash scripts/gates/v2-repository-shape.sh
+run "standalone source audit: scripts/gates/v2-standalone-source-audit.py" \
+  python3 scripts/gates/v2-standalone-source-audit.py --root .
 
 # --- 1. root cargo workspace -------------------------------------------------
 run "root: cargo fmt --all -- --check" \

@@ -6,6 +6,7 @@
   "permissions": [
     "core:default",
     "dialog:allow-open",
+    "os:default",
     "window-state:allow-restore-state",
     "window-state:allow-save-window-state"
   ]

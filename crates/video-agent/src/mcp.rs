@@ -683,6 +683,25 @@ impl StdioMcpServer {
                     "name": descriptor.capability_id,
                     "description": descriptor.description,
                     "inputSchema": descriptor.input_schema,
+                    "outputSchema": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "taskId": {"type": "string"},
+                            "status": {"type": "string"},
+                            "operation": {"type": "string"},
+                            "project_id": {"type": "string"},
+                            "revision": {"type": "string"},
+                            "truncated": {"type": "boolean"},
+                            "continuationCursor": {"type": ["string", "null"]}
+                        },
+                        "required": ["taskId", "status", "operation", "project_id", "revision", "truncated", "continuationCursor"]
+                    },
+                    "annotations": {
+                        "readOnlyHint": !descriptor.is_mutation(),
+                        "destructiveHint": descriptor.is_mutation(),
+                        "idempotentHint": !descriptor.is_mutation()
+                    }
                 })
             })
             .collect::<Vec<_>>();
@@ -726,13 +745,22 @@ impl StdioMcpServer {
         if self.registry.lookup(name).is_none() {
             return Self::error(id, -32004, "unknown_tool", None);
         }
+        let arguments = params
+            .and_then(|value| value.get("arguments"))
+            .and_then(serde_json::Value::as_object);
+        if arguments.is_some_and(|arguments| !arguments.is_empty()) {
+            return Self::error(id, -32602, "invalid_arguments", None);
+        }
         self.next_task += 1;
         let task_id = format!("task_{}", self.next_task);
         let result = serde_json::json!({
+            "taskId": task_id,
             "status": "read_only",
             "operation": name,
             "project_id": self.binding.project_id,
             "revision": self.binding.revision,
+            "truncated": false,
+            "continuationCursor": null,
         });
         self.tasks.insert(
             task_id.clone(),
@@ -741,7 +769,13 @@ impl StdioMcpServer {
                 result: Some(result.clone()),
             },
         );
-        Self::ok(id, serde_json::json!({"taskId": task_id, "result": result}))
+        Self::ok(
+            id,
+            serde_json::json!({
+                "content": [{"type": "text", "text": result.to_string()}],
+                "structuredContent": result
+            }),
+        )
     }
 
     fn task_get(

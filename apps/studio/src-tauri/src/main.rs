@@ -14,6 +14,7 @@ mod relink_history;
 mod security_scoped_bookmarks;
 mod settings;
 mod source_integrity;
+mod tray;
 
 #[cfg(test)]
 mod tests;
@@ -22,7 +23,9 @@ fn main() {
     tauri::Builder::default()
         .manage(daemon::AgentDaemonState::default())
         .manage(native_media::NativeMediaState::default())
+        .setup(tray::setup)
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             commands::pick_project,
@@ -61,7 +64,8 @@ fn main() {
             daemon::agent_session_events,
             daemon::agent_session_pause,
             daemon::agent_session_resume,
-            daemon::agent_session_cancel
+            daemon::agent_session_cancel,
+            tray::set_tray_health
         ])
         .run(tauri::generate_context!())
         .expect("CutRight Studio failed to start");

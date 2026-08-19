@@ -27,7 +27,7 @@ pub(crate) fn rightkit_app_info() -> serde_json::Value {
 #[tauri::command]
 pub(crate) fn rightkit_logs_write(
     path: String,
-    events: Vec<serde_json::Value>,
+    events: Vec<rightkit_logs::EventRecord>,
 ) -> Result<(), String> {
     let root = canonical_project_root(&path)?;
     let store = rightkit_logs::JsonlStore::new(
@@ -35,25 +35,29 @@ pub(crate) fn rightkit_logs_write(
         1_048_576,
     );
     for event in events {
-        store.append_value(&event).map_err(|e| e.to_string())?;
+        validate_rightkit_event(&event)?;
+        store.append(&event).map_err(|e| e.to_string())?;
     }
     Ok(())
 }
 
 #[tauri::command]
-pub(crate) fn rightkit_logs_collect(path: String) -> Result<Vec<serde_json::Value>, String> {
+pub(crate) fn rightkit_logs_collect(
+    path: String,
+) -> Result<rightkit_logs::DiagnosticsBundle, String> {
     let root = canonical_project_root(&path)?;
     let file = root.join(".cutright-tools/rightkit-events.jsonl");
-    if !file.exists() {
-        return Ok(vec![]);
-    }
-    std::fs::read_to_string(file)
-        .map_err(|e| e.to_string())
-        .map(|text| {
-            text.lines()
-                .filter_map(|line| serde_json::from_str(line).ok())
-                .collect()
-        })
+    Ok(rightkit_logs::collect_diagnostics(
+        &[rightkit_logs::LogSource::new("app", file)],
+        rightkit_logs::BundleMetadata {
+            app_name: "cutright".to_string(),
+            app_version: env!("CARGO_PKG_VERSION").to_string(),
+            build: "desktop".to_string(),
+            os: std::env::consts::OS.to_string(),
+            settings: serde_json::json!({"offline":true,"telemetry":false}),
+        },
+        &rightkit_logs::CollectionPolicy::default(),
+    ))
 }
 
 #[tauri::command]
@@ -65,6 +69,48 @@ pub(crate) fn rightkit_logs_clear(path: String) -> Result<(), String> {
     )
     .clear()
     .map_err(|e| e.to_string())
+}
+
+fn validate_rightkit_event(event: &rightkit_logs::EventRecord) -> Result<(), String> {
+    const ALLOWED_FIELDS: &[&str] = &[
+        "dropped_count",
+        "duration_ms",
+        "error_code",
+        "operation",
+        "outcome",
+        "source_count",
+        "variant_count",
+    ];
+    if event.schema_version != 1 {
+        return Err("rightkit log schema_version must be 1".to_string());
+    }
+    if event.event.is_empty()
+        || event.event.len() > 96
+        || !event
+            .event
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || b"_.:-".contains(&byte))
+    {
+        return Err("rightkit log event name is invalid".to_string());
+    }
+    for (field, value) in &event.fields {
+        if !ALLOWED_FIELDS.contains(&field.as_str()) {
+            return Err(format!("rightkit log field is not allowed: {field}"));
+        }
+        if let Some(value) = value.as_str() {
+            if value.is_empty()
+                || value.len() > 96
+                || !value
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || b"_.:-".contains(&byte))
+            {
+                return Err(format!("rightkit log field value is invalid: {field}"));
+            }
+        } else if !value.is_number() && !value.is_boolean() && !value.is_null() {
+            return Err(format!("rightkit log field type is invalid: {field}"));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -83,11 +129,26 @@ mod rightkit_tests {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("project.json"), "{}").unwrap();
         let path = dir.path().to_string_lossy().into_owned();
-        rightkit_logs_write(path.clone(), vec![serde_json::json!({"event":"opened"})]).unwrap();
-        let rows = rightkit_logs_collect(path.clone()).unwrap();
-        assert_eq!(rows.len(), 1);
+        let event = rightkit_logs::EventRecord::new(1, rightkit_logs::Level::Info, "opened")
+            .with_field("source_count", serde_json::json!(2));
+        rightkit_logs_write(path.clone(), vec![event]).unwrap();
+        let bundle = rightkit_logs_collect(path.clone()).unwrap();
+        assert_eq!(bundle.sources[0].events.len(), 1);
         rightkit_logs_clear(path.clone()).unwrap();
-        assert!(rightkit_logs_collect(path).unwrap().is_empty());
+        assert!(rightkit_logs_collect(path).unwrap().sources[0]
+            .events
+            .is_empty());
+    }
+    #[test]
+    fn logs_reject_content_bearing_fields() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("project.json"), "{}").unwrap();
+        let path = dir.path().to_string_lossy().into_owned();
+        let event = rightkit_logs::EventRecord::new(1, rightkit_logs::Level::Info, "opened")
+            .with_field("transcript", serde_json::json!("private words"));
+        assert!(rightkit_logs_write(path, vec![event])
+            .unwrap_err()
+            .contains("not allowed"));
     }
 }
 

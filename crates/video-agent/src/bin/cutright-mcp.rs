@@ -69,7 +69,7 @@ mod tools {
 }
 
 use std::env;
-use std::io::{self, BufReader, BufWriter};
+use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -92,9 +92,27 @@ fn run() -> Result<(), String> {
     let stdout = io::stdout();
     let mut reader = BufReader::new(stdin.lock());
     let mut writer = BufWriter::new(stdout.lock());
-    server
-        .serve(&mut reader, &mut writer)
-        .map_err(|error| error.to_string())
+    let mut line = String::new();
+    loop {
+        line.clear();
+        let count = reader
+            .by_ref()
+            .take((mcp::STDIO_MAX_FRAME_BYTES + 1) as u64)
+            .read_line(&mut line)
+            .map_err(|error| error.to_string())?;
+        if count == 0 {
+            return Ok(());
+        }
+        if count > mcp::STDIO_MAX_FRAME_BYTES {
+            return Err("stdio JSON line exceeds transport limit".into());
+        }
+        let request = serde_json::from_str(line.trim_end()).map_err(|error| error.to_string())?;
+        if let Some(response) = server.handle(request) {
+            serde_json::to_writer(&mut writer, &response).map_err(|error| error.to_string())?;
+            writer.write_all(b"\n").map_err(|error| error.to_string())?;
+            writer.flush().map_err(|error| error.to_string())?;
+        }
+    }
 }
 
 fn default_registry() -> McpToolRegistry {
@@ -105,8 +123,12 @@ fn default_registry() -> McpToolRegistry {
         kind: ToolKind::Read,
         owner_component: "cutright-mcp".into(),
         permission_set: "pset.evidence_read_only".into(),
-        description: "Read the bound project projection".into(),
-        input_schema: serde_json::json!({"type": "object"}),
+        description: "Use this when an agent needs the bound CutRight project projection. Do not use it to mutate projects, render media, or access arbitrary paths.".into(),
+        input_schema: serde_json::json!({
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {}
+        }),
     });
     registry
 }
@@ -165,4 +187,42 @@ fn ensure_daemon() -> Result<DaemonState, io::Error> {
     // a provider child. A packaged daemon is attached through CUTRIGHTD_SOCKET
     // or started through the absolute CUTRIGHTD_BIN path above.
     Ok(DaemonState::Embedded)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_tool_is_strict_and_returns_structured_content() {
+        let mut server = StdioMcpServer::new(default_registry(), StdioBinding::default());
+        let listed = server
+            .handle(mcp::StdioRequest {
+                jsonrpc: "2.0".into(),
+                id: Some(serde_json::json!(1)),
+                method: "tools/list".into(),
+                params: None,
+            })
+            .unwrap()
+            .result
+            .unwrap();
+        assert_eq!(
+            listed["tools"][0]["inputSchema"]["additionalProperties"],
+            false
+        );
+        assert!(listed["tools"][0]["outputSchema"].is_object());
+
+        let called = server
+            .handle(mcp::StdioRequest {
+                jsonrpc: "2.0".into(),
+                id: Some(serde_json::json!(2)),
+                method: "tools/call".into(),
+                params: Some(serde_json::json!({"name": "project.read", "arguments": {}})),
+            })
+            .unwrap()
+            .result
+            .unwrap();
+        assert_eq!(called["structuredContent"]["status"], "read_only");
+        assert_eq!(called["structuredContent"]["truncated"], false);
+    }
 }

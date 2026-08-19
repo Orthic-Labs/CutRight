@@ -93,7 +93,30 @@ export async function call<T>(
   if (command === "read_variant_selection") return memorySelection as T;
   if (command === "rightkit_app_info") return { schema_version: 1, app: "cutright", tier: "free", license: "Proprietary", offline: true, telemetry: false, updates: "disabled-until-configured" } as T;
   if (command === "rightkit_logs_write" || command === "rightkit_logs_clear") return undefined as T;
-  if (command === "rightkit_logs_collect") return [] as T;
+  if (command === "rightkit_logs_collect") return {
+    schema_version: 1,
+    metadata: {
+      app_name: "cutright",
+      app_version: "qa",
+      build: "qa",
+      os: "qa",
+      settings: { offline: true, telemetry: false },
+    },
+    sources: [{
+      name: "app",
+      file_name: "rightkit-events.jsonl",
+      events: [],
+      stats: {
+        scanned_bytes: 0,
+        parsed: 0,
+        malformed: 0,
+        dropped: 0,
+        error_anchor_found: false,
+        rotated_read: false,
+      },
+      warnings: [],
+    }],
+  } as T;
   if (command === "finish_read_variants") return {
     variants: ["balanced", "pullback", "punch", "push", "editor-takeover"].map((id, index) => ({
       id, label: id.replace("-", " "), preview_url: null, source_hashes: [`blake3:qa-${id}`], score: 1 - index * 0.05,

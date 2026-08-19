@@ -6,7 +6,7 @@ import { useProject } from "./hooks/useProject";
 import { usePlayback } from "./hooks/usePlayback";
 import { useReviewLedger } from "./hooks/useReviewLedger";
 import { useKeyboard } from "./hooks/useKeyboard";
-import { qa as qaMode } from "./lib/api";
+import { call, qa as qaMode } from "./lib/api";
 import { Empty } from "./components/Empty";
 import { Transcript } from "./components/Transcript";
 import { SourceFacts } from "./components/SourceFacts";
@@ -143,6 +143,11 @@ export function App() {
   useEffect(() => {
     document.documentElement.dataset.register = register;
   }, [register]);
+
+  useEffect(() => {
+    if (!qaMode)
+      void call("set_tray_health", { healthy: !error }).catch(() => undefined);
+  }, [error]);
 
   function swap() {
     const other = variant === "natural" ? "tight" : "natural";

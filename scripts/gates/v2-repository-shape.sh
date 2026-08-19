@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/gates/v2-repository-shape.sh — CutRight v2 repository shape guard.
 #
-# Fails when hosted CI, git submodules, skill symlinks, sibling-repository
+# Fails when unmanaged hosted CI, git submodules, skill symlinks, sibling-repository
 # paths, or release environment overrides appear in the tree. Part of the
 # standalone boundary frozen by CR-V2-B1-005.
 #
@@ -58,10 +58,13 @@ check_shape() {
   local root="$1"
   violations=0
 
-  # 1. No hosted CI of any flavour (a workflow file, not an empty leftover
-  # directory, is what would run CI).
-  if [ -d "$root/.github/workflows" ] && [ -n "$(ls -A "$root/.github/workflows" 2>/dev/null)" ]; then
-    fail "hosted CI is forbidden, found workflow files under .github/workflows/"
+  # 1. Only RightKit-managed workflows may run in hosted CI.
+  if [ -d "$root/.github/workflows" ]; then
+    while IFS= read -r -d '' workflow; do
+      if ! head -n 1 "$workflow" | grep -Fq '# Managed by right-git'; then
+        fail "unmanaged hosted CI is forbidden: ${workflow#"$root"/}"
+      fi
+    done < <(find "$root/.github/workflows" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0)
   fi
   for ci in .circleci .gitlab-ci.yml; do
     if [ -e "$root/$ci" ]; then
@@ -160,6 +163,13 @@ self_test() {
   mkdir -p "$tmp/ci/.github/workflows"
   echo "on: push" > "$tmp/ci/.github/workflows/x.yml"
   run_case ci
+
+  mkdir -p "$tmp/rightgit/.github/workflows"
+  echo '# Managed by right-git' > "$tmp/rightgit/.github/workflows/ci.yml"
+  if ! check_shape "$tmp/rightgit" >/dev/null 2>&1; then
+    echo "SELF-TEST FAIL: right-git workflow should pass" >&2
+    failures=$((failures + 1))
+  fi
 
   mkdir -p "$tmp/submodules"
   printf '[submodule "x"]\npath = x\n' > "$tmp/submodules/.gitmodules"

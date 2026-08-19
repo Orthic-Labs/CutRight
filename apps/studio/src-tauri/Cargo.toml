@@ -11,7 +11,7 @@ blake3 = "1"
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tauri = { version = "2", features = ["protocol-asset"] }
+tauri = { version = "2", features = ["protocol-asset", "tray-icon", "image-png"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-window-state = "2"
 rightkit-logs = "=0.1.0"
@@ -22,6 +22,7 @@ video-media = { path = "../../../crates/video-media" }
 video-project = { path = "../../../crates/video-project" }
 video-security = { path = "../../../crates/video-security" }
 video-sessions = { path = "../../../crates/video-sessions" }
+tauri-plugin-os = "=2.3.2"
 
 [dev-dependencies]
 tauri = { version = "2", features = ["protocol-asset", "test"] }

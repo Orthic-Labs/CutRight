@@ -8,8 +8,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::process::{ChildStdin, ChildStdout, Stdio};
 
+use rightkit_process::{OwnedChild, OwnedCommand};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
@@ -637,8 +638,9 @@ pub fn attest_executable(
 /// explicit non-secret values. The returned process exposes stdio only.
 pub fn spawn_stdio(spec: &LaunchSpec) -> Result<DriverProcess, DriverHostError> {
     spec.validate()?;
-    let mut command = Command::new(&spec.program);
+    let mut command = OwnedCommand::new(&spec.program);
     command
+        .command_mut()
         .args(&spec.args)
         .current_dir(&spec.cwd)
         .stdin(Stdio::piped())
@@ -647,9 +649,10 @@ pub fn spawn_stdio(spec: &LaunchSpec) -> Result<DriverProcess, DriverHostError> 
         .env_clear();
     for (name, value) in &spec.env {
         if !DENIED_ENV_VARS.contains(&name.as_str()) {
-            command.env(name, value);
+            command.command_mut().env(name, value);
         }
     }
+    command.windows_hide();
     let child = command
         .spawn()
         .map_err(|error| DriverHostError::Process(error.to_string()))?;
@@ -662,7 +665,7 @@ pub fn spawn_stdio(spec: &LaunchSpec) -> Result<DriverProcess, DriverHostError> 
 
 #[derive(Debug)]
 pub struct DriverProcess {
-    child: Child,
+    child: OwnedChild,
     stdin: Option<ChildStdin>,
     stdout: Option<BufReader<ChildStdout>>,
 }
@@ -670,7 +673,7 @@ pub struct DriverProcess {
 impl DriverProcess {
     pub fn take_stdin(&mut self) -> Result<&mut ChildStdin, DriverHostError> {
         if self.stdin.is_none() {
-            self.stdin = self.child.stdin.take();
+            self.stdin = self.child.take_stdin();
         }
         self.stdin
             .as_mut()
@@ -678,7 +681,7 @@ impl DriverProcess {
     }
     pub fn take_stdout(&mut self) -> Result<&mut BufReader<ChildStdout>, DriverHostError> {
         if self.stdout.is_none() {
-            self.stdout = self.child.stdout.take().map(BufReader::new);
+            self.stdout = self.child.take_stdout().map(BufReader::new);
         }
         self.stdout
             .as_mut()

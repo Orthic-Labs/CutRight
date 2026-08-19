@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "surfaces": {
+    "mcp": {
+      "serve": "cargo run -q -p video-agent --bin cutright-mcp",
+      "tools": 1
+    }
+  },
+  "plugin": {},
+  "ax": {
+    "gates": {
+      "static": "report-only",
+      "conformance": "report-only",
+      "behavioral": "report-only"
+    },
+    "claimBoundaryRequired": false
+  }
+}
