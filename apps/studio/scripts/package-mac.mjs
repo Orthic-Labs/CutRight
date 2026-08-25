@@ -3,21 +3,16 @@ import { join, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { resolveTargetRoot } from "@rightkit/release/cargo-target.mjs";
 
 const appRoot = fileURLToPath(new URL("..", import.meta.url));
 const repoRoot = resolve(appRoot, "../..");
-function metadata(cwd) {
-  const result = spawnSync("cargo", ["metadata", "--manifest-path", "Cargo.toml", "--no-deps", "--format-version", "1"], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-  if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`cargo metadata failed: ${result.stderr || result.status}`);
-  return result.stdout;
-}
 const version = JSON.parse(await (await import("node:fs/promises")).readFile(join(appRoot, "package.json"), "utf8")).version;
 // A managed build owns the target root, so the bundle is not under src-tauri,
 // and CARGO_TARGET_DIR can be set but stale on a broker-managed host. Cargo's
 // own `cargo metadata` target_directory is the sole source of truth for
 // locating build output; it never reads the env var to find it.
-const cargoTargetRoot = JSON.parse(metadata(join(appRoot, "src-tauri"))).target_directory;
+const cargoTargetRoot = resolveTargetRoot(join(appRoot, "src-tauri", "Cargo.toml"));
 const target = join(cargoTargetRoot, "universal-apple-darwin/release/bundle");
 const macos = join(target, "macos");
 const dmgDir = join(target, "dmg");

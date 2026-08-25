@@ -2,21 +2,16 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync }
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { resolveTargetRoot } from "@rightkit/release/cargo-target.mjs";
 
 const appRoot = fileURLToPath(new URL("..", import.meta.url));
 const repoRoot = resolve(appRoot, "../..");
-function metadata(cwd) {
-  const result = spawnSync("cargo", ["metadata", "--manifest-path", "Cargo.toml", "--no-deps", "--format-version", "1"], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-  if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`cargo metadata failed: ${result.stderr || result.status}`);
-  return JSON.parse(result.stdout).target_directory;
-}
 const version = JSON.parse(readFileSync(join(appRoot, "package.json"), "utf8")).version;
 // A managed build owns the target root, so src-tauri/target is not a valid
 // fallback, and CARGO_TARGET_DIR can be set but stale on a broker-managed
 // host. Cargo's own `cargo metadata` target_directory is the sole source of
 // truth for locating build output; it never reads the env var to find it.
-const targetDir = metadata(join(appRoot, "src-tauri"));
+const targetDir = resolveTargetRoot(join(appRoot, "src-tauri", "Cargo.toml"));
 const bundleDir = join(targetDir, "release/bundle/nsis");
 const sourceInstaller = join(bundleDir, `CutRight Studio_${version}_x64-setup.exe`);
 const installer = join(bundleDir, `CutRight_Studio_${version}_x64-setup.exe`);
