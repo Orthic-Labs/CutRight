@@ -41,8 +41,8 @@ second, independent validation layer inside the Remotion Studio/render path.
 
 ## Toolchain requirements
 
-- Node version pinned by the repo root `.node-version` (`26.5.1`);
-  `packageManager` here is pinned to the same `pnpm@11.18.0` as
+- Node version pinned by the repo root `.node-version` (`26.8.1`);
+  `packageManager` here is pinned to the same `pnpm@11.24.0` as
   `apps/studio`.
 - `pnpm install` in this directory before any render — the Rust renderer
   checks for `node_modules/` and fails with a named remediation
