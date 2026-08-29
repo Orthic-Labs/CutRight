@@ -43,3 +43,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
 rightkit-process = "=0.1.0"
+
+[profile.dev]
+# line-tables-only: full debuginfo dominates large-crate dev codegen; backtraces keep file:line
+debug = "line-tables-only"
