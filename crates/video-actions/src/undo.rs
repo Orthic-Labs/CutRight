@@ -211,10 +211,8 @@ pub fn inverse_batch_for_with_original(
         let original = original_clip_ids
             .get(index)
             .and_then(|value| value.as_deref());
-        match inverse_of_with_original(action, original_batch_id, original) {
-            Ok(inverse) => inverse_actions.push(inverse),
-            Err(error) => return Err(error),
-        }
+        let inverse = inverse_of_with_original(action, original_batch_id, original)?;
+        inverse_actions.push(inverse);
     }
     Ok(InverseBatch {
         schema: INVERSE_BATCH_SCHEMA.to_string(),
