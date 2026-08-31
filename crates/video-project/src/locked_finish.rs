@@ -341,10 +341,10 @@ fn sha256_hex(input: &[u8]) -> String {
         0x1f83d9ab,
         0x5be0cd19,
     ];
-    for chunk in bytes.chunks_exact(64) {
+    for chunk in bytes.as_chunks::<64>().0 {
         let mut w = [0_u32; 64];
-        for (index, word) in chunk.chunks_exact(4).enumerate() {
-            w[index] = u32::from_be_bytes([word[0], word[1], word[2], word[3]]);
+        for (index, word) in chunk.as_chunks::<4>().0.iter().enumerate() {
+            w[index] = u32::from_be_bytes(*word);
         }
         for index in 16..64 {
             let s0 = w[index - 15].rotate_right(7)
