@@ -12,6 +12,7 @@ export default {
   schema: 1,
   app: "cutright",
   version,
+  distribution: { provider: "github-releases", repository: "Orthic-Labs/CutRight" },
   packageManager: "pnpm",
   deps: { workdirs: ["."] },
   checks: ["typecheck", "test"],
@@ -23,7 +24,6 @@ export default {
       package: { cmd: "pnpm", args: ["run", "rightkit:package:mac"] },
       artifacts: [dmg],
       hardening: [dmg, updater],
-      publish: { cmd: "right-release", args: ["publish-update", "--config", "right-release.config.mjs", "--platform", "mac"] },
       installer: { artifacts: [{ file: dmg, key: "cutright/installers/mac/current/CutRight_Studio_universal.dmg" }] },
       updater: { artifacts: [
         { file: updater, signature: `${updater}.sig`, platform: "darwin-aarch64", key: "cutright/updates/mac/current/CutRight_Studio.app.tar.gz" },
@@ -37,7 +37,6 @@ export default {
       artifacts: ["src-tauri/target/release/bundle/nsis"],
       sign: { files: [windowsInstaller] },
       hardening: ["src-tauri/target/release/bundle/nsis"],
-      publish: { cmd: "right-release", args: ["publish-update", "--config", "right-release.config.mjs", "--platform", "win"] },
       installer: { artifacts: [{ file: windowsInstaller, key: "cutright/installers/windows/current/CutRight_Studio_x64-setup.exe" }] },
       updater: { artifacts: [
         { file: windowsInstaller, signature: `${windowsInstaller}.sig`, platform: "windows-x86_64", key: "cutright/updates/windows/current/CutRight_Studio_x64-setup.exe" }
