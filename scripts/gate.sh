@@ -3,7 +3,7 @@
 # scripts/gate.sh — CutRight repository gate (hardening plan §7.2).
 #
 # This is the single authoritative gate. RightKit-managed public CI calls this
-# exact script; run it locally before every commit.
+# exact script. Rust compilation is reserved for GitHub Actions.
 #
 # Test policy (changed 2026-08-09, Adrian's direction)
 # ----------------------------------------------------
@@ -66,7 +66,7 @@ usage() {
 usage: bash scripts/gate.sh [--with-qa]
 
 Runs the CutRight gate in order, failing fast:
-  root cargo fmt/clippy/test -> Studio cargo fmt/clippy/test ->
+  root cargo fmt/clippy -> Studio cargo fmt/clippy ->
   frontend pnpm install/typecheck/test/build -> license/asset resolution.
 
 Options:
@@ -77,6 +77,14 @@ EOF
 }
 
 WITH_QA=0
+RUST_CHANGED="${RIGHT_GIT_RUST_CHANGED:-true}"
+case "$RUST_CHANGED" in
+  true|false) ;;
+  *)
+    echo "gate.sh: RIGHT_GIT_RUST_CHANGED must be true or false." >&2
+    exit 2
+    ;;
+esac
 for arg in "$@"; do
   case "$arg" in
     --with-qa) WITH_QA=1 ;;
@@ -163,6 +171,7 @@ trap on_exit EXIT
 
 echo "gate.sh: repo root = $ROOT"
 echo "gate.sh: mode = $([ "$WITH_QA" -eq 1 ] && echo 'default + QA' || echo 'default')"
+echo "gate.sh: rust changed = $RUST_CHANGED"
 
 # --- 0. enforced crate dependency DAG ---------------------------------------
 run "crate DAG: python3 scripts/check-crate-dag.py" \
@@ -172,29 +181,33 @@ run "repository shape: scripts/gates/v2-repository-shape.sh" \
 run "standalone source audit: scripts/gates/v2-standalone-source-audit.py" \
   python3 scripts/gates/v2-standalone-source-audit.py --root .
 
-# --- 1. root cargo workspace -------------------------------------------------
-run "root: cargo fmt --all -- --check" \
-  cargo fmt --all -- --check
-run "root: cargo clippy --workspace --all-targets --locked -- -D warnings" \
-  cargo clippy --workspace --all-targets --locked -- -D warnings
-# `cargo test --workspace --locked` was removed 2026-08-09 by Adrian's direction.
-# It made every gate invocation a full regression run; with many tasks calling
-# the gate, the machine was compiling and running both Cargo suites repeatedly.
-# Tests now run per task, scoped to the crate that task owns:
-#   cargo test -p <exact-crate>
-# See "Test policy" at the head of this file.
+if [ "$RUST_CHANGED" = "true" ]; then
+  # --- 1. root cargo workspace -----------------------------------------------
+  run "root: cargo fmt --all -- --check" \
+    cargo fmt --all -- --check
+  run "root: cargo clippy --workspace --all-targets --locked -- -D warnings" \
+    cargo clippy --workspace --all-targets --locked -- -D warnings
+  # `cargo test --workspace --locked` was removed 2026-08-09 by Adrian's direction.
+  # It made every gate invocation a full regression run; with many tasks calling
+  # the gate, the machine was compiling and running both Cargo suites repeatedly.
+  # Tests now run per task, scoped to the crate that task owns:
+  #   cargo test -p <exact-crate>
+  # See "Test policy" at the head of this file.
 
-# --- 2. Studio cargo workspace (separate lockfile, gated by manifest path) ---
-STUDIO_MANIFEST="apps/studio/src-tauri/Cargo.toml"
-run "studio: cargo fmt --manifest-path $STUDIO_MANIFEST -- --check" \
-  cargo fmt --manifest-path "$STUDIO_MANIFEST" -- --check
-prepare_studio_clippy_sidecars
-run "studio: cargo clippy --manifest-path $STUDIO_MANIFEST --all-targets --locked -- -D warnings" \
-  cargo clippy --manifest-path "$STUDIO_MANIFEST" --all-targets --locked -- -D warnings
-cleanup_studio_clippy_sidecars
-# `cargo test --manifest-path "$STUDIO_MANIFEST" --locked` removed with the root
-# suite on 2026-08-09. Studio Rust tests run per task:
-#   cargo test --manifest-path apps/studio/src-tauri/Cargo.toml -p <exact-crate>
+  # --- 2. Studio cargo workspace (separate lockfile, gated by manifest path) --
+  STUDIO_MANIFEST="apps/studio/src-tauri/Cargo.toml"
+  run "studio: cargo fmt --manifest-path $STUDIO_MANIFEST -- --check" \
+    cargo fmt --manifest-path "$STUDIO_MANIFEST" -- --check
+  prepare_studio_clippy_sidecars
+  run "studio: cargo clippy --manifest-path $STUDIO_MANIFEST --all-targets --locked -- -D warnings" \
+    cargo clippy --manifest-path "$STUDIO_MANIFEST" --all-targets --locked -- -D warnings
+  cleanup_studio_clippy_sidecars
+  # `cargo test --manifest-path "$STUDIO_MANIFEST" --locked` removed with the root
+  # suite on 2026-08-09. Studio Rust tests run per task:
+  #   cargo test --manifest-path apps/studio/src-tauri/Cargo.toml -p <exact-crate>
+else
+  skip_note "Rust inputs unchanged — root & Studio Cargo gates omitted"
+fi
 
 # --- 3. Studio frontend ------------------------------------------------------
 # Prefer corepack so the packageManager pin in apps/studio/package.json is

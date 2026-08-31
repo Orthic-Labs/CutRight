@@ -13,6 +13,7 @@ export default {
   app: "cutright",
   version,
   distribution: { provider: "github-releases", repository: "Orthic-Labs/CutRight" },
+  hostedWorkflows: "right-git-ci-only",
   packageManager: "pnpm",
   deps: { workdirs: ["."] },
   checks: ["typecheck", "test"],

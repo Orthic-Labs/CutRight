@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
+  "compile": "github-actions-only",
   "profile": "rust-hybrid",
   "lanes": ["ci"],
   "matrix": { "os": ["macos-14"], "node": ["26.8.1"] },
   "packageManager": "pnpm@11.24.0",
   "gate": { "path": "scripts/gate.sh" },
-  "templateVersion": "1.6.0",
+  "templateVersion": "1.7.0",
   "rustCache": {
     "workspaces": [".", "apps/studio/src-tauri"]
   }
