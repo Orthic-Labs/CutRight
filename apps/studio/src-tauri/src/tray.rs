@@ -15,7 +15,7 @@ fn active_icon() -> tauri::Result<Image<'static>> {
 fn failure_icon() -> tauri::Result<Image<'static>> {
     let source = active_icon()?;
     let mut rgba = source.rgba().to_vec();
-    for pixel in rgba.chunks_exact_mut(4) {
+    for pixel in rgba.as_chunks_mut::<4>().0 {
         pixel[..3].copy_from_slice(&FAILURE_RGB);
     }
     Ok(Image::new_owned(rgba, source.width(), source.height()))
@@ -80,17 +80,23 @@ mod tests {
         );
         assert!(failure
             .rgba()
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .all(|pixel| { pixel[3] == 0 || pixel[..3] == FAILURE_RGB }));
         assert_eq!(
             failure
                 .rgba()
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .map(|pixel| pixel[3])
                 .collect::<Vec<_>>(),
             active
                 .rgba()
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .map(|pixel| pixel[3])
                 .collect::<Vec<_>>()
         );

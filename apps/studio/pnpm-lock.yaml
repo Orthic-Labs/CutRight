@@ -31,11 +31,11 @@ importers:
         specifier: 0.1.1
         version: 0.1.1
       '@rightkit/git':
-        specifier: 0.2.18
-        version: 0.2.18
+        specifier: 0.2.19
+        version: 0.2.19
       '@rightkit/release':
-        specifier: 0.2.94
-        version: 0.2.94
+        specifier: 0.2.95
+        version: 0.2.95
       '@tauri-apps/cli':
         specifier: ^2.11.4
         version: 2.11.4
@@ -145,8 +145,8 @@ packages:
     resolution: {integrity: sha512-Nh8EWczxyIEJ4TEpkCxp6TpBZUW9+4LxucBtImL6Xv5YO61lDI4dQVHWzrX4TR3pQdFZABynKKn0k9dOvDIZpQ==}
     hasBin: true
 
-  '@rightkit/git@0.2.18':
-    resolution: {integrity: sha512-C4YN+d8FCLV1Ktr9Q+vk7HPK32FdY50oG6xPToyYQ3VDX+zFiaarL7VCuqBN4vpuVLRsO42lwVXX3GQnSsBEGw==}
+  '@rightkit/git@0.2.19':
+    resolution: {integrity: sha512-eAfvSxFDS1NZFLqnmhFErNZNUG5I02SPmq2P4TB+Y1yS6Z0AwKnvMadpnTvnAwxl5xIEflT8AkBvMpVEPURmQQ==}
     hasBin: true
 
   '@rightkit/logs@0.1.3':
@@ -158,8 +158,8 @@ packages:
       '@tauri-apps/plugin-os': '>=2 <3'
       react: '>=18 <20'
 
-  '@rightkit/release@0.2.94':
-    resolution: {integrity: sha512-gvyUjCfhZEew6mK9uU31mZ+qBIwdbvfQqIR5XcbNXgiCwztqfdyVJUZa2QZRM2hkKp5oftPrb5mc/HBtUdI9Pg==}
+  '@rightkit/release@0.2.95':
+    resolution: {integrity: sha512-u0cUjnP1WcpRcYrbqMXYU6Md5+3PjKx4z8gSvzpzLxsJ7gNPIs8TSfDMHXUKqHT8P34Z7svEn8p3fY1zJ03jKg==}
     hasBin: true
 
   '@rolldown/binding-android-arm64@1.1.5':
@@ -909,7 +909,7 @@ snapshots:
 
   '@rightkit/ax@0.1.1': {}
 
-  '@rightkit/git@0.2.18': {}
+  '@rightkit/git@0.2.19': {}
 
   '@rightkit/logs@0.1.3': {}
 
@@ -918,7 +918,7 @@ snapshots:
       '@tauri-apps/plugin-os': 2.3.2
       react: 19.2.8
 
-  '@rightkit/release@0.2.94': {}
+  '@rightkit/release@0.2.95': {}
 
   '@rolldown/binding-android-arm64@1.1.5':
     optional: true
