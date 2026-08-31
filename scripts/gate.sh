@@ -92,6 +92,7 @@ done
 # --- step runner + summary ---------------------------------------------------
 CURRENT_STEP="<startup>"
 QA_STARTED=0
+STUDIO_CLIPPY_PLACEHOLDERS=()
 
 log() { printf '\n%s==> %s%s\n' "$C_BLUE" "$*" "$C_RESET"; }
 ok()  { printf '%s[PASS]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
@@ -108,8 +109,35 @@ run() {
   ok "$CURRENT_STEP"
 }
 
+prepare_studio_clippy_sidecars() {
+  local triple name path
+  case "$(uname -s)/$(uname -m)" in
+    Darwin/arm64) triple="aarch64-apple-darwin" ;;
+    Darwin/x86_64) triple="x86_64-apple-darwin" ;;
+    *) return ;;
+  esac
+  mkdir -p apps/studio/src-tauri/bin
+  for name in videoctl cutright-mcp cutrightd; do
+    path="apps/studio/src-tauri/bin/${name}-${triple}"
+    if [ ! -e "$path" ]; then
+      : > "$path"
+      chmod +x "$path"
+      STUDIO_CLIPPY_PLACEHOLDERS+=("$path")
+    fi
+  done
+}
+
+cleanup_studio_clippy_sidecars() {
+  local path
+  for path in "${STUDIO_CLIPPY_PLACEHOLDERS[@]}"; do
+    rm -f "$path"
+  done
+  STUDIO_CLIPPY_PLACEHOLDERS=()
+}
+
 on_exit() {
   local code=$?
+  cleanup_studio_clippy_sidecars
   # Always tear down the QA dev server if we started it (happy path stops it
   # explicitly; this guards the failure path so no orphaned vite survives).
   if [ "$QA_STARTED" -eq 1 ]; then
@@ -160,8 +188,10 @@ run "root: cargo clippy --workspace --all-targets --locked -- -D warnings" \
 STUDIO_MANIFEST="apps/studio/src-tauri/Cargo.toml"
 run "studio: cargo fmt --manifest-path $STUDIO_MANIFEST -- --check" \
   cargo fmt --manifest-path "$STUDIO_MANIFEST" -- --check
+prepare_studio_clippy_sidecars
 run "studio: cargo clippy --manifest-path $STUDIO_MANIFEST --all-targets --locked -- -D warnings" \
   cargo clippy --manifest-path "$STUDIO_MANIFEST" --all-targets --locked -- -D warnings
+cleanup_studio_clippy_sidecars
 # `cargo test --manifest-path "$STUDIO_MANIFEST" --locked` removed with the root
 # suite on 2026-08-09. Studio Rust tests run per task:
 #   cargo test --manifest-path apps/studio/src-tauri/Cargo.toml -p <exact-crate>
