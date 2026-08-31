@@ -92,7 +92,7 @@ done
 # --- step runner + summary ---------------------------------------------------
 CURRENT_STEP="<startup>"
 QA_STARTED=0
-STUDIO_CLIPPY_PLACEHOLDERS=()
+STUDIO_CLIPPY_PLACEHOLDERS=""
 
 log() { printf '\n%s==> %s%s\n' "$C_BLUE" "$*" "$C_RESET"; }
 ok()  { printf '%s[PASS]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
@@ -122,17 +122,17 @@ prepare_studio_clippy_sidecars() {
     if [ ! -e "$path" ]; then
       : > "$path"
       chmod +x "$path"
-      STUDIO_CLIPPY_PLACEHOLDERS+=("$path")
+      STUDIO_CLIPPY_PLACEHOLDERS="${STUDIO_CLIPPY_PLACEHOLDERS}${STUDIO_CLIPPY_PLACEHOLDERS:+ }$path"
     fi
   done
 }
 
 cleanup_studio_clippy_sidecars() {
   local path
-  for path in "${STUDIO_CLIPPY_PLACEHOLDERS[@]}"; do
+  for path in $STUDIO_CLIPPY_PLACEHOLDERS; do
     rm -f "$path"
   done
-  STUDIO_CLIPPY_PLACEHOLDERS=()
+  STUDIO_CLIPPY_PLACEHOLDERS=""
 }
 
 on_exit() {
