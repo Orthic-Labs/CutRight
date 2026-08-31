@@ -276,9 +276,11 @@ fn count_clipped_samples(path: &Path) -> Result<u64, AudioFinishError> {
     let _ = std::fs::remove_file(&raw_path);
     let bytes = bytes?;
     Ok(bytes
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .filter(|chunk| {
-            let value = f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+            let value = f32::from_le_bytes(**chunk);
             value.abs() >= CLIP_MAGNITUDE_THRESHOLD
         })
         .count() as u64)
